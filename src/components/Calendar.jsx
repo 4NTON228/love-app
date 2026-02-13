@@ -1,0 +1,256 @@
+﻿import { useState, useEffect } from "react";
+import { supabase } from "../lib/supabase";
+import { Plus, Trash2, Camera } from "lucide-react";
+
+const MONTHS_RU = ["янв", "фев", "мар", "апр", "май", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"];
+const EMOJIS = ["❤️", "🥰", "🎉", "🎂", "🎬", "🍕", "✈️", "🌅", "🎵", "💐", "🏖️", "🎄"];
+
+export default function Calendar({ session, profile }) {
+  const [events, setEvents] = useState([]);
+  const [showModal, setShowModal] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [eventDate, setEventDate] = useState("");
+  const [emoji, setEmoji] = useState("❤️");
+  const [photo, setPhoto] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState(null);
+
+  useEffect(() => {
+    loadEvents();
+  }, []);
+
+  async function loadEvents() {
+    const { data } = await supabase
+      .from("calendar_events")
+      .select("*")
+      .order("event_date", { ascending: false });
+
+    setEvents(data || []);
+    setLoading(false);
+  }
+
+  async function uploadPhoto(file) {
+    const fileExt = file.name.split(".").pop();
+    const fileName = Date.now() + "-" + Math.random().toString(36).substring(7) + "." + fileExt;
+    const filePath = "calendar/" + fileName;
+
+    const { error } = await supabase.storage
+      .from("photos")
+      .upload(filePath, file);
+
+    if (error) throw error;
+
+    const { data } = supabase.storage
+      .from("photos")
+      .getPublicUrl(filePath);
+
+    return data.publicUrl;
+  }
+
+  function handlePhotoSelect(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    setPhoto(file);
+    setPhotoPreview(URL.createObjectURL(file));
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    if (!title || !eventDate) return;
+
+    setSaving(true);
+
+    try {
+      let photoUrl = null;
+      if (photo) {
+        photoUrl = await uploadPhoto(photo);
+      }
+
+      const { error } = await supabase
+        .from("calendar_events")
+        .insert({
+          user_id: session.user.id,
+          title,
+          description,
+          event_date: eventDate,
+          emoji,
+          photo_url: photoUrl
+        });
+
+      if (!error) {
+        resetForm();
+        setShowModal(false);
+        loadEvents();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+
+    setSaving(false);
+  }
+
+  async function deleteEvent(id) {
+    if (!confirm("Удалить это событие?")) return;
+    await supabase.from("calendar_events").delete().eq("id", id);
+    loadEvents();
+  }
+
+  function resetForm() {
+    setTitle("");
+    setDescription("");
+    setEventDate("");
+    setEmoji("❤️");
+    setPhoto(null);
+    setPhotoPreview(null);
+  }
+
+  function formatDate(dateStr) {
+    const d = new Date(dateStr);
+    return {
+      day: d.getDate(),
+      month: MONTHS_RU[d.getMonth()]
+    };
+  }
+
+  return (
+    <div>
+      <h1 className="screen-title">📅 Наш календарь</h1>
+
+      <button className="add-btn" onClick={() => setShowModal(true)}>
+        <Plus size={20} />
+        Добавить событие
+      </button>
+
+      {loading ? (
+        <div className="empty-state">
+          <div className="loading-heart">💕</div>
+        </div>
+      ) : events.length === 0 ? (
+        <div className="empty-state">
+          <div className="empty-state-emoji">📅</div>
+          <p className="empty-state-text">
+            Пока нет событий.<br />
+            Добавьте ваше первое воспоминание!
+          </p>
+        </div>
+      ) : (
+        events.map(event => {
+          const { day, month } = formatDate(event.event_date);
+          return (
+            <div key={event.id} className="event-card">
+              <div className="event-date-badge">
+                <div className="event-date-day">{day}</div>
+                <div className="event-date-month">{month}</div>
+              </div>
+              <div className="event-info">
+                <div className="event-title">{event.emoji} {event.title}</div>
+                {event.description && (
+                  <div className="event-desc">{event.description}</div>
+                )}
+                {event.photo_url && (
+                  <img
+                    className="event-photo"
+                    src={event.photo_url}
+                    alt={event.title}
+                    loading="lazy"
+                  />
+                )}
+              </div>
+              <button
+                className="event-delete"
+                onClick={() => deleteEvent(event.id)}
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
+          );
+        })
+      )}
+
+      {showModal && (
+        <div className="modal-overlay" onClick={(e) => {
+          if (e.target === e.currentTarget) setShowModal(false);
+        }}>
+          <div className="modal">
+            <div className="modal-handle" />
+            <h2 className="modal-title">Новое событие</h2>
+
+            <form onSubmit={handleSubmit}>
+              <div className="form-group">
+                <label className="form-label">Название</label>
+                <input
+                  className="form-input"
+                  type="text"
+                  placeholder="Наше первое свидание"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Дата</label>
+                <input
+                  className="form-input"
+                  type="date"
+                  value={eventDate}
+                  onChange={(e) => setEventDate(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Описание</label>
+                <textarea
+                  className="form-textarea"
+                  placeholder="Что делали, какие эмоции..."
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Настроение</label>
+                <div className="emoji-select">
+                  {EMOJIS.map(e => (
+                    <button
+                      key={e}
+                      type="button"
+                      className={`emoji-option ${emoji === e ? "selected" : ""}`}
+                      onClick={() => setEmoji(e)}
+                    >
+                      {e}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Фото</label>
+                <label className="form-file-label">
+                  <Camera size={20} />
+                  {photo ? photo.name : "Выбрать фото"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoSelect}
+                  />
+                </label>
+                {photoPreview && (
+                  <img className="photo-preview" src={photoPreview} alt="Preview" />
+                )}
+              </div>
+
+              <button className="form-submit" type="submit" disabled={saving}>
+                {saving ? "Сохраняем..." : "Сохранить ❤️"}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

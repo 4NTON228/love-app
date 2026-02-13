@@ -1,0 +1,125 @@
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
+import { Plus, Trash2 } from 'lucide-react';
+
+export default function Calendar() {
+  const [events, setEvents] = useState([]);
+  const [showForm, setShowForm] = useState(false);
+  const [newEvent, setNewEvent] = useState({
+    title: '',
+    description: '',
+    event_date: new Date().toISOString().split('T')[0]
+  });
+
+  useEffect(() => {
+    loadEvents();
+  }, []);
+
+  async function loadEvents() {
+    const { data, error } = await supabase
+      .from('calendar_events')
+      .select('*')
+      .order('event_date', { ascending: false });
+    
+    if (!error) setEvents(data || []);
+  }
+
+  async function addEvent(e) {
+    e.preventDefault();
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    const { error } = await supabase
+      .from('calendar_events')
+      .insert([{
+        ...newEvent,
+        user_id: user.id
+      }]);
+    
+    if (!error) {
+      setShowForm(false);
+      setNewEvent({ title: '', description: '', event_date: new Date().toISOString().split('T')[0] });
+      loadEvents();
+    }
+  }
+
+  async function deleteEvent(id) {
+    if (window.confirm('Удалить событие?')) {
+      const { error } = await supabase
+        .from('calendar_events')
+        .delete()
+        .eq('id', id);
+      
+      if (!error) {
+        loadEvents();
+      }
+    }
+  }
+
+  return (
+    <div className="p-4">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-playfair text-[#2D1F2D]">Наш календарь</h2>
+        <button
+          onClick={() => setShowForm(true)}
+          className="bg-[#E8466A] text-white p-2 rounded-full shadow-lg"
+        >
+          <Plus size={24} />
+        </button>
+      </div>
+
+      {showForm && (
+        <form onSubmit={addEvent} className="bg-white p-4 rounded-lg shadow mb-4">
+          <input
+            type="text"
+            placeholder="Название"
+            className="w-full p-2 border rounded mb-2"
+            value={newEvent.title}
+            onChange={(e) => setNewEvent({...newEvent, title: e.target.value})}
+            required
+          />
+          <textarea
+            placeholder="Описание"
+            className="w-full p-2 border rounded mb-2"
+            value={newEvent.description}
+            onChange={(e) => setNewEvent({...newEvent, description: e.target.value})}
+          />
+          <input
+            type="date"
+            className="w-full p-2 border rounded mb-2"
+            value={newEvent.event_date}
+            onChange={(e) => setNewEvent({...newEvent, event_date: e.target.value})}
+            required
+          />
+          <div className="flex gap-2">
+            <button type="submit" className="bg-[#E8466A] text-white px-4 py-2 rounded">
+              Сохранить
+            </button>
+            <button type="button" onClick={() => setShowForm(false)} className="bg-gray-300 px-4 py-2 rounded">
+              Отмена
+            </button>
+          </div>
+        </form>
+      )}
+
+      <div className="space-y-3">
+        {events.map(event => (
+          <div key={event.id} className="bg-white p-4 rounded-lg shadow flex justify-between items-start">
+            <div>
+              <h3 className="font-bold text-[#2D1F2D]">{event.title}</h3>
+              <p className="text-sm text-gray-600">{event.description}</p>
+              <p className="text-xs text-[#E8466A] mt-1">
+                {new Date(event.event_date).toLocaleDateString('ru-RU')}
+              </p>
+            </div>
+            <button
+              onClick={() => deleteEvent(event.id)}
+              className="text-red-500 hover:text-red-700 p-2"
+            >
+              <Trash2 size={20} />
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

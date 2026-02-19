@@ -1,8 +1,9 @@
-import { Home, CalendarHeart, Heart, ListChecks } from 'lucide-react'
+import { Home, CalendarHeart, Heart, ListChecks, MessageCircleHeart } from 'lucide-react'
 
 export default function Navigation({ activeTab, setActiveTab }) {
   const tabs = [
     { id: 'home', label: 'Главная', icon: Home },
+    { id: 'chat', label: 'Чат', icon: MessageCircleHeart },
     { id: 'calendar', label: 'Календарь', icon: CalendarHeart },
     { id: 'moments', label: 'Моменты', icon: Heart },
     { id: 'plans', label: 'Планы', icon: ListChecks },

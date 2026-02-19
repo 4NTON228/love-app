@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from './lib/supabase'
 import Auth from './components/Auth'
 import Home from './components/Home'
+import Chat from './components/Chat'
 import Calendar from './components/Calendar'
 import Moments from './components/Moments'
 import Plans from './components/Plans'
@@ -15,14 +16,12 @@ export default function App() {
   const [profile, setProfile] = useState(null)
 
   useEffect(() => {
-    // Получаем текущую сессию
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
       if (session) loadProfile(session.user.id)
       setLoading(false)
     })
 
-    // Слушаем изменения авторизации
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setSession(session)
@@ -58,6 +57,8 @@ export default function App() {
     switch (activeTab) {
       case 'home':
         return <Home session={session} profile={profile} />
+      case 'chat':
+        return <Chat session={session} profile={profile} />
       case 'calendar':
         return <Calendar session={session} profile={profile} />
       case 'moments':
@@ -71,8 +72,8 @@ export default function App() {
 
   return (
     <div className="app">
-      <Hearts />
-      <div className="app-content">
+      {activeTab !== 'chat' && <Hearts />}
+      <div className="app-content" style={activeTab === 'chat' ? { padding: 0, paddingTop: 'var(--safe-top)' } : {}}>
         {renderTab()}
       </div>
       <Navigation activeTab={activeTab} setActiveTab={setActiveTab} />

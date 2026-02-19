@@ -441,7 +441,7 @@ export default function Chat({ session, profile }) {
           top: 0;
           left: 0;
           right: 0;
-          bottom: 90px;
+          bottom: 110px;
           display: flex;
           flex-direction: column;
           z-index: 5;

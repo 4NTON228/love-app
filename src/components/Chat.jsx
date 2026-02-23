@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { Send, Image, Video, X, ArrowDown, Mic, Play, Pause } from 'lucide-react'
+import { sendPushNotification } from '../lib/push'
 
 export default function Chat({ session, profile }) {
   const [messages, setMessages] = useState([])
@@ -104,6 +105,8 @@ export default function Chat({ session, profile }) {
         text: newText.trim() || null,
         photo_url: photoUrl
       })
+      const senderName = profile?.name || 'Кто-то'
+      sendPushNotification(senderName, photoUrl ? '📷 Фото' : newText.trim(), session.user.id)
       setNewText('')
       cancelPhoto()
     } catch (err) {
@@ -143,6 +146,7 @@ export default function Chat({ session, profile }) {
         await supabase.from('messages').insert({
           user_id: session.user.id, video_url: videoUrl, is_video_circle: true
         })
+        sendPushNotification(profile?.name || 'Кто-то', '🔵 Видео-кружочек', session.user.id)
       } catch (err) { console.error('Video upload error:', err) }
       setSending(false); setRecording(false); setRecordingType(null); setRecordingTime(0)
     }
@@ -178,7 +182,6 @@ export default function Chat({ session, profile }) {
   }
 
   async function switchCamera() {
-    // Останавливаем текущую запись без отправки
     if (mediaRecorderRef.current?.state === 'recording') {
       mediaRecorderRef.current.ondataavailable = null
       mediaRecorderRef.current.onstop = () => {}
@@ -235,6 +238,7 @@ export default function Chat({ session, profile }) {
             user_id: session.user.id, video_url: audioUrl,
             is_video_circle: false, text: '🎤 Голосовое сообщение'
           })
+          sendPushNotification(profile?.name || 'Кто-то', '🎤 Голосовое сообщение', session.user.id)
         } catch (err) { console.error('Voice upload error:', err) }
         setSending(false); setRecording(false); setRecordingType(null); setRecordingTime(0)
       }
@@ -350,7 +354,6 @@ export default function Chat({ session, profile }) {
                 onMouseLeave={handleLongPressEnd}
                 className="chat-msg-wrapper"
               >
-                {/* ВИДЕО-КРУЖОЧЕК */}
                 {msg.is_video_circle && msg.video_url ? (
                   <div className="chat-video-circle-wrapper">
                     <video
@@ -362,8 +365,6 @@ export default function Chat({ session, profile }) {
                     />
                     <div className="chat-video-circle-time">{formatTime(msg.created_at)}</div>
                   </div>
-
-                /* ГОЛОСОВОЕ */
                 ) : isVoiceMessage(msg) ? (
                   <div className={`chat-bubble ${isMyMessage(msg) ? 'mine' : 'theirs'}`} style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: '160px', padding: '10px 14px' }}>
                     <button onClick={() => toggleAudio(msg.id, msg.video_url)} className={`chat-voice-btn ${isMyMessage(msg) ? 'mine' : 'theirs'}`}>
@@ -379,8 +380,6 @@ export default function Chat({ session, profile }) {
                     </div>
                     <div className="chat-msg-time">{formatTime(msg.created_at)}</div>
                   </div>
-
-                /* ТЕКСТ / ФОТО */
                 ) : (
                   <div className={`chat-bubble ${isMyMessage(msg) ? 'mine' : 'theirs'} ${msg.photo_url && !msg.text ? 'photo-only' : ''}`}>
                     {msg.photo_url && (
@@ -397,14 +396,12 @@ export default function Chat({ session, profile }) {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Кнопка вниз */}
       {showScrollBtn && (
         <button onClick={scrollToBottom} className="chat-scroll-btn">
           <ArrowDown size={18} color="var(--primary)" />
         </button>
       )}
 
-      {/* Превью фото */}
       {photoPreview && (
         <div className="chat-photo-preview">
           <img src={photoPreview} alt="" />
@@ -413,7 +410,6 @@ export default function Chat({ session, profile }) {
         </div>
       )}
 
-      {/* Панель записи */}
       {recording && (
         <div className="chat-recording-panel">
           {recordingType === 'video' && (
@@ -441,7 +437,6 @@ export default function Chat({ session, profile }) {
         </div>
       )}
 
-      {/* Поле ввода */}
       {!recording && (
         <div className="chat-input-bar">
           <button onClick={() => fileInputRef.current?.click()} className="chat-input-icon-btn">

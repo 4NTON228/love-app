@@ -15,6 +15,7 @@ export default function Chat({ session, profile }) {
   const [showScrollBtn, setShowScrollBtn] = useState(false)
   const [playingAudio, setPlayingAudio] = useState(null)
   const [cameraStream, setCameraStream] = useState(null)
+  const [facingMode, setFacingMode] = useState('user')
 
   const messagesEndRef = useRef(null)
   const chatContainerRef = useRef(null)
@@ -118,10 +119,40 @@ export default function Chat({ session, profile }) {
     }
   }
 
+  function setupMediaRecorder(stream) {
+    const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+      ? 'video/webm;codecs=vp9' : 'video/webm'
+    const mediaRecorder = new MediaRecorder(stream, { mimeType })
+    mediaRecorderRef.current = mediaRecorder
+
+    mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) chunksRef.current.push(e.data)
+    }
+    mediaRecorder.onstop = async () => {
+      stream.getTracks().forEach(t => t.stop())
+      setCameraStream(null)
+      clearInterval(timerRef.current)
+      const blob = new Blob(chunksRef.current, { type: 'video/webm' })
+      if (blob.size < 1000) {
+        setRecording(false); setRecordingType(null); setRecordingTime(0); return
+      }
+      const file = new File([blob], `circle-${Date.now()}.webm`, { type: 'video/webm' })
+      setSending(true)
+      try {
+        const videoUrl = await uploadFile(file, 'circles')
+        await supabase.from('messages').insert({
+          user_id: session.user.id, video_url: videoUrl, is_video_circle: true
+        })
+      } catch (err) { console.error('Video upload error:', err) }
+      setSending(false); setRecording(false); setRecordingType(null); setRecordingTime(0)
+    }
+    return mediaRecorder
+  }
+
   async function startVideoCircle() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: 240, height: 240 },
+        video: { facingMode: facingMode, width: 240, height: 240 },
         audio: true
       })
       setCameraStream(stream)
@@ -132,33 +163,8 @@ export default function Chat({ session, profile }) {
         }
       }, 100)
 
-      const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
-        ? 'video/webm;codecs=vp9' : 'video/webm'
-      const mediaRecorder = new MediaRecorder(stream, { mimeType })
-      mediaRecorderRef.current = mediaRecorder
       chunksRef.current = []
-
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunksRef.current.push(e.data)
-      }
-      mediaRecorder.onstop = async () => {
-        stream.getTracks().forEach(t => t.stop())
-        setCameraStream(null)
-        clearInterval(timerRef.current)
-        const blob = new Blob(chunksRef.current, { type: 'video/webm' })
-        if (blob.size < 1000) {
-          setRecording(false); setRecordingType(null); setRecordingTime(0); return
-        }
-        const file = new File([blob], `circle-${Date.now()}.webm`, { type: 'video/webm' })
-        setSending(true)
-        try {
-          const videoUrl = await uploadFile(file, 'circles')
-          await supabase.from('messages').insert({
-            user_id: session.user.id, video_url: videoUrl, is_video_circle: true
-          })
-        } catch (err) { console.error('Video upload error:', err) }
-        setSending(false); setRecording(false); setRecordingType(null); setRecordingTime(0)
-      }
+      const mediaRecorder = setupMediaRecorder(stream)
       mediaRecorder.start()
       setRecording(true); setRecordingType('video'); setRecordingTime(0)
       timerRef.current = setInterval(() => setRecordingTime(t => t + 1), 1000)
@@ -168,6 +174,37 @@ export default function Chat({ session, profile }) {
     } catch (err) {
       console.error('Camera error:', err)
       alert('Нет доступа к камере')
+    }
+  }
+
+  async function switchCamera() {
+    // Останавливаем текущую запись без отправки
+    if (mediaRecorderRef.current?.state === 'recording') {
+      mediaRecorderRef.current.ondataavailable = null
+      mediaRecorderRef.current.onstop = () => {}
+      mediaRecorderRef.current.stop()
+    }
+    if (cameraStream) cameraStream.getTracks().forEach(t => t.stop())
+
+    const newMode = facingMode === 'user' ? 'environment' : 'user'
+    setFacingMode(newMode)
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: newMode, width: 240, height: 240 },
+        audio: true
+      })
+      setCameraStream(stream)
+      if (videoPreviewRef.current) {
+        videoPreviewRef.current.srcObject = stream
+        videoPreviewRef.current.play()
+      }
+
+      const mediaRecorder = setupMediaRecorder(stream)
+      mediaRecorder.start()
+    } catch (err) {
+      console.error('Camera switch error:', err)
+      alert('Не удалось переключить камеру')
     }
   }
 
@@ -396,6 +433,9 @@ export default function Chat({ session, profile }) {
           )}
           <div style={{ display: 'flex', gap: '12px' }}>
             <button onClick={cancelRecording} className="chat-rec-cancel-btn">Отмена</button>
+            {recordingType === 'video' && (
+              <button onClick={switchCamera} className="chat-rec-switch-btn">🔄</button>
+            )}
             <button onClick={stopRecording} className="chat-rec-send-btn"><Send size={16} /> Отправить</button>
           </div>
         </div>
@@ -528,13 +568,12 @@ export default function Chat({ session, profile }) {
         .chat-msg-time {
           font-size: 11px; opacity: 0.55; text-align: right; margin-top: 2px;
         }
-
-        /* Видео-кружочек */
         .chat-video-circle-wrapper { position: relative; }
         .chat-video-circle {
           width: 180px; height: 180px; border-radius: 50%;
           object-fit: cover; display: block; border: 3px solid;
           cursor: pointer;
+          transform: scaleX(-1);
         }
         .chat-video-circle.mine { border-color: #E8466A; }
         .chat-video-circle.theirs { border-color: #F7A8B8; }
@@ -543,8 +582,6 @@ export default function Chat({ session, profile }) {
           background: rgba(0,0,0,0.5); border-radius: 10px;
           padding: 2px 8px; font-size: 11px; color: white;
         }
-
-        /* Голосовое сообщение */
         .chat-voice-btn {
           width: 34px; height: 34px; border-radius: 50%;
           border: none; cursor: pointer;
@@ -560,18 +597,14 @@ export default function Chat({ session, profile }) {
         }
         .chat-voice-bar.mine { background: rgba(255,255,255,0.6); }
         .chat-voice-bar.theirs { background: rgba(232,70,106,0.3); }
-
-        /* Кнопка вниз */
         .chat-scroll-btn {
-          position: fixed; bottom: 130px; right: 14px;
+          position: fixed; bottom: 170px; right: 14px;
           width: 38px; height: 38px; border-radius: 50%;
           background: white; border: none;
           box-shadow: 0 2px 8px rgba(0,0,0,0.15);
           display: flex; align-items: center; justify-content: center;
           cursor: pointer; z-index: 10;
         }
-
-        /* Превью фото */
         .chat-photo-preview {
           padding: 8px 14px; background: white;
           border-top: 1px solid #eee;
@@ -586,8 +619,6 @@ export default function Chat({ session, profile }) {
         .chat-photo-preview button {
           background: none; border: none; cursor: pointer; padding: 4px;
         }
-
-        /* Панель записи */
         .chat-recording-panel {
           padding: 16px; background: white;
           border-top: 1px solid rgba(232,70,106,0.1);
@@ -598,6 +629,7 @@ export default function Chat({ session, profile }) {
           width: 140px; height: 140px; border-radius: 50%;
           object-fit: cover; border: 4px solid #E8466A;
           animation: recordPulse 2s ease-in-out infinite;
+          transform: scaleX(-1);
         }
         .chat-recording-timer {
           position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%);
@@ -615,14 +647,16 @@ export default function Chat({ session, profile }) {
           border-radius: 24px; font-size: 14px; font-weight: 600;
           font-family: var(--font-body); color: var(--text-light); cursor: pointer;
         }
+        .chat-rec-switch-btn {
+          padding: 10px 16px; background: #F5F0F3; border: none;
+          border-radius: 24px; font-size: 18px; cursor: pointer;
+        }
         .chat-rec-send-btn {
           padding: 10px 24px; background: linear-gradient(135deg, #E8466A, #F06292);
           border: none; border-radius: 24px; font-size: 14px; font-weight: 700;
           font-family: var(--font-body); color: white; cursor: pointer;
           display: flex; align-items: center; gap: 6px;
         }
-
-        /* Поле ввода */
         .chat-input-bar {
           padding: 8px 10px;
           background: white;
@@ -652,7 +686,6 @@ export default function Chat({ session, profile }) {
         .chat-send-btn.active {
           background: linear-gradient(135deg, #E8466A, #F06292);
         }
-
         @keyframes recordPulse {
           0%, 100% { box-shadow: 0 0 0 4px rgba(232,70,106,0.2); }
           50% { box-shadow: 0 0 0 8px rgba(232,70,106,0.3), 0 0 20px rgba(232,70,106,0.2); }

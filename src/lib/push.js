@@ -29,12 +29,17 @@ export async function subscribeToPush(userId) {
       .from('push_subscriptions')
       .select('id')
       .eq('user_id', userId)
+      .single()
 
-    if (!existing || existing.length === 0) {
+    if (!existing) {
       await supabase.from('push_subscriptions').insert({
         user_id: userId,
         subscription: sub.toJSON()
       })
+    } else {
+      await supabase.from('push_subscriptions')
+        .update({ subscription: sub.toJSON() })
+        .eq('user_id', userId)
     }
 
     return true

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './lib/supabase'
+import { subscribeToPush } from './lib/push'
 import Auth from './components/Auth'
 import Home from './components/Home'
 import Chat from './components/Chat'
@@ -39,6 +40,7 @@ export default function App() {
       .eq('id', userId)
       .single()
     setProfile(data)
+    subscribeToPush(userId)
   }
 
   if (loading) {

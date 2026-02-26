@@ -33,7 +33,6 @@ export default function Chat({ session, profile }) {
   const [swipeOffset, setSwipeOffset] = useState({})
   const [unreadCount, setUnreadCount] = useState(0)
   const [partnerLastReadAt, setPartnerLastReadAt] = useState(null)
-  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('tgDarkMode') === 'true')
 
   const messagesEndRef = useRef(null)
   const chatContainerRef = useRef(null)
@@ -543,7 +542,7 @@ export default function Chat({ session, profile }) {
   if (loading) return <div className="tg-loading"><div className="loading-heart">💕</div></div>
 
   return (
-    <div className={`tg-chat${darkMode ? ' dark' : ''}`} onClick={() => { closeContextMenu(); setShowEmojiPicker(false) }}>
+    <div className="tg-chat" onClick={() => { closeContextMenu(); setShowEmojiPicker(false) }}>
 
       {/* HEADER */}
       <div className="tg-header">
@@ -564,13 +563,6 @@ export default function Chat({ session, profile }) {
             )}
           </div>
         </div>
-        <button
-          onClick={(e) => { e.stopPropagation(); setDarkMode(v => { localStorage.setItem('tgDarkMode', !v); return !v }) }}
-          className="tg-theme-toggle"
-          aria-label="Сменить тему"
-        >
-          {darkMode ? '☀️' : '🌙'}
-        </button>
       </div>
 
       {/* PINNED MESSAGE */}
@@ -1375,45 +1367,37 @@ function TGStyles() {
         border-color: rgba(232,70,106,0.3);
       }
       .tg-reaction span { font-size: 12px; font-weight: 600; }
-      /* THEME TOGGLE BUTTON */
-      .tg-theme-toggle {
-        margin-left: auto; background: rgba(255,255,255,0.2);
-        border: none; border-radius: 50%; width: 36px; height: 36px;
-        font-size: 18px; cursor: pointer; flex-shrink: 0;
-        display: flex; align-items: center; justify-content: center;
-      }
-      /* DARK MODE */
-      .tg-chat.dark { background: #1A1825; }
-      .tg-chat.dark .tg-messages { background: transparent; }
-      .tg-chat.dark::before { background-image: radial-gradient(circle, rgba(232,70,106,0.04) 1px, transparent 1px); }
-      .tg-chat.dark .tg-bubble.theirs { background: #2A2540; color: #EDE4F0; }
-      .tg-chat.dark .tg-bubble.theirs.tail::after { background: #2A2540; }
-      .tg-chat.dark .tg-input-bar { background: #1A1825; border-top-color: rgba(232,70,106,0.15); }
-      .tg-chat.dark .tg-input-field { background: #2A2540; }
-      .tg-chat.dark .tg-input-field textarea { color: #EDE4F0; }
-      .tg-chat.dark .tg-input-field textarea::placeholder { color: #7A6880; }
-      .tg-chat.dark .tg-input-icon-btn svg { filter: brightness(0.7) sepia(0.3); }
-      .tg-chat.dark .tg-recording-panel { background: #1A1825; border-top-color: rgba(232,70,106,0.15); }
-      .tg-chat.dark .tg-pinned { background: #2A2540; border-bottom-color: rgba(232,70,106,0.15); }
-      .tg-chat.dark .tg-pinned-text { color: #9A8098; }
-      .tg-chat.dark .tg-pinned-close { color: #7A6880; }
-      .tg-chat.dark .tg-reply-bar { background: #1A1825; border-top-color: rgba(232,70,106,0.15); }
-      .tg-chat.dark .tg-reply-bar-text { color: #9A8098; }
-      .tg-chat.dark .tg-reply-bar-close { color: #7A6880; }
-      .tg-chat.dark .tg-photo-preview-bar { background: #1A1825; border-top-color: #333; }
-      .tg-chat.dark .tg-photo-preview-bar span { color: #9A8098; }
-      .tg-chat.dark .tg-ctx-menu { background: #2A2540; }
-      .tg-chat.dark .tg-ctx-item { color: #EDE4F0; border-bottom-color: #3A3050; }
-      .tg-chat.dark .tg-ctx-item:active { background: #3A3050; }
-      .tg-chat.dark .tg-ctx-divider { background: #3A3050; }
-      .tg-chat.dark .tg-emoji-picker { background: #2A2540; }
-      .tg-chat.dark .tg-emoji-btn:active { background: #3A3050; }
-      .tg-chat.dark .tg-scroll-btn { background: #2A2540; box-shadow: 0 2px 10px rgba(0,0,0,0.5); }
-      .tg-chat.dark .tg-reply-preview.theirs { background: rgba(232,70,106,0.1); }
-      .tg-chat.dark .tg-bubble.theirs .tg-voice-play-btn { background: rgba(232,70,106,0.2); }
-      .tg-chat.dark .tg-reaction { background: rgba(255,255,255,0.08); }
-      .tg-chat.dark .tg-rec-cancel { background: #3A3050; color: #9A8098; }
-      .tg-chat.dark .tg-rec-switch { background: #3A3050; }
+      /* DARK MODE — triggered by .app.dark on parent */
+      .app.dark .tg-chat { background: #1A1825; }
+      .app.dark .tg-chat::before { background-image: radial-gradient(circle, rgba(232,70,106,0.04) 1px, transparent 1px); }
+      .app.dark .tg-bubble.theirs { background: #2A2540; color: #EDE4F0; }
+      .app.dark .tg-bubble.theirs.tail::after { background: #2A2540; }
+      .app.dark .tg-input-bar { background: #1A1825; border-top-color: rgba(232,70,106,0.15); }
+      .app.dark .tg-input-field { background: #2A2540; }
+      .app.dark .tg-input-field textarea { color: #EDE4F0; }
+      .app.dark .tg-input-field textarea::placeholder { color: #7A6880; }
+      .app.dark .tg-input-icon-btn svg { filter: brightness(0.7) sepia(0.3); }
+      .app.dark .tg-recording-panel { background: #1A1825; border-top-color: rgba(232,70,106,0.15); }
+      .app.dark .tg-pinned { background: #2A2540; border-bottom-color: rgba(232,70,106,0.15); }
+      .app.dark .tg-pinned-text { color: #9A8098; }
+      .app.dark .tg-pinned-close { color: #7A6880; }
+      .app.dark .tg-reply-bar { background: #1A1825; border-top-color: rgba(232,70,106,0.15); }
+      .app.dark .tg-reply-bar-text { color: #9A8098; }
+      .app.dark .tg-reply-bar-close { color: #7A6880; }
+      .app.dark .tg-photo-preview-bar { background: #1A1825; border-top-color: #333; }
+      .app.dark .tg-photo-preview-bar span { color: #9A8098; }
+      .app.dark .tg-ctx-menu { background: #2A2540; }
+      .app.dark .tg-ctx-item { color: #EDE4F0; border-bottom-color: #3A3050; }
+      .app.dark .tg-ctx-item:active { background: #3A3050; }
+      .app.dark .tg-ctx-divider { background: #3A3050; }
+      .app.dark .tg-emoji-picker { background: #2A2540; }
+      .app.dark .tg-emoji-btn:active { background: #3A3050; }
+      .app.dark .tg-scroll-btn { background: #2A2540; box-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+      .app.dark .tg-reply-preview.theirs { background: rgba(232,70,106,0.1); }
+      .app.dark .tg-bubble.theirs .tg-voice-play-btn { background: rgba(232,70,106,0.2); }
+      .app.dark .tg-reaction { background: rgba(255,255,255,0.08); }
+      .app.dark .tg-rec-cancel { background: #3A3050; color: #9A8098; }
+      .app.dark .tg-rec-switch { background: #3A3050; }
     `}</style>
   )
 }

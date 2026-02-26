@@ -29,7 +29,7 @@ export async function subscribeToPush(userId) {
       .from('push_subscriptions')
       .select('id')
       .eq('user_id', userId)
-      .single()
+      .maybeSingle()
 
     if (!existing) {
       await supabase.from('push_subscriptions').insert({

@@ -40,6 +40,7 @@ export default function Chat({ session, profile }) {
   const chunksRef = useRef([])
   const timerRef = useRef(null)
   const videoPreviewRef = useRef(null)
+  const cameraStreamRef = useRef(null)
   const audioRefs = useRef({})
   const longPressRef = useRef(null)
   const typingChannelRef = useRef(null)
@@ -108,6 +109,11 @@ export default function Chat({ session, profile }) {
     return () => {
       supabase.removeChannel(msgChannel)
       supabase.removeChannel(presenceCh)
+      // Stop any active media streams on unmount
+      if (cameraStreamRef.current) { cameraStreamRef.current.getTracks().forEach(t => t.stop()); cameraStreamRef.current = null }
+      if (videoPreviewRef.current) videoPreviewRef.current.srcObject = null
+      if (mediaRecorderRef.current?.state === 'recording') mediaRecorderRef.current.stop()
+      clearInterval(timerRef.current)
     }
   }, [])
 
@@ -361,6 +367,8 @@ export default function Chat({ session, profile }) {
     mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data) }
     mediaRecorder.onstop = async () => {
       stream.getTracks().forEach(t => t.stop())
+      if (videoPreviewRef.current) videoPreviewRef.current.srcObject = null
+      cameraStreamRef.current = null
       setCameraStream(null)
       clearInterval(timerRef.current)
       const blob = new Blob(chunksRef.current, { type: 'video/webm' })
@@ -380,6 +388,7 @@ export default function Chat({ session, profile }) {
   async function startVideoCircle() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode, width: 240, height: 240 }, audio: true })
+      cameraStreamRef.current = stream
       setCameraStream(stream)
       setTimeout(() => { if (videoPreviewRef.current) { videoPreviewRef.current.srcObject = stream; videoPreviewRef.current.play() } }, 100)
       chunksRef.current = []
@@ -397,11 +406,13 @@ export default function Chat({ session, profile }) {
       mediaRecorderRef.current.onstop = () => {}
       mediaRecorderRef.current.stop()
     }
-    if (cameraStream) cameraStream.getTracks().forEach(t => t.stop())
+    if (cameraStreamRef.current) cameraStreamRef.current.getTracks().forEach(t => t.stop())
+    if (videoPreviewRef.current) videoPreviewRef.current.srcObject = null
     const newMode = facingMode === 'user' ? 'environment' : 'user'
     setFacingMode(newMode)
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: newMode, width: 240, height: 240 }, audio: true })
+      cameraStreamRef.current = stream
       setCameraStream(stream)
       if (videoPreviewRef.current) { videoPreviewRef.current.srcObject = stream; videoPreviewRef.current.play() }
       const mr = setupMediaRecorder(stream)
@@ -448,8 +459,17 @@ export default function Chat({ session, profile }) {
   function cancelRecording() {
     if (mediaRecorderRef.current?.state === 'recording') {
       mediaRecorderRef.current.ondataavailable = null
-      mediaRecorderRef.current.onstop = () => { if (cameraStream) cameraStream.getTracks().forEach(t => t.stop()); setCameraStream(null) }
+      mediaRecorderRef.current.onstop = () => {
+        if (cameraStreamRef.current) { cameraStreamRef.current.getTracks().forEach(t => t.stop()); cameraStreamRef.current = null }
+        if (videoPreviewRef.current) videoPreviewRef.current.srcObject = null
+        setCameraStream(null)
+      }
       mediaRecorderRef.current.stop()
+    } else {
+      // Stop any lingering streams even if recorder isn't active
+      if (cameraStreamRef.current) { cameraStreamRef.current.getTracks().forEach(t => t.stop()); cameraStreamRef.current = null }
+      if (videoPreviewRef.current) videoPreviewRef.current.srcObject = null
+      setCameraStream(null)
     }
     clearInterval(timerRef.current)
     setRecording(false); setRecordingType(null); setRecordingTime(0)

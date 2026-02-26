@@ -50,6 +50,13 @@ CREATE TABLE IF NOT EXISTS couple_settings (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) NOT NULL,
+  subscription JSONB NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('photos', 'photos', true)
 ON CONFLICT (id) DO NOTHING;

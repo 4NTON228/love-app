@@ -44,6 +44,12 @@ CREATE POLICY "insert_settings" ON couple_settings FOR INSERT WITH CHECK (auth.u
 CREATE POLICY "update_settings" ON couple_settings FOR UPDATE
   USING (auth.uid() = user_id OR user_id = (SELECT partner_id FROM profiles WHERE id = auth.uid()));
 
+-- PUSH SUBSCRIPTIONS
+ALTER TABLE push_subscriptions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "insert_push_sub" ON push_subscriptions FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "select_push_sub" ON push_subscriptions FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "delete_push_sub" ON push_subscriptions FOR DELETE USING (auth.uid() = user_id);
+
 -- STORAGE
 CREATE POLICY "upload_photos" ON storage.objects FOR INSERT
   WITH CHECK (bucket_id = 'photos' AND auth.role() = 'authenticated');

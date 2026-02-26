@@ -423,6 +423,7 @@ export default function Chat({ session, profile }) {
   async function startVoiceMessage() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      cameraStreamRef.current = stream
       const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm'
       const mediaRecorder = new MediaRecorder(stream, { mimeType })
       mediaRecorderRef.current = mediaRecorder
@@ -430,6 +431,7 @@ export default function Chat({ session, profile }) {
       mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data) }
       mediaRecorder.onstop = async () => {
         stream.getTracks().forEach(t => t.stop())
+        cameraStreamRef.current = null
         clearInterval(timerRef.current)
         const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
         if (blob.size < 1000) { setRecording(false); setRecordingType(null); setRecordingTime(0); return }
@@ -683,7 +685,7 @@ export default function Chat({ session, profile }) {
                     {msg.photo_url && (
                       <img src={msg.photo_url} alt="" className="tg-photo" loading="lazy" />
                     )}
-                    {msg.text && <div className="tg-text">{msg.text}</div>}
+                    {msg.text && <div className="tg-text" onTouchStart={(e) => { e.stopPropagation(); handleLongPressEnd() }} onMouseDown={(e) => e.stopPropagation()}>{msg.text}</div>}
                     <div className="tg-meta">
                       {msg.edited_at && <span className="tg-edited">изм.</span>}
                       <span className="tg-time">{formatTime(msg.created_at)}</span>
@@ -801,7 +803,7 @@ export default function Chat({ session, profile }) {
         <div className="tg-recording-panel">
           {recordingType === 'video' && (
             <div style={{ position: 'relative' }}>
-              <video ref={videoPreviewRef} muted playsInline className="tg-rec-preview" />
+              <video ref={videoPreviewRef} muted playsInline className="tg-rec-preview" style={{ transform: facingMode === 'user' ? 'scaleX(-1)' : 'none' }} />
               <div className="tg-rec-timer">{formatRecTime(recordingTime)}</div>
             </div>
           )}
@@ -825,7 +827,7 @@ export default function Chat({ session, profile }) {
       {/* INPUT BAR */}
       {!recording && (
         <div className="tg-input-bar">
-          <button onClick={() => setShowEmojiPicker(v => !v)} className="tg-input-icon-btn">
+          <button onClick={(e) => { e.stopPropagation(); setShowEmojiPicker(v => !v) }} className="tg-input-icon-btn">
             <Smile size={22} color={showEmojiPicker ? 'var(--primary)' : '#8B7088'} />
           </button>
           <div className="tg-input-field">
@@ -1063,7 +1065,7 @@ function TGStyles() {
         max-width: 100%; max-height: 300px;
         border-radius: 15px; display: block;
       }
-      .tg-text { font-size: 15px; line-height: 1.45; white-space: pre-wrap; }
+      .tg-text { font-size: 15px; line-height: 1.45; white-space: pre-wrap; user-select: text; -webkit-user-select: text; }
       .tg-meta {
         display: flex; align-items: center; justify-content: flex-end;
         gap: 3px; margin-top: 3px;
@@ -1252,7 +1254,6 @@ function TGStyles() {
         width: 140px; height: 140px; border-radius: 50%;
         object-fit: cover; border: 4px solid #E8466A;
         animation: tgPulse 1.5s ease-in-out infinite;
-        transform: scaleX(-1);
       }
       .tg-rec-timer {
         position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%);

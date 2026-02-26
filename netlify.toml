@@ -1,13 +1,6 @@
 [build]
   command = "npm run build"
   publish = "dist"
-  functions = "netlify/functions"
-
-# API редирект должен быть ПЕРЕД SPA редиректом
-[[redirects]]
-  from = "/api/send-push"
-  to = "/.netlify/functions/send-push"
-  status = 200
 
 [[redirects]]
   from = "/*"

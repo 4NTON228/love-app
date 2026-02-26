@@ -32,6 +32,8 @@ export default function Chat({ session, profile }) {
   const [swipeStart, setSwipeStart] = useState({})
   const [swipeOffset, setSwipeOffset] = useState({})
   const [unreadCount, setUnreadCount] = useState(0)
+  const [partnerLastReadAt, setPartnerLastReadAt] = useState(null)
+  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('tgDarkMode') === 'true')
 
   const messagesEndRef = useRef(null)
   const chatContainerRef = useRef(null)
@@ -69,7 +71,7 @@ export default function Chat({ session, profile }) {
           })
           const el = chatContainerRef.current
           const isAtBottom = !el || (el.scrollHeight - el.scrollTop - el.clientHeight < 150)
-          if (isAtBottom || payload.new.user_id === myId) setTimeout(scrollToBottom, 100)
+          if (isAtBottom || payload.new.user_id === myId) { setTimeout(scrollToBottom, 100); if (payload.new.user_id !== myId) setTimeout(updateLastRead, 300) }
         }
       )
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' },
@@ -99,10 +101,12 @@ export default function Chat({ session, profile }) {
         setPartnerOnline(others.length > 0)
         const isTyping = others.some(k => state[k]?.some?.(s => s.typing))
         setPartnerTyping(isTyping)
+        const readTimes = others.flatMap(k => state[k] || []).map(s => s.lastReadAt).filter(Boolean)
+        if (readTimes.length > 0) setPartnerLastReadAt(readTimes[readTimes.length - 1])
       })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
-          await presenceCh.track({ typing: false, online: true })
+          await presenceCh.track({ typing: false, online: true, lastReadAt: new Date().toISOString() })
         }
       })
 
@@ -129,11 +133,19 @@ export default function Chat({ session, profile }) {
     const pinned = msgs.findLast(m => m.is_pinned)
     if (pinned) setPinnedMessage(pinned)
     setTimeout(scrollToBottom, 200)
+    setTimeout(updateLastRead, 600)
+  }
+
+  async function updateLastRead() {
+    if (presenceChannelRef.current) {
+      await presenceChannelRef.current.track({ typing: false, online: true, lastReadAt: new Date().toISOString() })
+    }
   }
 
   function scrollToBottom() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
     setUnreadCount(0)
+    updateLastRead()
   }
 
   function handleScroll() {
@@ -141,7 +153,7 @@ export default function Chat({ session, profile }) {
     if (!el) return
     const dist = el.scrollHeight - el.scrollTop - el.clientHeight
     setShowScrollBtn(dist > 200)
-    if (dist < 50) setUnreadCount(0)
+    if (dist < 50) { setUnreadCount(0); updateLastRead() }
   }
 
   async function uploadFile(file, folder) {
@@ -531,7 +543,7 @@ export default function Chat({ session, profile }) {
   if (loading) return <div className="tg-loading"><div className="loading-heart">💕</div></div>
 
   return (
-    <div className="tg-chat" onClick={() => { closeContextMenu(); setShowEmojiPicker(false) }}>
+    <div className={`tg-chat${darkMode ? ' dark' : ''}`} onClick={() => { closeContextMenu(); setShowEmojiPicker(false) }}>
 
       {/* HEADER */}
       <div className="tg-header">
@@ -552,6 +564,13 @@ export default function Chat({ session, profile }) {
             )}
           </div>
         </div>
+        <button
+          onClick={(e) => { e.stopPropagation(); setDarkMode(v => { localStorage.setItem('tgDarkMode', !v); return !v }) }}
+          className="tg-theme-toggle"
+          aria-label="Сменить тему"
+        >
+          {darkMode ? '☀️' : '🌙'}
+        </button>
       </div>
 
       {/* PINNED MESSAGE */}
@@ -628,7 +647,7 @@ export default function Chat({ session, profile }) {
                     />
                     <div className="tg-circle-time">
                       {formatTime(msg.created_at)}
-                      {mine && <span className="tg-tick">{partnerOnline ? '✓✓' : '✓'}</span>}
+                      {mine && <span className={`tg-tick ${partnerLastReadAt && new Date(msg.created_at) <= new Date(partnerLastReadAt) ? 'read' : ''}`}>{partnerLastReadAt && new Date(msg.created_at) <= new Date(partnerLastReadAt) ? '✓✓' : '✓'}</span>}
                     </div>
                   </div>
 
@@ -670,7 +689,7 @@ export default function Chat({ session, profile }) {
                           </span>
                           <span className="tg-msg-time">
                             {formatTime(msg.created_at)}
-                            {mine && <span className={`tg-tick ${partnerOnline ? 'read' : ''}`}>{partnerOnline ? ' ✓✓' : ' ✓'}</span>}
+                            {mine && <span className={`tg-tick ${partnerLastReadAt && new Date(msg.created_at) <= new Date(partnerLastReadAt) ? 'read' : ''}`}>{partnerLastReadAt && new Date(msg.created_at) <= new Date(partnerLastReadAt) ? ' ✓✓' : ' ✓'}</span>}
                           </span>
                         </div>
                       </div>
@@ -690,8 +709,8 @@ export default function Chat({ session, profile }) {
                       {msg.edited_at && <span className="tg-edited">изм.</span>}
                       <span className="tg-time">{formatTime(msg.created_at)}</span>
                       {mine && (
-                        <span className={`tg-tick ${partnerOnline ? 'read' : ''}`}>
-                          {partnerOnline ? '✓✓' : '✓'}
+                        <span className={`tg-tick ${partnerLastReadAt && new Date(msg.created_at) <= new Date(partnerLastReadAt) ? 'read' : ''}`}>
+                          {partnerLastReadAt && new Date(msg.created_at) <= new Date(partnerLastReadAt) ? '✓✓' : '✓'}
                         </span>
                       )}
                     </div>
@@ -827,6 +846,16 @@ export default function Chat({ session, profile }) {
       {/* INPUT BAR */}
       {!recording && (
         <div className="tg-input-bar">
+          {/* EMOJI PICKER — inside input bar so position:absolute works */}
+          {showEmojiPicker && (
+            <div className="tg-emoji-picker" onClick={e => e.stopPropagation()}>
+              {['😍','❤️','🔥','💋','💕','😘','🥰','😂','👍','😊','🎉','✨','💫','🌹','🦋','💌','😭','🤗','💯','🫶','💪','🙈','😏','🥺','🤩','😇','💝','🌸','🍀','🌙'].map(e => (
+                <button key={e} className="tg-emoji-btn" onClick={() => { setNewText(t => t + e); setShowEmojiPicker(false); inputRef.current?.focus() }}>
+                  {e}
+                </button>
+              ))}
+            </div>
+          )}
           <button onClick={(e) => { e.stopPropagation(); setShowEmojiPicker(v => !v) }} className="tg-input-icon-btn">
             <Smile size={22} color={showEmojiPicker ? 'var(--primary)' : '#8B7088'} />
           </button>
@@ -859,17 +888,6 @@ export default function Chat({ session, profile }) {
               </button>
             </>
           )}
-        </div>
-      )}
-
-      {/* EMOJI PICKER */}
-      {showEmojiPicker && (
-        <div className="tg-emoji-picker" onClick={e => e.stopPropagation()}>
-          {['😍','❤️','🔥','💋','💕','😘','🥰','😂','👍','😊','🎉','✨','💫','🌹','🦋','💌','😭','🤗','💯','🫶','💪','🙈','😏','🥺','🤩','😇','💝','🌸','🍀','🌙'].map(e => (
-            <button key={e} className="tg-emoji-btn" onClick={() => { setNewText(t => t + e); setShowEmojiPicker(false); inputRef.current?.focus() }}>
-              {e}
-            </button>
-          ))}
         </div>
       )}
 
@@ -1357,6 +1375,45 @@ function TGStyles() {
         border-color: rgba(232,70,106,0.3);
       }
       .tg-reaction span { font-size: 12px; font-weight: 600; }
+      /* THEME TOGGLE BUTTON */
+      .tg-theme-toggle {
+        margin-left: auto; background: rgba(255,255,255,0.2);
+        border: none; border-radius: 50%; width: 36px; height: 36px;
+        font-size: 18px; cursor: pointer; flex-shrink: 0;
+        display: flex; align-items: center; justify-content: center;
+      }
+      /* DARK MODE */
+      .tg-chat.dark { background: #1A1825; }
+      .tg-chat.dark .tg-messages { background: transparent; }
+      .tg-chat.dark::before { background-image: radial-gradient(circle, rgba(232,70,106,0.04) 1px, transparent 1px); }
+      .tg-chat.dark .tg-bubble.theirs { background: #2A2540; color: #EDE4F0; }
+      .tg-chat.dark .tg-bubble.theirs.tail::after { background: #2A2540; }
+      .tg-chat.dark .tg-input-bar { background: #1A1825; border-top-color: rgba(232,70,106,0.15); }
+      .tg-chat.dark .tg-input-field { background: #2A2540; }
+      .tg-chat.dark .tg-input-field textarea { color: #EDE4F0; }
+      .tg-chat.dark .tg-input-field textarea::placeholder { color: #7A6880; }
+      .tg-chat.dark .tg-input-icon-btn svg { filter: brightness(0.7) sepia(0.3); }
+      .tg-chat.dark .tg-recording-panel { background: #1A1825; border-top-color: rgba(232,70,106,0.15); }
+      .tg-chat.dark .tg-pinned { background: #2A2540; border-bottom-color: rgba(232,70,106,0.15); }
+      .tg-chat.dark .tg-pinned-text { color: #9A8098; }
+      .tg-chat.dark .tg-pinned-close { color: #7A6880; }
+      .tg-chat.dark .tg-reply-bar { background: #1A1825; border-top-color: rgba(232,70,106,0.15); }
+      .tg-chat.dark .tg-reply-bar-text { color: #9A8098; }
+      .tg-chat.dark .tg-reply-bar-close { color: #7A6880; }
+      .tg-chat.dark .tg-photo-preview-bar { background: #1A1825; border-top-color: #333; }
+      .tg-chat.dark .tg-photo-preview-bar span { color: #9A8098; }
+      .tg-chat.dark .tg-ctx-menu { background: #2A2540; }
+      .tg-chat.dark .tg-ctx-item { color: #EDE4F0; border-bottom-color: #3A3050; }
+      .tg-chat.dark .tg-ctx-item:active { background: #3A3050; }
+      .tg-chat.dark .tg-ctx-divider { background: #3A3050; }
+      .tg-chat.dark .tg-emoji-picker { background: #2A2540; }
+      .tg-chat.dark .tg-emoji-btn:active { background: #3A3050; }
+      .tg-chat.dark .tg-scroll-btn { background: #2A2540; box-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+      .tg-chat.dark .tg-reply-preview.theirs { background: rgba(232,70,106,0.1); }
+      .tg-chat.dark .tg-bubble.theirs .tg-voice-play-btn { background: rgba(232,70,106,0.2); }
+      .tg-chat.dark .tg-reaction { background: rgba(255,255,255,0.08); }
+      .tg-chat.dark .tg-rec-cancel { background: #3A3050; color: #9A8098; }
+      .tg-chat.dark .tg-rec-switch { background: #3A3050; }
     `}</style>
   )
 }

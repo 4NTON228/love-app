@@ -15,6 +15,14 @@ export default function App() {
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('home')
   const [profile, setProfile] = useState(null)
+  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('appDarkMode') === 'true')
+
+  function toggleDarkMode() {
+    setDarkMode(v => {
+      localStorage.setItem('appDarkMode', !v)
+      return !v
+    })
+  }
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -73,12 +81,12 @@ export default function App() {
   }
 
   return (
-    <div className="app">
+    <div className={`app${darkMode ? ' dark' : ''}`}>
       {activeTab !== 'chat' && <Hearts />}
       <div className="app-content" style={activeTab === 'chat' ? { padding: 0, paddingTop: 'var(--safe-top)' } : {}}>
         {renderTab()}
       </div>
-      <Navigation activeTab={activeTab} setActiveTab={setActiveTab} />
+      <Navigation activeTab={activeTab} setActiveTab={setActiveTab} darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
     </div>
   )
 }

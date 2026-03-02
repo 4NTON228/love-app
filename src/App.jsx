@@ -83,10 +83,17 @@ export default function App() {
   return (
     <div className={`app${darkMode ? ' dark' : ''}`}>
       {activeTab !== 'chat' && <Hearts />}
+      <button
+        className="theme-toggle-btn"
+        onClick={toggleDarkMode}
+        aria-label="Сменить тему"
+      >
+        {darkMode ? '☀️' : '🌙'}
+      </button>
       <div className="app-content" style={activeTab === 'chat' ? { padding: 0, paddingTop: 'var(--safe-top)' } : {}}>
         {renderTab()}
       </div>
-      <Navigation activeTab={activeTab} setActiveTab={setActiveTab} darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
+      <Navigation activeTab={activeTab} setActiveTab={setActiveTab} />
     </div>
   )
 }

@@ -379,8 +379,34 @@ h1, h2, h3 {
   transform: scale(0.9);
 }
 
-.nav-theme-btn {
-  color: var(--text-muted);
+.theme-toggle-btn {
+  position: fixed;
+  top: calc(var(--safe-top) + 12px);
+  right: 16px;
+  z-index: 150;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 2px 12px rgba(232, 70, 106, 0.15);
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.theme-toggle-btn:active {
+  transform: scale(0.9);
+}
+
+.app.dark .theme-toggle-btn {
+  background: rgba(42, 37, 64, 0.85);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
 }
 
 /* =============================================

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { supabase } from '../lib/supabase'
 import { Send, Image, Video, X, ArrowDown, Mic, Play, Pause, Reply, Edit3, Trash2, Pin, Smile, Check, CheckCheck, Copy, RotateCcw, PinOff, Forward } from 'lucide-react'
 import { sendPushNotification } from '../lib/push'
@@ -899,8 +900,8 @@ export default function Chat({ session, profile }) {
       <TGStyles partnerOnline={partnerOnline} />
     </div>
 
-    {/* MEDIA — вне tg-chat, чтобы перекрывать весь экран включая навбар */}
-    {showMedia && (
+    {/* MEDIA — через портал в body, вне всех stacking context */}
+    {showMedia && createPortal(
       <MediaSection
         messages={messages}
         myId={myId}
@@ -915,18 +916,20 @@ export default function Chat({ session, profile }) {
         formatTime={formatTime}
         onOpenPhoto={(url) => { setShowMedia(false); setLightbox({ type: 'photo', url }) }}
         onOpenVideo={(url) => { setShowMedia(false); setLightbox({ type: 'video', url }) }}
-      />
+      />,
+      document.body
     )}
 
-    {/* LIGHTBOX — вне tg-chat */}
-    {lightbox && (
+    {/* LIGHTBOX — через портал в body */}
+    {lightbox && createPortal(
       <div className="tg-lightbox" onClick={() => setLightbox(null)}>
         {lightbox.type === 'photo'
           ? <img src={lightbox.url} alt="" className="tg-lightbox-img" onClick={e => e.stopPropagation()} />
           : <video src={lightbox.url} className="tg-lightbox-video" controls autoPlay playsInline onClick={e => e.stopPropagation()} />
         }
         <button className="tg-lightbox-close" onClick={() => setLightbox(null)}><X size={24} /></button>
-      </div>
+      </div>,
+      document.body
     )}
     </>
   )
@@ -1577,6 +1580,7 @@ function TGStyles() {
         display: flex; flex-direction: column;
         animation: slideUp 0.3s ease;
         overflow: hidden;
+        padding-top: env(safe-area-inset-top, 0px);
       }
       .tg-media-header {
         display: flex; align-items: center; justify-content: space-between;

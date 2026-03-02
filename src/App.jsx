@@ -68,7 +68,7 @@ export default function App() {
       case 'home':
         return <Home session={session} profile={profile} />
       case 'chat':
-        return <Chat session={session} profile={profile} />
+        return <Chat session={session} profile={profile} darkMode={darkMode} />
       case 'calendar':
         return <Calendar session={session} profile={profile} />
       case 'moments':

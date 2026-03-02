@@ -6,7 +6,7 @@ import { sendPushNotification } from '../lib/push'
 
 const REACTION_EMOJIS = ['❤️', '🔥', '😂', '👍', '😍', '😢', '🎉', '💋']
 
-export default function Chat({ session, profile }) {
+export default function Chat({ session, profile, darkMode }) {
   const [messages, setMessages] = useState([])
   const [newText, setNewText] = useState('')
   const [sending, setSending] = useState(false)
@@ -914,6 +914,7 @@ export default function Chat({ session, profile }) {
         audioDuration={audioDuration}
         formatAudioTime={formatAudioTime}
         formatTime={formatTime}
+        darkMode={darkMode}
         onOpenPhoto={(url) => { setShowMedia(false); setLightbox({ type: 'photo', url }) }}
         onOpenVideo={(url) => { setShowMedia(false); setLightbox({ type: 'video', url }) }}
       />,
@@ -935,7 +936,7 @@ export default function Chat({ session, profile }) {
   )
 }
 
-function MediaSection({ messages, myId, myName, partnerName, onClose, onPlayAudio, playingAudio, audioProgress, audioDuration, formatAudioTime, formatTime, onOpenPhoto, onOpenVideo }) {
+function MediaSection({ messages, myId, myName, partnerName, onClose, onPlayAudio, playingAudio, audioProgress, audioDuration, formatAudioTime, formatTime, darkMode, onOpenPhoto, onOpenVideo }) {
   const [tab, setTab] = useState('photos')
 
   const photos = messages.filter(m => m.photo_url)
@@ -959,7 +960,7 @@ function MediaSection({ messages, myId, myName, partnerName, onClose, onPlayAudi
   }
 
   return (
-    <div className="tg-media-overlay" onClick={onClose}>
+    <div className={`tg-media-overlay${darkMode ? ' dark' : ''}`} onClick={onClose}>
       <div className="tg-media-panel" onClick={e => e.stopPropagation()}>
         <div className="tg-media-header">
           <span className="tg-media-title">Медиафайлы</span>
@@ -1667,15 +1668,15 @@ function TGStyles() {
         white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
       }
       .tg-media-link-from { font-size: 11px; color: var(--text-muted); }
-      /* DARK MODE — media */
-      .app.dark .tg-media-panel { background: #2A2540; }
-      .app.dark .tg-media-header { border-bottom-color: rgba(232,70,106,0.15); }
-      .app.dark .tg-media-title { color: #EDE4F0; }
-      .app.dark .tg-media-close { color: #7A6880; }
-      .app.dark .tg-media-tab { color: #7A6880; }
-      .app.dark .tg-media-voice-item { background: #3A3050; }
-      .app.dark .tg-media-link-item { background: #3A3050; }
-      .app.dark .tg-media-empty { color: #7A6880; }
+      /* DARK MODE — media (класс dark на самом оверлее, т.к. портал рендерится в body) */
+      .tg-media-overlay.dark .tg-media-panel { background: #2A2540; }
+      .tg-media-overlay.dark .tg-media-header { border-bottom-color: rgba(232,70,106,0.15); }
+      .tg-media-overlay.dark .tg-media-title { color: #EDE4F0; }
+      .tg-media-overlay.dark .tg-media-close { color: #7A6880; }
+      .tg-media-overlay.dark .tg-media-tab { color: #7A6880; }
+      .tg-media-overlay.dark .tg-media-voice-item { background: #3A3050; }
+      .tg-media-overlay.dark .tg-media-link-item { background: #3A3050; }
+      .tg-media-overlay.dark .tg-media-empty { color: #7A6880; }
       /* LIGHTBOX */
       .tg-lightbox {
         position: fixed; inset: 0; z-index: 500;

@@ -549,7 +549,7 @@ export default function Chat({ session, profile }) {
   if (loading) return <div className="tg-loading"><div className="loading-heart">💕</div></div>
 
   return (
-    <div className="tg-chat" onClick={() => { closeContextMenu(); setShowEmojiPicker(false) }}>
+    <div className="tg-chat" style={{ zIndex: (showMedia || lightbox) ? 260 : undefined }} onClick={() => { closeContextMenu(); setShowEmojiPicker(false) }}>
 
       {/* HEADER — click to open media */}
       <div className="tg-header" style={{ cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); setShowMedia(true) }}>

@@ -33,6 +33,9 @@ export default function Chat({ session, profile }) {
   const [swipeOffset, setSwipeOffset] = useState({})
   const [unreadCount, setUnreadCount] = useState(0)
   const [partnerLastReadAt, setPartnerLastReadAt] = useState(null)
+  const [partnerProfile, setPartnerProfile] = useState(null)
+  const [showMedia, setShowMedia] = useState(false)
+  const [mediaTab, setMediaTab] = useState('photos')
 
   const messagesEndRef = useRef(null)
   const chatContainerRef = useRef(null)
@@ -133,6 +136,9 @@ export default function Chat({ session, profile }) {
     if (pinned) setPinnedMessage(pinned)
     setTimeout(scrollToBottom, 200)
     setTimeout(updateLastRead, 600)
+    // Fetch partner profile
+    const { data: profiles } = await supabase.from('profiles').select('*').neq('id', myId).limit(1)
+    if (profiles?.[0]) setPartnerProfile(profiles[0])
   }
 
   async function updateLastRead() {
@@ -549,7 +555,7 @@ export default function Chat({ session, profile }) {
         <div className="tg-header-avatar">
           {profile?.avatar_url ? <img src={profile.avatar_url} alt="" /> : '💕'}
         </div>
-        <div className="tg-header-info">
+        <div className="tg-header-info" style={{ flex: 1 }}>
           <div className="tg-header-name">Наш чат 💕</div>
           <div className="tg-header-status">
             {partnerTyping ? (
@@ -563,7 +569,27 @@ export default function Chat({ session, profile }) {
             )}
           </div>
         </div>
+        <button className="tg-media-btn" onClick={(e) => { e.stopPropagation(); setShowMedia(true) }} aria-label="Медиа">
+          <Image size={20} color="white" />
+        </button>
       </div>
+
+      {/* MEDIA SECTION */}
+      {showMedia && (
+        <MediaSection
+          messages={messages}
+          myId={myId}
+          myName={profile?.name}
+          partnerName={partnerProfile?.name}
+          onClose={() => setShowMedia(false)}
+          onPlayAudio={toggleAudio}
+          playingAudio={playingAudio}
+          audioProgress={audioProgress}
+          audioDuration={audioDuration}
+          formatAudioTime={formatAudioTime}
+          formatTime={formatTime}
+        />
+      )}
 
       {/* PINNED MESSAGE */}
       {pinnedMessage && (
@@ -646,7 +672,7 @@ export default function Chat({ session, profile }) {
                 ) : voice ? (
                   /* VOICE MESSAGE */
                   <div className={`tg-bubble ${mine ? 'mine' : 'theirs'} voice ${lastInGroup ? 'tail' : ''}`}>
-                    {replyMsg && <ReplyPreview msg={replyMsg} mine={mine} />}
+                    {replyMsg && <ReplyPreview msg={replyMsg} mine={mine} myId={myId} myName={profile?.name} partnerName={partnerProfile?.name} />}
                     <div className="tg-voice-inner">
                       <button className="tg-voice-play-btn" onClick={() => toggleAudio(msg.id, msg.video_url)}>
                         {playingAudio === msg.id ? <Pause size={18} /> : <Play size={18} />}
@@ -692,7 +718,7 @@ export default function Chat({ session, profile }) {
                 ) : (
                   /* TEXT / PHOTO BUBBLE */
                   <div className={`tg-bubble ${mine ? 'mine' : 'theirs'} ${msg.photo_url && !msg.text ? 'photo-only' : ''} ${lastInGroup ? 'tail' : ''}`}>
-                    {replyMsg && <ReplyPreview msg={replyMsg} mine={mine} />}
+                    {replyMsg && <ReplyPreview msg={replyMsg} mine={mine} myId={myId} myName={profile?.name} partnerName={partnerProfile?.name} />}
                     {msg.photo_url && (
                       <img src={msg.photo_url} alt="" className="tg-photo" loading="lazy" />
                     )}
@@ -781,7 +807,7 @@ export default function Chat({ session, profile }) {
         <div className="tg-reply-bar">
           <div className="tg-reply-bar-line" />
           <div className="tg-reply-bar-content">
-            <div className="tg-reply-bar-name">{isMine(replyTo) ? 'Вы' : (profile?.name || 'Партнёр')}</div>
+            <div className="tg-reply-bar-name">{isMine(replyTo) ? (profile?.name || 'Вы') : (partnerProfile?.name || 'Партнёр')}</div>
             <div className="tg-reply-bar-text">{replyTo.text || (replyTo.photo_url ? '📷 Фото' : replyTo.is_video_circle ? '🔵 Кружочек' : '🎤 Голосовое')}</div>
           </div>
           <button onClick={() => setReplyTo(null)} className="tg-reply-bar-close"><X size={18} /></button>
@@ -888,14 +914,130 @@ export default function Chat({ session, profile }) {
   )
 }
 
-function ReplyPreview({ msg, mine }) {
+function MediaSection({ messages, myId, myName, partnerName, onClose, onPlayAudio, playingAudio, audioProgress, audioDuration, formatAudioTime, formatTime }) {
+  const [tab, setTab] = useState('photos')
+
+  const photos = messages.filter(m => m.photo_url)
+  const circles = messages.filter(m => m.is_video_circle && m.video_url)
+  const voices = messages.filter(m => m.video_url && !m.is_video_circle && (m.is_voice || m.text === '🎤 Голосовое сообщение'))
+  const links = messages.filter(m => m.text && /https?:\/\/\S+/.test(m.text))
+    .flatMap(m => {
+      const urls = m.text.match(/https?:\/\/\S+/g) || []
+      return urls.map(url => ({ url, msg: m }))
+    })
+
+  const tabs = [
+    { id: 'photos', label: '📷 Фото', count: photos.length },
+    { id: 'circles', label: '🔵 Кружочки', count: circles.length },
+    { id: 'voices', label: '🎤 Голосовые', count: voices.length },
+    { id: 'links', label: '🔗 Ссылки', count: links.length },
+  ]
+
+  function getSenderName(msg) {
+    return msg.user_id === myId ? (myName || 'Вы') : (partnerName || 'Партнёр')
+  }
+
+  return (
+    <div className="tg-media-overlay" onClick={onClose}>
+      <div className="tg-media-panel" onClick={e => e.stopPropagation()}>
+        <div className="tg-media-header">
+          <span className="tg-media-title">Медиафайлы</span>
+          <button className="tg-media-close" onClick={onClose}><X size={20} /></button>
+        </div>
+        <div className="tg-media-tabs">
+          {tabs.map(t => (
+            <button
+              key={t.id}
+              className={`tg-media-tab ${tab === t.id ? 'active' : ''}`}
+              onClick={() => setTab(t.id)}
+            >
+              {t.label} {t.count > 0 && <span className="tg-media-tab-count">{t.count}</span>}
+            </button>
+          ))}
+        </div>
+        <div className="tg-media-content">
+          {tab === 'photos' && (
+            photos.length === 0 ? (
+              <div className="tg-media-empty">📷<p>Нет фотографий</p></div>
+            ) : (
+              <div className="tg-media-grid">
+                {photos.map(m => (
+                  <a key={m.id} href={m.photo_url} target="_blank" rel="noreferrer" className="tg-media-photo-cell">
+                    <img src={m.photo_url} alt="" loading="lazy" />
+                    <span className="tg-media-cell-time">{formatTime(m.created_at)}</span>
+                  </a>
+                ))}
+              </div>
+            )
+          )}
+          {tab === 'circles' && (
+            circles.length === 0 ? (
+              <div className="tg-media-empty">🔵<p>Нет видео-кружочков</p></div>
+            ) : (
+              <div className="tg-media-grid">
+                {circles.map(m => (
+                  <div key={m.id} className="tg-media-photo-cell">
+                    <video src={m.video_url} className="tg-media-circle-thumb" playsInline
+                      onClick={(e) => { const v = e.target; v.paused ? v.play() : v.pause() }}
+                    />
+                    <span className="tg-media-cell-time">{formatTime(m.created_at)}</span>
+                  </div>
+                ))}
+              </div>
+            )
+          )}
+          {tab === 'voices' && (
+            voices.length === 0 ? (
+              <div className="tg-media-empty">🎤<p>Нет голосовых</p></div>
+            ) : (
+              <div className="tg-media-list">
+                {voices.map(m => (
+                  <div key={m.id} className="tg-media-voice-item">
+                    <button className="tg-media-voice-play" onClick={() => onPlayAudio(m.id, m.video_url)}>
+                      {playingAudio === m.id ? <Pause size={18} /> : <Play size={18} />}
+                    </button>
+                    <div className="tg-media-voice-info">
+                      <span className="tg-media-voice-name">{getSenderName(m)}</span>
+                      <span className="tg-media-voice-dur">{formatAudioTime(audioDuration[m.id]) || '—'}</span>
+                    </div>
+                    <span className="tg-media-voice-time">{formatTime(m.created_at)}</span>
+                  </div>
+                ))}
+              </div>
+            )
+          )}
+          {tab === 'links' && (
+            links.length === 0 ? (
+              <div className="tg-media-empty">🔗<p>Нет ссылок</p></div>
+            ) : (
+              <div className="tg-media-list">
+                {links.map(({ url, msg }, i) => (
+                  <a key={i} href={url} target="_blank" rel="noreferrer" className="tg-media-link-item">
+                    <span className="tg-media-link-icon">🔗</span>
+                    <div className="tg-media-link-info">
+                      <span className="tg-media-link-url">{url}</span>
+                      <span className="tg-media-link-from">{getSenderName(msg)} · {formatTime(msg.created_at)}</span>
+                    </div>
+                  </a>
+                ))}
+              </div>
+            )
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ReplyPreview({ msg, mine, myId, myName, partnerName }) {
   const isVoice = msg.video_url && !msg.is_video_circle && (msg.is_voice || msg.text === '🎤 Голосовое сообщение')
   const text = msg.text || (msg.photo_url ? '📷 Фото' : msg.is_video_circle ? '🔵 Кружочек' : isVoice ? '🎤 Голосовое' : '')
+  const senderName = msg.user_id === myId ? (myName || 'Вы') : (partnerName || 'Партнёр')
   return (
     <div className={`tg-reply-preview ${mine ? 'mine' : 'theirs'}`}>
       <div className="tg-reply-preview-line" />
       <div className="tg-reply-preview-body">
-        <div className="tg-reply-preview-name">{msg._senderName || 'Сообщение'}</div>
+        <div className="tg-reply-preview-name">{senderName}</div>
         {msg.photo_url && <img src={msg.photo_url} alt="" className="tg-reply-photo-thumb" />}
         <div className="tg-reply-preview-text">{text}</div>
       </div>
@@ -1398,6 +1540,122 @@ function TGStyles() {
       .app.dark .tg-reaction { background: rgba(255,255,255,0.08); }
       .app.dark .tg-rec-cancel { background: #3A3050; color: #9A8098; }
       .app.dark .tg-rec-switch { background: #3A3050; }
+      /* MEDIA BUTTON */
+      .tg-media-btn {
+        background: rgba(255,255,255,0.2); border: none; border-radius: 50%;
+        width: 36px; height: 36px; cursor: pointer; flex-shrink: 0;
+        display: flex; align-items: center; justify-content: center;
+        transition: background 0.2s;
+      }
+      .tg-media-btn:active { background: rgba(255,255,255,0.35); }
+      /* MEDIA OVERLAY */
+      .tg-media-overlay {
+        position: fixed; inset: 0; z-index: 300;
+        background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
+        display: flex; align-items: flex-end;
+        animation: fadeIn 0.2s ease;
+      }
+      .tg-media-panel {
+        width: 100%; max-height: 80vh;
+        background: white; border-radius: 24px 24px 0 0;
+        display: flex; flex-direction: column;
+        animation: slideUp 0.3s ease;
+        overflow: hidden;
+      }
+      .tg-media-header {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 16px 20px 12px;
+        border-bottom: 1px solid rgba(232,70,106,0.1);
+        flex-shrink: 0;
+      }
+      .tg-media-title { font-weight: 700; font-size: 17px; font-family: var(--font-display); }
+      .tg-media-close { background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 4px; }
+      .tg-media-tabs {
+        display: flex; gap: 0; overflow-x: auto; flex-shrink: 0;
+        border-bottom: 1px solid rgba(232,70,106,0.08);
+        padding: 0 12px;
+      }
+      .tg-media-tabs::-webkit-scrollbar { display: none; }
+      .tg-media-tab {
+        background: none; border: none; cursor: pointer;
+        padding: 10px 12px; font-size: 13px; font-weight: 600;
+        color: var(--text-muted); white-space: nowrap;
+        border-bottom: 2px solid transparent;
+        font-family: var(--font-body);
+        display: flex; align-items: center; gap: 5px;
+        transition: color 0.2s;
+      }
+      .tg-media-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+      .tg-media-tab-count {
+        background: var(--primary); color: white;
+        font-size: 10px; padding: 1px 6px; border-radius: 10px;
+      }
+      .tg-media-content { flex: 1; overflow-y: auto; padding: 12px; }
+      .tg-media-content::-webkit-scrollbar { display: none; }
+      .tg-media-empty {
+        text-align: center; padding: 40px 20px;
+        color: var(--text-muted); font-size: 40px;
+      }
+      .tg-media-empty p { font-size: 15px; margin-top: 8px; }
+      /* PHOTO GRID */
+      .tg-media-grid {
+        display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px;
+      }
+      .tg-media-photo-cell {
+        position: relative; aspect-ratio: 1; overflow: hidden;
+        border-radius: 8px; display: block;
+      }
+      .tg-media-photo-cell img {
+        width: 100%; height: 100%; object-fit: cover;
+        transition: transform 0.2s;
+      }
+      .tg-media-photo-cell:active img { transform: scale(0.95); }
+      .tg-media-circle-thumb {
+        width: 100%; height: 100%; object-fit: cover; border-radius: 50%;
+        cursor: pointer;
+      }
+      .tg-media-cell-time {
+        position: absolute; bottom: 4px; right: 6px;
+        font-size: 10px; color: white; font-weight: 600;
+        text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+      }
+      /* VOICE LIST */
+      .tg-media-list { display: flex; flex-direction: column; gap: 2px; }
+      .tg-media-voice-item {
+        display: flex; align-items: center; gap: 12px;
+        padding: 10px 12px; border-radius: 12px;
+        background: var(--bg);
+      }
+      .tg-media-voice-play {
+        width: 38px; height: 38px; border-radius: 50%;
+        background: var(--primary); color: white; border: none; cursor: pointer;
+        display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+      }
+      .tg-media-voice-info { flex: 1; }
+      .tg-media-voice-name { font-size: 13px; font-weight: 600; color: var(--text); display: block; }
+      .tg-media-voice-dur { font-size: 12px; color: var(--text-muted); }
+      .tg-media-voice-time { font-size: 11px; color: var(--text-muted); }
+      /* LINKS LIST */
+      .tg-media-link-item {
+        display: flex; align-items: center; gap: 12px; padding: 10px 12px;
+        border-radius: 12px; background: var(--bg); text-decoration: none; color: inherit;
+      }
+      .tg-media-link-icon { font-size: 20px; flex-shrink: 0; }
+      .tg-media-link-info { flex: 1; min-width: 0; }
+      .tg-media-link-url {
+        font-size: 13px; color: #2196F3; display: block;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      }
+      .tg-media-link-from { font-size: 11px; color: var(--text-muted); }
+      /* DARK MODE — media */
+      .app.dark .tg-media-panel { background: #2A2540; }
+      .app.dark .tg-media-header { border-bottom-color: rgba(232,70,106,0.15); }
+      .app.dark .tg-media-title { color: #EDE4F0; }
+      .app.dark .tg-media-close { color: #7A6880; }
+      .app.dark .tg-media-tab { color: #7A6880; }
+      .app.dark .tg-media-voice-item { background: #3A3050; }
+      .app.dark .tg-media-link-item { background: #3A3050; }
+      .app.dark .tg-media-empty { color: #7A6880; }
     `}</style>
   )
 }

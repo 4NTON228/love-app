@@ -1568,12 +1568,12 @@ function TGStyles() {
       .tg-media-overlay {
         position: fixed; inset: 0; z-index: 300;
         background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
-        display: flex; align-items: flex-end;
+        display: flex; align-items: stretch;
         animation: fadeIn 0.2s ease;
       }
       .tg-media-panel {
-        width: 100%; max-height: 80vh;
-        background: white; border-radius: 24px 24px 0 0;
+        width: 100%; height: 100%;
+        background: white; border-radius: 0;
         display: flex; flex-direction: column;
         animation: slideUp 0.3s ease;
         overflow: hidden;

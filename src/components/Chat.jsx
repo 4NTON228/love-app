@@ -549,7 +549,8 @@ export default function Chat({ session, profile }) {
   if (loading) return <div className="tg-loading"><div className="loading-heart">💕</div></div>
 
   return (
-    <div className="tg-chat" style={{ zIndex: (showMedia || lightbox) ? 260 : undefined }} onClick={() => { closeContextMenu(); setShowEmojiPicker(false) }}>
+    <>
+    <div className="tg-chat" onClick={() => { closeContextMenu(); setShowEmojiPicker(false) }}>
 
       {/* HEADER — click to open media */}
       <div className="tg-header" style={{ cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); setShowMedia(true) }}>
@@ -572,36 +573,6 @@ export default function Chat({ session, profile }) {
         </div>
         <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12, paddingRight: 4, flexShrink: 0 }}>Медиа ›</span>
       </div>
-
-      {/* MEDIA SECTION */}
-      {showMedia && (
-        <MediaSection
-          messages={messages}
-          myId={myId}
-          myName={profile?.name}
-          partnerName={partnerProfile?.name}
-          onClose={() => setShowMedia(false)}
-          onPlayAudio={toggleAudio}
-          playingAudio={playingAudio}
-          audioProgress={audioProgress}
-          audioDuration={audioDuration}
-          formatAudioTime={formatAudioTime}
-          formatTime={formatTime}
-          onOpenPhoto={(url) => { setShowMedia(false); setLightbox({ type: 'photo', url }) }}
-          onOpenVideo={(url) => { setShowMedia(false); setLightbox({ type: 'video', url }) }}
-        />
-      )}
-
-      {/* LIGHTBOX */}
-      {lightbox && (
-        <div className="tg-lightbox" onClick={() => setLightbox(null)}>
-          {lightbox.type === 'photo'
-            ? <img src={lightbox.url} alt="" className="tg-lightbox-img" onClick={e => e.stopPropagation()} />
-            : <video src={lightbox.url} className="tg-lightbox-video" controls autoPlay playsInline onClick={e => e.stopPropagation()} />
-          }
-          <button className="tg-lightbox-close" onClick={() => setLightbox(null)}><X size={24} /></button>
-        </div>
-      )}
 
       {/* PINNED MESSAGE */}
       {pinnedMessage && (
@@ -927,6 +898,37 @@ export default function Chat({ session, profile }) {
 
       <TGStyles partnerOnline={partnerOnline} />
     </div>
+
+    {/* MEDIA — вне tg-chat, чтобы перекрывать весь экран включая навбар */}
+    {showMedia && (
+      <MediaSection
+        messages={messages}
+        myId={myId}
+        myName={profile?.name}
+        partnerName={partnerProfile?.name}
+        onClose={() => setShowMedia(false)}
+        onPlayAudio={toggleAudio}
+        playingAudio={playingAudio}
+        audioProgress={audioProgress}
+        audioDuration={audioDuration}
+        formatAudioTime={formatAudioTime}
+        formatTime={formatTime}
+        onOpenPhoto={(url) => { setShowMedia(false); setLightbox({ type: 'photo', url }) }}
+        onOpenVideo={(url) => { setShowMedia(false); setLightbox({ type: 'video', url }) }}
+      />
+    )}
+
+    {/* LIGHTBOX — вне tg-chat */}
+    {lightbox && (
+      <div className="tg-lightbox" onClick={() => setLightbox(null)}>
+        {lightbox.type === 'photo'
+          ? <img src={lightbox.url} alt="" className="tg-lightbox-img" onClick={e => e.stopPropagation()} />
+          : <video src={lightbox.url} className="tg-lightbox-video" controls autoPlay playsInline onClick={e => e.stopPropagation()} />
+        }
+        <button className="tg-lightbox-close" onClick={() => setLightbox(null)}><X size={24} /></button>
+      </div>
+    )}
+    </>
   )
 }
 

@@ -12,22 +12,48 @@ webpush.setVapidDetails(
   process.env.VAPID_PRIVATE_KEY
 )
 
-module.exports = async (req, res) => {
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
+// Netlify Functions format
+exports.handler = async (event) => {
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Content-Type': 'application/json'
+  }
 
-  const { title, body, senderId } = req.body
+  if (event.httpMethod === 'OPTIONS') {
+    return { statusCode: 204, headers, body: '' }
+  }
+
+  if (event.httpMethod !== 'POST') {
+    return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) }
+  }
+
+  let title, body, senderId
+  try {
+    const parsed = JSON.parse(event.body)
+    title = parsed.title
+    body = parsed.body
+    senderId = parsed.senderId
+  } catch {
+    return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid JSON' }) }
+  }
 
   const { data: subs } = await supabase
     .from('push_subscriptions')
     .select('*')
     .neq('user_id', senderId)
 
-  if (!subs || subs.length === 0) return res.status(200).json({ sent: 0 })
+  if (!subs || subs.length === 0) {
+    return { statusCode: 200, headers, body: JSON.stringify({ sent: 0 }) }
+  }
 
   let sent = 0
   for (const sub of subs) {
     try {
-      await webpush.sendNotification(sub.subscription, JSON.stringify({ title, body }))
+      await webpush.sendNotification(
+        sub.subscription,
+        JSON.stringify({ title, body })
+      )
       sent++
     } catch (err) {
       if (err.statusCode === 410) {
@@ -36,5 +62,5 @@ module.exports = async (req, res) => {
     }
   }
 
-  res.status(200).json({ sent })
+  return { statusCode: 200, headers, body: JSON.stringify({ sent }) }
 }

@@ -15,9 +15,21 @@ export async function subscribeToPush(userId) {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) return false
 
   try {
-    const reg = await navigator.serviceWorker.ready
-    let sub = await reg.pushManager.getSubscription()
+    // 1. Запросить разрешение
+    const permission = await Notification.requestPermission()
+    if (permission !== 'granted') return false
 
+    // 2. Зарегистрировать service worker если ещё не зарегистрирован
+    let reg = await navigator.serviceWorker.getRegistration('/')
+    if (!reg) {
+      reg = await navigator.serviceWorker.register('/sw.js')
+    }
+
+    // 3. Дождаться активации
+    await navigator.serviceWorker.ready
+
+    // 4. Получить или создать push-подписку
+    let sub = await reg.pushManager.getSubscription()
     if (!sub) {
       sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
@@ -25,6 +37,7 @@ export async function subscribeToPush(userId) {
       })
     }
 
+    // 5. Сохранить подписку в базу данных
     const { data: existing } = await supabase
       .from('push_subscriptions')
       .select('id')

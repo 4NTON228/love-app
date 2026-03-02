@@ -2,13 +2,13 @@ const webpush = require('web-push')
 const { createClient } = require('@supabase/supabase-js')
 
 const supabase = createClient(
-  process.env.VITE_SUPABASE_URL,
-  process.env.VITE_SUPABASE_ANON_KEY
+  process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_KEY || process.env.VITE_SUPABASE_ANON_KEY
 )
 
 webpush.setVapidDetails(
-  'mailto:love-app@example.com',
-  process.env.VITE_VAPID_PUBLIC_KEY,
+  process.env.VAPID_SUBJECT || 'mailto:love-app@example.com',
+  process.env.VAPID_PUBLIC_KEY || process.env.VITE_VAPID_PUBLIC_KEY,
   process.env.VAPID_PRIVATE_KEY
 )
 

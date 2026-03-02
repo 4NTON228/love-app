@@ -36,6 +36,7 @@ export default function Chat({ session, profile }) {
   const [partnerProfile, setPartnerProfile] = useState(null)
   const [showMedia, setShowMedia] = useState(false)
   const [mediaTab, setMediaTab] = useState('photos')
+  const [lightbox, setLightbox] = useState(null)
 
   const messagesEndRef = useRef(null)
   const chatContainerRef = useRef(null)
@@ -550,8 +551,8 @@ export default function Chat({ session, profile }) {
   return (
     <div className="tg-chat" onClick={() => { closeContextMenu(); setShowEmojiPicker(false) }}>
 
-      {/* HEADER */}
-      <div className="tg-header">
+      {/* HEADER — click to open media */}
+      <div className="tg-header" style={{ cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); setShowMedia(true) }}>
         <div className="tg-header-avatar">
           {profile?.avatar_url ? <img src={profile.avatar_url} alt="" /> : '💕'}
         </div>
@@ -569,9 +570,7 @@ export default function Chat({ session, profile }) {
             )}
           </div>
         </div>
-        <button className="tg-media-btn" onClick={(e) => { e.stopPropagation(); setShowMedia(true) }} aria-label="Медиа">
-          <Image size={20} color="white" />
-        </button>
+        <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12, paddingRight: 4, flexShrink: 0 }}>Медиа ›</span>
       </div>
 
       {/* MEDIA SECTION */}
@@ -588,7 +587,20 @@ export default function Chat({ session, profile }) {
           audioDuration={audioDuration}
           formatAudioTime={formatAudioTime}
           formatTime={formatTime}
+          onOpenPhoto={(url) => { setShowMedia(false); setLightbox({ type: 'photo', url }) }}
+          onOpenVideo={(url) => { setShowMedia(false); setLightbox({ type: 'video', url }) }}
         />
+      )}
+
+      {/* LIGHTBOX */}
+      {lightbox && (
+        <div className="tg-lightbox" onClick={() => setLightbox(null)}>
+          {lightbox.type === 'photo'
+            ? <img src={lightbox.url} alt="" className="tg-lightbox-img" onClick={e => e.stopPropagation()} />
+            : <video src={lightbox.url} className="tg-lightbox-video" controls autoPlay playsInline onClick={e => e.stopPropagation()} />
+          }
+          <button className="tg-lightbox-close" onClick={() => setLightbox(null)}><X size={24} /></button>
+        </div>
       )}
 
       {/* PINNED MESSAGE */}
@@ -661,7 +673,8 @@ export default function Chat({ session, profile }) {
                       src={msg.video_url}
                       className="tg-circle-video"
                       playsInline preload="metadata"
-                      onClick={(e) => { const v = e.target; v.paused ? v.play() : v.pause() }}
+                      style={{ cursor: 'pointer' }}
+                      onClick={(e) => { e.stopPropagation(); setLightbox({ type: 'video', url: msg.video_url }) }}
                     />
                     <div className="tg-circle-time">
                       {formatTime(msg.created_at)}
@@ -720,7 +733,10 @@ export default function Chat({ session, profile }) {
                   <div className={`tg-bubble ${mine ? 'mine' : 'theirs'} ${msg.photo_url && !msg.text ? 'photo-only' : ''} ${lastInGroup ? 'tail' : ''}`}>
                     {replyMsg && <ReplyPreview msg={replyMsg} mine={mine} myId={myId} myName={profile?.name} partnerName={partnerProfile?.name} />}
                     {msg.photo_url && (
-                      <img src={msg.photo_url} alt="" className="tg-photo" loading="lazy" />
+                      <img src={msg.photo_url} alt="" className="tg-photo" loading="lazy"
+                        style={{ cursor: 'zoom-in' }}
+                        onClick={(e) => { e.stopPropagation(); setLightbox({ type: 'photo', url: msg.photo_url }) }}
+                      />
                     )}
                     {msg.text && <div className="tg-text" onTouchStart={(e) => { e.stopPropagation(); handleLongPressEnd() }} onMouseDown={(e) => e.stopPropagation()}>{msg.text}</div>}
                     <div className="tg-meta">
@@ -914,7 +930,7 @@ export default function Chat({ session, profile }) {
   )
 }
 
-function MediaSection({ messages, myId, myName, partnerName, onClose, onPlayAudio, playingAudio, audioProgress, audioDuration, formatAudioTime, formatTime }) {
+function MediaSection({ messages, myId, myName, partnerName, onClose, onPlayAudio, playingAudio, audioProgress, audioDuration, formatAudioTime, formatTime, onOpenPhoto, onOpenVideo }) {
   const [tab, setTab] = useState('photos')
 
   const photos = messages.filter(m => m.photo_url)
@@ -962,10 +978,10 @@ function MediaSection({ messages, myId, myName, partnerName, onClose, onPlayAudi
             ) : (
               <div className="tg-media-grid">
                 {photos.map(m => (
-                  <a key={m.id} href={m.photo_url} target="_blank" rel="noreferrer" className="tg-media-photo-cell">
+                  <div key={m.id} className="tg-media-photo-cell" onClick={() => onOpenPhoto && onOpenPhoto(m.photo_url)}>
                     <img src={m.photo_url} alt="" loading="lazy" />
                     <span className="tg-media-cell-time">{formatTime(m.created_at)}</span>
-                  </a>
+                  </div>
                 ))}
               </div>
             )
@@ -976,10 +992,8 @@ function MediaSection({ messages, myId, myName, partnerName, onClose, onPlayAudi
             ) : (
               <div className="tg-media-grid">
                 {circles.map(m => (
-                  <div key={m.id} className="tg-media-photo-cell">
-                    <video src={m.video_url} className="tg-media-circle-thumb" playsInline
-                      onClick={(e) => { const v = e.target; v.paused ? v.play() : v.pause() }}
-                    />
+                  <div key={m.id} className="tg-media-photo-cell" onClick={() => onOpenVideo && onOpenVideo(m.video_url)}>
+                    <video src={m.video_url} className="tg-media-circle-thumb" playsInline preload="metadata" />
                     <span className="tg-media-cell-time">{formatTime(m.created_at)}</span>
                   </div>
                 ))}
@@ -1656,6 +1670,35 @@ function TGStyles() {
       .app.dark .tg-media-voice-item { background: #3A3050; }
       .app.dark .tg-media-link-item { background: #3A3050; }
       .app.dark .tg-media-empty { color: #7A6880; }
+      /* LIGHTBOX */
+      .tg-lightbox {
+        position: fixed; inset: 0; z-index: 500;
+        background: rgba(0,0,0,0.92); backdrop-filter: blur(8px);
+        display: flex; align-items: center; justify-content: center;
+        animation: fadeIn 0.2s ease;
+      }
+      .tg-lightbox-img {
+        max-width: 96vw; max-height: 88vh;
+        object-fit: contain; border-radius: 8px;
+        animation: tgLbIn 0.25s ease;
+      }
+      .tg-lightbox-video {
+        max-width: 96vw; max-height: 88vh;
+        border-radius: 8px; animation: tgLbIn 0.25s ease;
+      }
+      @keyframes tgLbIn {
+        from { transform: scale(0.88); opacity: 0; }
+        to { transform: scale(1); opacity: 1; }
+      }
+      .tg-lightbox-close {
+        position: absolute; top: 16px; right: 16px;
+        background: rgba(255,255,255,0.15); border: none; border-radius: 50%;
+        width: 44px; height: 44px; cursor: pointer; color: white;
+        display: flex; align-items: center; justify-content: center;
+        z-index: 501;
+      }
+      /* PHOTO CELL CURSOR */
+      .tg-media-photo-cell { cursor: pointer; }
     `}</style>
   )
 }

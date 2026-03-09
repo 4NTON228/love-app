@@ -1,8 +1,67 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
+/* ── SVG icons ── */
+function IcoTrash() {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="3 6 5 6 21 6"/>
+      <path d="M19 6l-1 14H6L5 6"/>
+      <path d="M10 11v6M14 11v6"/>
+      <path d="M9 6V4h6v2"/>
+    </svg>
+  )
+}
+function IcoClose() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+      <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+    </svg>
+  )
+}
+function IcoCamera() {
+  return (
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+      <circle cx="12" cy="13" r="4"/>
+    </svg>
+  )
+}
+function IcoCalendarLg() {
+  return (
+    <svg viewBox="0 0 60 60" width="48" height="48" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="6" y="10" width="48" height="44" rx="6"/>
+      <line x1="16" y1="4" x2="16" y2="16"/>
+      <line x1="44" y1="4" x2="44" y2="16"/>
+      <line x1="6" y1="24" x2="54" y2="24"/>
+      <rect x="16" y="32" width="10" height="10" rx="2" fill="rgba(255,255,255,0.2)" stroke="none"/>
+      <rect x="34" y="32" width="10" height="10" rx="2" fill="rgba(255,255,255,0.2)" stroke="none"/>
+    </svg>
+  )
+}
+function IcoPlus() {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+    </svg>
+  )
+}
+function LoadingHeart() {
+  return (
+    <svg viewBox="0 0 60 56" width="48" height="44" fill="none">
+      <style>{`@keyframes hbLoad2{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}.hbL2{animation:hbLoad2 1.2s ease-in-out infinite;transform-origin:center}`}</style>
+      <g className="hbL2">
+        <path d="M30 52C30 52 3 35 3 16C3 8 9.5 2 18 2C22.5 2 26.5 4.5 30 9C33.5 4.5 37.5 2 42 2C50.5 2 57 8 57 16C57 35 30 52 30 52Z"
+          fill="rgba(232,70,106,0.4)" stroke="rgba(232,70,106,0.6)" strokeWidth="2"/>
+      </g>
+    </svg>
+  )
+}
+
 const MONTHS_RU = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек']
 const MONTHS_FULL = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря']
+
+// Event emoji picker — these are user-selected content (not UI chrome)
 const EMOJIS = ['❤️','🥰','🎉','🎂','🎬','🍕','✈️','🌅','🎵','💐','🏖️','🎄','🌸','🎭','🌙','⭐']
 
 function getDaysUntil(dateStr) {
@@ -297,7 +356,6 @@ export default function Calendar({ session, profile }) {
           border-radius: 50%;
           width: 40px; height: 40px;
           color: white;
-          font-size: 18px;
           cursor: pointer;
           display: flex;
           align-items: center;
@@ -311,7 +369,6 @@ export default function Calendar({ session, profile }) {
           padding: 60px 20px;
           gap: 12px;
         }
-        .cal-empty-emoji { font-size: 60px; }
         .cal-empty-text {
           font-family: var(--font-body);
           font-size: 15px;
@@ -323,16 +380,16 @@ export default function Calendar({ session, profile }) {
 
       <div className="cal-wrap">
         <div className="cal-header">
-          <div className="cal-header-title">📅 Наш календарь</div>
+          <div className="cal-header-title">Наш календарь</div>
           <div className="cal-header-sub">{events.length} событий · {upcoming.length} предстоящих</div>
-          <button className="cal-add-btn" onClick={() => setShowModal(true)}>＋ Добавить событие</button>
+          <button className="cal-add-btn" onClick={() => setShowModal(true)}><IcoPlus /> Добавить событие</button>
         </div>
 
         {loading ? (
-          <div className="cal-empty"><div className="loading-heart">💕</div></div>
+          <div className="cal-empty"><LoadingHeart /></div>
         ) : events.length === 0 ? (
           <div className="cal-empty">
-            <div className="cal-empty-emoji">📅</div>
+            <IcoCalendarLg />
             <p className="cal-empty-text">Пока нет событий.<br />Добавьте первое воспоминание!</p>
           </div>
         ) : (
@@ -356,7 +413,7 @@ export default function Calendar({ session, profile }) {
       {/* Lightbox */}
       {lightbox && (
         <div className="cal-lightbox" onClick={() => setLightbox(null)}>
-          <button className="cal-lightbox-close">✕</button>
+          <button className="cal-lightbox-close"><IcoClose /></button>
           <img src={lightbox} alt="" onClick={e => e.stopPropagation()} />
         </div>
       )}
@@ -366,7 +423,7 @@ export default function Calendar({ session, profile }) {
         <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) setShowModal(false) }}>
           <div className="modal">
             <div className="modal-handle" />
-            <h2 className="modal-title">📅 Новое событие</h2>
+            <h2 className="modal-title">Новое событие</h2>
             <form onSubmit={handleSubmit}>
               <div className="form-group">
                 <label className="form-label">Название</label>
@@ -391,13 +448,13 @@ export default function Calendar({ session, profile }) {
               <div className="form-group">
                 <label className="form-label">Фото</label>
                 <label className="form-file-label">
-                  📷 {photo ? photo.name : 'Выбрать фото'}
+                  <IcoCamera /> {photo ? photo.name : 'Выбрать фото'}
                   <input type="file" accept="image/*" onChange={handlePhotoSelect} />
                 </label>
                 {photoPreview && <img className="photo-preview" src={photoPreview} alt="Preview" />}
               </div>
               <button className="form-submit" type="submit" disabled={saving}>
-                {saving ? 'Сохраняем...' : 'Сохранить ❤️'}
+                {saving ? 'Сохраняем...' : 'Сохранить'}
               </button>
             </form>
           </div>
@@ -414,7 +471,7 @@ function EventCard({ event, idx, session, onDelete, onPhoto, past = false }) {
 
   let badgeText = ''
   let badgeClass = ''
-  if (daysUntil === 0) { badgeText = '🎉 Сегодня!'; badgeClass = 'today' }
+  if (daysUntil === 0) { badgeText = 'Сегодня!'; badgeClass = 'today' }
   else if (daysUntil > 0) { badgeText = `через ${daysUntil} дн`; badgeClass = '' }
   else { badgeText = `${daysAgo} дн назад`; badgeClass = 'past-label' }
 
@@ -443,7 +500,9 @@ function EventCard({ event, idx, session, onDelete, onPhoto, past = false }) {
             </span>
           )}
         </div>
-        <button className="cal-del-btn" onClick={() => onDelete(event.id)}>🗑️</button>
+        <button className="cal-del-btn" onClick={() => onDelete(event.id)} style={{ display:'flex', alignItems:'center', justifyContent:'center' }}>
+          <IcoTrash />
+        </button>
       </div>
     </div>
   )

@@ -123,11 +123,12 @@
 html, body {
   height: 100%;
   overflow: hidden;
+  /* Dark background prevents white flash / white safe-area strip on iPhone */
+  background: #0D0D0D;
 }
 
 body {
   font-family: var(--font-body);
-  background: var(--bg);
   color: var(--text);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -157,6 +158,10 @@ h1, h2, h3 {
   width: 100%;
   position: relative;
   overflow: hidden;
+  background: var(--bg);
+}
+.app.dark {
+  background: #1A1825;
 }
 
 .app-content {

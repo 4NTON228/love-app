@@ -1,6 +1,71 @@
 import { useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 
+/* ── Small SVG icons for settings rows ── */
+function IcoUser() {
+  return (
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="8" r="4"/>
+      <path d="M4 20c0-4.4 3.6-8 8-8s8 3.6 8 8"/>
+    </svg>
+  )
+}
+function IcoBirthday() {
+  return (
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="9" width="18" height="12" rx="2"/>
+      <path d="M3 14h18"/>
+      <path d="M8 9V7c0-1.1.9-2 2-2s2 .9 2 2v2"/>
+      <path d="M14 9V7c0-1.1.9-2 2-2s2 .9 2 2v2"/>
+    </svg>
+  )
+}
+function IcoMoon() {
+  return (
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+    </svg>
+  )
+}
+function IcoSun() {
+  return (
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="5"/>
+      <line x1="12" y1="1" x2="12" y2="3"/>
+      <line x1="12" y1="21" x2="12" y2="23"/>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+      <line x1="1" y1="12" x2="3" y2="12"/>
+      <line x1="21" y1="12" x2="23" y2="12"/>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+    </svg>
+  )
+}
+function IcoCamera() {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+      <circle cx="12" cy="13" r="4"/>
+    </svg>
+  )
+}
+function IcoSpinner() {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/>
+    </svg>
+  )
+}
+function IcoPersonFill() {
+  return (
+    <svg viewBox="0 0 40 40" width="44" height="44" fill="none">
+      <circle cx="20" cy="16" r="8" fill="rgba(200,75,139,0.7)"/>
+      <path d="M4 38c0-8.8 7.2-16 16-16s16 7.2 16 16" fill="rgba(200,75,139,0.5)"/>
+    </svg>
+  )
+}
+
 const THEMES = [
   { id: 'rose',    label: 'Роза',      a: '#e8466a', b: '#c84b8b' },
   { id: 'purple',  label: 'Лаванда',   a: '#9b4dca', b: '#6d28d9' },
@@ -105,12 +170,10 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
           width: 90px;
           height: 90px;
           border-radius: 50%;
-          object-fit: cover;
           border: 3px solid rgba(255,255,255,0.6);
           box-shadow: 0 4px 20px rgba(0,0,0,0.25);
-          display: block;
-          background: rgba(255,255,255,0.2);
-          font-size: 40px;
+          background: rgba(255,255,255,0.15);
+          overflow: hidden;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -168,10 +231,11 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
         }
         .app.dark .settings-row { border-top-color: rgba(255,255,255,0.05); }
         .settings-row-icon {
-          font-size: 22px;
           flex-shrink: 0;
           width: 34px;
-          text-align: center;
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
         .settings-row-label {
           flex: 1;
@@ -311,12 +375,13 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
         <div className="settings-header">
           <div className="settings-avatar-wrap">
             <div className="settings-avatar">
-              {avatarPreview ? (
-                <img src={avatarPreview} alt={myName} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
-              ) : '👤'}
+              {avatarPreview
+                ? <img src={avatarPreview} alt={myName} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                : <IcoPersonFill />
+              }
             </div>
-            <button className="settings-avatar-btn" onClick={() => fileRef.current?.click()} disabled={savingAvatar}>
-              {savingAvatar ? '⏳' : '📷'}
+            <button className="settings-avatar-btn" onClick={() => fileRef.current?.click()} disabled={savingAvatar} style={{ color: '#c84b8b' }}>
+              {savingAvatar ? <IcoSpinner /> : <IcoCamera />}
             </button>
             <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatarChange} />
           </div>
@@ -328,7 +393,7 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
         <div className="settings-section">
           <div className="settings-section-title">Профиль</div>
           <div className="settings-row">
-            <span className="settings-row-icon">👤</span>
+            <span className="settings-row-icon" style={{ color: 'var(--primary)' }}><IcoUser /></span>
             <span className="settings-row-label">Имя</span>
             <input
               className="settings-input"
@@ -338,7 +403,7 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
             />
           </div>
           <div className="settings-row">
-            <span className="settings-row-icon">🎂</span>
+            <span className="settings-row-icon" style={{ color: 'var(--primary)' }}><IcoBirthday /></span>
             <span className="settings-row-label">День рождения</span>
             <input
               className="settings-input"
@@ -350,7 +415,7 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
           </div>
         </div>
         <button className="settings-save-btn" onClick={saveProfile} disabled={saving}>
-          {saved ? '✓ Сохранено!' : saving ? 'Сохраняем...' : 'Сохранить профиль'}
+          {saved ? 'Сохранено!' : saving ? 'Сохраняем...' : 'Сохранить профиль'}
         </button>
 
         {/* Love message */}
@@ -377,14 +442,14 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
           </div>
         </div>
         <button className="settings-save-btn" onClick={saveLoveMsg} disabled={saving}>
-          {saved ? '✓ Сохранено!' : saving ? 'Сохраняем...' : 'Сохранить послание 💌'}
+          {saved ? 'Сохранено!' : saving ? 'Сохраняем...' : 'Сохранить послание'}
         </button>
 
         {/* Appearance */}
         <div className="settings-section">
           <div className="settings-section-title">Оформление</div>
           <div className="settings-row">
-            <span className="settings-row-icon">{darkMode ? '🌙' : '☀️'}</span>
+            <span className="settings-row-icon" style={{ color: 'var(--primary)' }}>{darkMode ? <IcoMoon /> : <IcoSun />}</span>
             <span className="settings-row-label">Тёмная тема</span>
             <button
               className={`settings-toggle${darkMode ? '' : ' off'}`}

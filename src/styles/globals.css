@@ -163,8 +163,7 @@ h1, h2, h3 {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 0 20px 100px;
-  padding-top: calc(var(--safe-top) + 16px);
+  padding: 0;
   -webkit-overflow-scrolling: touch;
   scroll-behavior: smooth;
 }

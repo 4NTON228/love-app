@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from './lib/supabase'
 import { subscribeToPush } from './lib/push'
 import Auth from './components/Auth'
@@ -7,8 +7,32 @@ import Chat from './components/Chat'
 import Calendar from './components/Calendar'
 import Moments from './components/Moments'
 import Plans from './components/Plans'
+import LoveClock from './components/LoveClock'
+import LoveLetter from './components/LoveLetter'
+import Settings from './components/Settings'
 import Navigation from './components/Navigation'
-import Hearts from './components/Hearts'
+
+// Apply saved theme on load
+;(function applyStoredTheme() {
+  const THEMES = {
+    rose:    { a: '#e8466a', b: '#c84b8b' },
+    purple:  { a: '#9b4dca', b: '#6d28d9' },
+    sunset:  { a: '#f97316', b: '#ec4899' },
+    ocean:   { a: '#0ea5e9', b: '#6366f1' },
+    forest:  { a: '#22c55e', b: '#059669' },
+    cherry:  { a: '#be123c', b: '#9f1239' },
+    gold:    { a: '#f59e0b', b: '#d97706' },
+    night:   { a: '#1e1b4b', b: '#312e81' },
+  }
+  const saved = localStorage.getItem('loveTheme')
+  if (saved && THEMES[saved]) {
+    const t = THEMES[saved]
+    document.documentElement.style.setProperty('--primary', t.a)
+    document.documentElement.style.setProperty('--primary-dark', t.b)
+    document.documentElement.style.setProperty('--gradient', `linear-gradient(135deg, ${t.a} 0%, ${t.b} 100%)`)
+    document.documentElement.style.setProperty('--gradient-warm', `linear-gradient(135deg, ${t.a} 0%, ${t.b} 100%)`)
+  }
+})()
 
 export default function App() {
   const [session, setSession] = useState(null)
@@ -19,7 +43,7 @@ export default function App() {
 
   function toggleDarkMode() {
     setDarkMode(v => {
-      localStorage.setItem('appDarkMode', !v)
+      localStorage.setItem('appDarkMode', String(!v))
       return !v
     })
   }
@@ -31,25 +55,23 @@ export default function App() {
       setLoading(false)
     })
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setSession(session)
-        if (session) loadProfile(session.user.id)
-      }
-    )
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session)
+      if (session) loadProfile(session.user.id)
+    })
 
     return () => subscription.unsubscribe()
   }, [])
 
   async function loadProfile(userId) {
-    const { data } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single()
+    const { data } = await supabase.from('profiles').select('*').eq('id', userId).single()
     setProfile(data)
     subscribeToPush(userId)
   }
+
+  const reloadProfile = useCallback(() => {
+    if (session?.user?.id) loadProfile(session.user.id)
+  }, [session?.user?.id])
 
   if (loading) {
     return (
@@ -66,31 +88,42 @@ export default function App() {
   const renderTab = () => {
     switch (activeTab) {
       case 'home':
-        return <Home session={session} profile={profile} />
+        return <Home session={session} profile={profile} darkMode={darkMode} onNavigate={setActiveTab} />
       case 'chat':
         return <Chat session={session} profile={profile} darkMode={darkMode} />
+      case 'clock':
+        return <LoveClock session={session} profile={profile} />
+      case 'letter':
+        return <LoveLetter session={session} profile={profile} />
       case 'calendar':
         return <Calendar session={session} profile={profile} />
       case 'moments':
         return <Moments session={session} profile={profile} />
       case 'plans':
         return <Plans session={session} profile={profile} />
+      case 'settings':
+        return (
+          <Settings
+            session={session}
+            profile={profile}
+            darkMode={darkMode}
+            toggleDarkMode={toggleDarkMode}
+            onProfileUpdate={reloadProfile}
+          />
+        )
       default:
-        return <Home session={session} profile={profile} />
+        return <Home session={session} profile={profile} darkMode={darkMode} onNavigate={setActiveTab} />
     }
   }
 
+  const noPadding = activeTab === 'chat' || activeTab === 'clock' || activeTab === 'letter'
+
   return (
     <div className={`app${darkMode ? ' dark' : ''}`}>
-      {activeTab !== 'chat' && <Hearts />}
-      <button
-        className="theme-toggle-btn"
-        onClick={toggleDarkMode}
-        aria-label="Сменить тему"
+      <div
+        className="app-content"
+        style={noPadding ? { padding: 0, paddingTop: activeTab === 'chat' ? 'var(--safe-top)' : 0 } : {}}
       >
-        {darkMode ? '☀️' : '🌙'}
-      </button>
-      <div className="app-content" style={activeTab === 'chat' ? { padding: 0, paddingTop: 'var(--safe-top)' } : {}}>
         {renderTab()}
       </div>
       <Navigation activeTab={activeTab} setActiveTab={setActiveTab} />

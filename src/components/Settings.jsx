@@ -67,14 +67,18 @@ function IcoPersonFill() {
 }
 
 const THEMES = [
-  { id: 'rose',    label: 'Роза',      a: '#e8466a', b: '#c84b8b' },
-  { id: 'purple',  label: 'Лаванда',   a: '#9b4dca', b: '#6d28d9' },
-  { id: 'sunset',  label: 'Закат',     a: '#f97316', b: '#ec4899' },
-  { id: 'ocean',   label: 'Океан',     a: '#0ea5e9', b: '#6366f1' },
-  { id: 'forest',  label: 'Лес',       a: '#22c55e', b: '#059669' },
-  { id: 'cherry',  label: 'Вишня',     a: '#be123c', b: '#9f1239' },
-  { id: 'gold',    label: 'Золото',    a: '#f59e0b', b: '#d97706' },
-  { id: 'night',   label: 'Ночь',      a: '#1e1b4b', b: '#312e81' },
+  { id: 'rose',      label: 'Роза',       a: '#E8466A', b: '#9C27B0' },
+  { id: 'cherry',    label: 'Вишня',      a: '#AD1457', b: '#4A0072' },
+  { id: 'violet',    label: 'Фиалка',     a: '#6A1B9A', b: '#1A0A2E' },
+  { id: 'lavender',  label: 'Лаванда',    a: '#7E57C2', b: '#EC407A' },
+  { id: 'ocean',     label: 'Океан',      a: '#0277BD', b: '#00838F' },
+  { id: 'sky',       label: 'Небо',       a: '#039BE5', b: '#B388FF' },
+  { id: 'forest',    label: 'Лес',        a: '#2E7D32', b: '#004D40' },
+  { id: 'northern',  label: 'Сияние',     a: '#00C853', b: '#00BCD4' },
+  { id: 'sunset',    label: 'Закат',      a: '#FF6F00', b: '#C62828' },
+  { id: 'fire',      label: 'Огонь',      a: '#D50000', b: '#FF6D00' },
+  { id: 'gold',      label: 'Золото',     a: '#F57F17', b: '#E65100' },
+  { id: 'night',     label: 'Ночь',       a: '#1A237E', b: '#0D0D1A' },
 ]
 
 export default function Settings({ session, profile, darkMode, toggleDarkMode, onProfileUpdate }) {
@@ -290,43 +294,42 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
         .themes-grid {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
-          gap: 10px;
+          gap: 12px;
           padding: 8px 16px 16px;
         }
         .theme-swatch {
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 5px;
+          gap: 6px;
           cursor: pointer;
         }
         .theme-circle {
-          width: 42px; height: 42px;
+          width: 52px; height: 52px;
           border-radius: 50%;
-          box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+          box-shadow: 0 2px 10px rgba(0,0,0,0.18);
           position: relative;
-          transition: transform 0.15s;
+          transition: transform 0.15s, box-shadow 0.15s;
+          border: 3px solid transparent;
         }
         .theme-circle.active {
-          transform: scale(1.15);
-          box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+          transform: scale(1.12);
+          border-color: white;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.3);
         }
         .theme-circle.active::after {
-          content: '✓';
+          content: '';
           position: absolute;
           inset: 0;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: white;
-          font-size: 16px;
-          font-weight: 700;
+          border-radius: 50%;
+          background: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpolyline points='20 6 9 17 4 12' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/60% no-repeat;
         }
         .theme-label {
           font-family: var(--font-body);
           font-size: 10px;
           color: var(--text-muted);
           text-align: center;
+          white-space: nowrap;
         }
 
         /* Save button */

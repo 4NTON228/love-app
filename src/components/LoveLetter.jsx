@@ -193,8 +193,8 @@ export default function LoveLetter({ session, profile }) {
         .letter-sheet-overlay {
           position: fixed;
           inset: 0;
-          background: rgba(0,0,0,0.65);
-          backdrop-filter: blur(6px);
+          background: rgba(0,0,0,0.75);
+          backdrop-filter: blur(8px);
           z-index: 100;
           display: flex;
           align-items: center;
@@ -204,7 +204,8 @@ export default function LoveLetter({ session, profile }) {
         }
         @keyframes fadeIn { from{opacity:0} to{opacity:1} }
         .letter-sheet {
-          background: linear-gradient(160deg, #fffdf5 0%, #fff5e8 100%);
+          /* Opaque white paper — readable on ANY background */
+          background: #FFFFFF !important;
           border-radius: 16px;
           padding: 28px 24px;
           max-width: 360px;
@@ -212,11 +213,13 @@ export default function LoveLetter({ session, profile }) {
           max-height: 82vh;
           overflow-y: auto;
           position: relative;
-          box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+          box-shadow: 0 12px 40px rgba(0,0,0,0.5);
           animation: letterUnfold 0.5s cubic-bezier(0.34,1.56,0.64,1) both;
           font-family: 'Georgia', serif;
+          opacity: 1 !important;
+          /* Ruled lines on paper */
           background-image:
-            repeating-linear-gradient(0deg, transparent, transparent 27px, rgba(200,100,150,0.12) 27px, rgba(200,100,150,0.12) 28px);
+            repeating-linear-gradient(0deg, transparent, transparent 27px, rgba(200,100,150,0.1) 27px, rgba(200,100,150,0.1) 28px) !important;
           background-attachment: local;
         }
         @keyframes letterUnfold {
@@ -240,37 +243,40 @@ export default function LoveLetter({ session, profile }) {
         }
         .letter-date {
           font-family: var(--font-body);
-          font-size: 12px;
-          color: #b08090;
+          font-size: 13px;
+          color: #666666;
           text-align: right;
           margin-bottom: 16px;
         }
         .letter-salutation {
           font-family: var(--font-display);
           font-style: italic;
-          font-size: 17px;
-          color: #c84b8b;
-          margin-bottom: 12px;
+          font-size: 20px;
+          font-weight: 600;
+          color: #C2185B;
+          margin-bottom: 16px;
         }
         .letter-body {
-          font-size: 15px;
-          color: #3d2030;
+          font-size: 16px;
+          color: #1A1A1A;
           line-height: 1.8;
           white-space: pre-wrap;
           min-height: 60px;
+          font-family: 'Georgia', serif;
         }
         .letter-empty {
-          color: #c0a0b0;
+          color: #888888;
           font-style: italic;
-          font-size: 14px;
+          font-size: 15px;
         }
         .letter-signature {
-          margin-top: 20px;
+          margin-top: 24px;
           text-align: right;
           font-family: var(--font-display);
           font-style: italic;
-          font-size: 16px;
-          color: #c84b8b;
+          font-size: 18px;
+          font-weight: 500;
+          color: #C2185B;
         }
         .letter-edit-area {
           width: 100%;

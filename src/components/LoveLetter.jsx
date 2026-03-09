@@ -226,16 +226,17 @@ export default function LoveLetter({ session, profile }) {
         .letter-close {
           position: absolute;
           top: 12px; right: 14px;
-          background: rgba(200,75,139,0.12);
-          border: none;
+          background: white;
+          border: 1.5px solid rgba(200,75,139,0.25);
           border-radius: 50%;
-          width: 32px; height: 32px;
+          width: 36px; height: 36px;
           font-size: 16px;
           cursor: pointer;
           display: flex;
           align-items: center;
           justify-content: center;
           color: #c84b8b;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.12);
         }
         .letter-date {
           font-family: var(--font-body);
@@ -420,7 +421,11 @@ export default function LoveLetter({ session, profile }) {
         {showLetter && (
           <div className="letter-sheet-overlay" onClick={handleClose}>
             <div className="letter-sheet" onClick={e => e.stopPropagation()}>
-              <button className="letter-close" onClick={handleClose}>✕</button>
+              <button className="letter-close" onClick={handleClose} aria-label="Закрыть">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
               <div className="letter-date">{today}</div>
 
               {editing ? (
@@ -452,9 +457,18 @@ export default function LoveLetter({ session, profile }) {
                       Ты ещё не написал(а) письмо... Нажми «Написать», чтобы оставить слова для любимого человека
                     </div>
                   )}
-                  <div className="letter-signature">С любовью, {myName} ❤️</div>
+                  <div className="letter-signature">
+                    С любовью, {myName}&nbsp;
+                    <svg viewBox="0 0 20 18" width="14" height="12" fill="#c84b8b" display="inline-block" style={{ verticalAlign: 'middle' }}>
+                      <path d="M10 16.5C10 16.5 1.5 10.5 1.5 5C1.5 2.5 3.6 0.5 6 0.5C7.5 0.5 8.8 1.3 10 2.8C11.2 1.3 12.5 0.5 14 0.5C16.4 0.5 18.5 2.5 18.5 5C18.5 10.5 10 16.5 10 16.5Z"/>
+                    </svg>
+                  </div>
                   <button className="letter-btn-edit" onClick={() => setEditing(true)}>
-                    ✏️ {myMessage ? 'Изменить письмо' : 'Написать письмо'}
+                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: 'middle', marginRight: 5 }}>
+                      <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                      <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4z"/>
+                    </svg>
+                    {myMessage ? 'Изменить письмо' : 'Написать письмо'}
                   </button>
                 </>
               )}
@@ -482,7 +496,11 @@ export default function LoveLetter({ session, profile }) {
         {showPartner && (
           <div className="letter-sheet-overlay" onClick={() => setShowPartner(false)}>
             <div className="letter-sheet" onClick={e => e.stopPropagation()}>
-              <button className="letter-close" onClick={() => setShowPartner(false)}>✕</button>
+              <button className="letter-close" onClick={() => setShowPartner(false)} aria-label="Закрыть">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
               <div className="letter-date">{today}</div>
               <div className="letter-salutation">Любимый(ая),</div>
               {partnerMessage ? (
@@ -492,7 +510,12 @@ export default function LoveLetter({ session, profile }) {
                   {partnerName} ещё не написал(а) письмо...
                 </div>
               )}
-              <div className="letter-signature">С любовью, {partnerName} ❤️</div>
+              <div className="letter-signature">
+                С любовью, {partnerName}&nbsp;
+                <svg viewBox="0 0 20 18" width="14" height="12" fill="#c84b8b" display="inline-block" style={{ verticalAlign: 'middle' }}>
+                  <path d="M10 16.5C10 16.5 1.5 10.5 1.5 5C1.5 2.5 3.6 0.5 6 0.5C7.5 0.5 8.8 1.3 10 2.8C11.2 1.3 12.5 0.5 14 0.5C16.4 0.5 18.5 2.5 18.5 5C18.5 10.5 10 16.5 10 16.5Z"/>
+                </svg>
+              </div>
             </div>
           </div>
         )}

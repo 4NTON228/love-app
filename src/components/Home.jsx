@@ -288,9 +288,37 @@ function GlowDigit({ value, prevValue }) {
 }
 
 /* ─────────────────────────────────────────
+   Zodiac sign from birthday date
+───────────────────────────────────────── */
+function getZodiac(dateStr) {
+  if (!dateStr) return null
+  const d = new Date(dateStr)
+  const m = d.getMonth() + 1
+  const day = d.getDate()
+  if ((m === 3 && day >= 21) || (m === 4 && day <= 19)) return 'Овен'
+  if ((m === 4 && day >= 20) || (m === 5 && day <= 20)) return 'Телец'
+  if ((m === 5 && day >= 21) || (m === 6 && day <= 20)) return 'Близнецы'
+  if ((m === 6 && day >= 21) || (m === 7 && day <= 22)) return 'Рак'
+  if ((m === 7 && day >= 23) || (m === 8 && day <= 22)) return 'Лев'
+  if ((m === 8 && day >= 23) || (m === 9 && day <= 22)) return 'Дева'
+  if ((m === 9 && day >= 23) || (m === 10 && day <= 22)) return 'Весы'
+  if ((m === 10 && day >= 23) || (m === 11 && day <= 21)) return 'Скорпион'
+  if ((m === 11 && day >= 22) || (m === 12 && day <= 21)) return 'Стрелец'
+  if ((m === 12 && day >= 22) || (m === 1 && day <= 19)) return 'Козерог'
+  if ((m === 1 && day >= 20) || (m === 2 && day <= 18)) return 'Водолей'
+  return 'Рыбы'
+}
+
+function formatBirthday(dateStr) {
+  if (!dateStr) return null
+  const d = new Date(dateStr)
+  return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
+}
+
+/* ─────────────────────────────────────────
    Avatar ring — clickable, CSS animated gradient
 ───────────────────────────────────────── */
-function AvatarRing({ src, name, initials, onClick }) {
+function AvatarRing({ src, name, birthday, onClick }) {
   return (
     <div
       style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7, cursor: 'pointer' }}
@@ -324,6 +352,110 @@ function AvatarRing({ src, name, initials, onClick }) {
       }}>
         {name}
       </span>
+      {birthday && (
+        <span style={{
+          fontFamily: 'var(--font-body)',
+          fontSize: 10,
+          color: 'rgba(255,255,255,0.65)',
+          textShadow: '0 1px 3px rgba(0,0,0,0.4)',
+          marginTop: -4,
+        }}>
+          {formatBirthday(birthday)}
+        </span>
+      )}
+    </div>
+  )
+}
+
+/* ─────────────────────────────────────────
+   Partner card modal
+───────────────────────────────────────── */
+function PartnerCard({ profile, onClose }) {
+  if (!profile) return null
+  const birthday = formatBirthday(profile.birthday)
+  const zodiac   = getZodiac(profile.birthday)
+  return (
+    <div
+      style={{
+        position: 'fixed', inset: 0, zIndex: 200,
+        background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(8px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: 20, animation: 'fadeIn 0.2s ease',
+      }}
+      onClick={onClose}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: 'linear-gradient(160deg, #1a0a2e 0%, #2d0a40 60%, #3d1545 100%)',
+          borderRadius: 24,
+          padding: '32px 24px 28px',
+          maxWidth: 300, width: '100%',
+          boxShadow: '0 24px 80px rgba(0,0,0,0.6)',
+          border: '1px solid rgba(232,70,106,0.2)',
+          textAlign: 'center',
+          position: 'relative',
+          animation: 'slideUp 0.3s cubic-bezier(0.34,1.56,0.64,1) both',
+        }}
+      >
+        <button
+          onClick={onClose}
+          style={{
+            position: 'absolute', top: 14, right: 14,
+            background: 'rgba(255,255,255,0.1)', border: 'none',
+            borderRadius: '50%', width: 36, height: 36,
+            color: 'white', fontSize: 18, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}
+        >
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+
+        {/* Avatar */}
+        <div style={{
+          width: 88, height: 88, borderRadius: '50%', margin: '0 auto 16px',
+          border: '3px solid rgba(255,255,255,0.25)',
+          boxShadow: '0 0 20px rgba(232,70,106,0.3)',
+          overflow: 'hidden', background: '#2d1457',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          {profile.avatar_url
+            ? <img src={profile.avatar_url} alt={profile.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            : <svg viewBox="0 0 40 40" width="44" height="44" fill="none">
+                <circle cx="20" cy="16" r="8" fill="rgba(200,75,139,0.7)"/>
+                <path d="M4 38c0-8.8 7.2-16 16-16s16 7.2 16 16" fill="rgba(200,75,139,0.5)"/>
+              </svg>
+          }
+        </div>
+
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, color: 'white', marginBottom: 4 }}>
+          {profile.name || 'Партнёр'}
+        </div>
+
+        {birthday && (
+          <div style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'rgba(255,255,255,0.65)', marginBottom: 16 }}>
+            {birthday}
+          </div>
+        )}
+
+        {zodiac && (
+          <div style={{
+            display: 'inline-block',
+            background: 'rgba(232,70,106,0.15)',
+            border: '1px solid rgba(232,70,106,0.3)',
+            borderRadius: 20,
+            padding: '6px 18px',
+            fontFamily: 'var(--font-body)',
+            fontSize: 13,
+            fontWeight: 600,
+            color: '#f7a8c4',
+          }}>
+            {zodiac}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -343,6 +475,7 @@ export default function Home({ session, profile, onNavigate }) {
   const [newMsg,         setNewMsg]         = useState('')
   const [newMeet,        setNewMeet]        = useState('')
   const [saving,         setSaving]         = useState(false)
+  const [showPartnerCard, setShowPartnerCard] = useState(false)
 
   const loveMsg   = settings?.love_message || 'Ты — лучшее, что случилось в моей жизни'
   const { out, done } = useTypewriter(loveMsg, 55)
@@ -908,17 +1041,21 @@ export default function Home({ session, profile, onNavigate }) {
             <AvatarRing
               src={profile?.avatar_url}
               name={myName}
-              initials={myName[0]}
+              birthday={profile?.birthday}
+              onClick={() => onNavigate?.('settings')}
             />
-            <div style={{ animation: 'heartbeat 1.6s ease-in-out infinite' }}>
-              <CentreHeart />
-            </div>
+            <CentreHeart />
             <AvatarRing
               src={partnerProfile?.avatar_url}
               name={pName}
-              initials={pName[0]}
+              birthday={partnerProfile?.birthday}
+              onClick={() => setShowPartnerCard(true)}
             />
           </div>
+
+          {showPartnerCard && (
+            <PartnerCard profile={partnerProfile} onClose={() => setShowPartnerCard(false)} />
+          )}
 
           {/* Day counter */}
           <div className="day-counter">

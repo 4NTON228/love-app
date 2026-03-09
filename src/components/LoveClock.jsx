@@ -229,7 +229,19 @@ export default function LoveClock() {
       <canvas ref={canvasRef} className="clock-particles" />
 
       <div className="clock-wrap">
-        <div className="clock-title">Часы любви ❤️</div>
+        <div className="clock-title" style={{ display:'flex', alignItems:'center', gap:10 }}>
+          <svg width="22" height="20" viewBox="0 0 22 20" fill="none" aria-hidden>
+            <path d="M11 18.5C11 18.5 1.5 12 1.5 5.5C1.5 3 3.5 1 6 1C8 1 9.5 2.2 11 4C12.5 2.2 14 1 16 1C18.5 1 20.5 3 20.5 5.5C20.5 12 11 18.5 11 18.5Z"
+              fill="rgba(255,255,255,0.9)" filter="url(#clockHeartGlow)"/>
+            <defs>
+              <filter id="clockHeartGlow" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="1.5" result="b"/>
+                <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+            </defs>
+          </svg>
+          Часы любви
+        </div>
         <div className="clock-subtitle">с 17 октября 2025 года</div>
 
         {/* SVG Analog Clock */}
@@ -244,7 +256,11 @@ export default function LoveClock() {
             return photo ? (
               <img key={i} className="photo-ring-img" src={photo} alt="" style={{ left: cx, top: cy }} />
             ) : (
-              <div key={i} className="photo-ring-placeholder" style={{ left: cx, top: cy }}>💕</div>
+              <div key={i} className="photo-ring-placeholder" style={{ left: cx, top: cy }}>
+                <svg viewBox="0 0 20 18" width="18" height="16" fill="rgba(255,150,180,0.6)">
+                  <path d="M10 16.5C10 16.5 1.5 10.5 1.5 5C1.5 2.5 3.6 0.5 6 0.5C7.5 0.5 8.8 1.3 10 2.8C11.2 1.3 12.5 0.5 14 0.5C16.4 0.5 18.5 2.5 18.5 5C18.5 10.5 10 16.5 10 16.5Z"/>
+                </svg>
+              </div>
             )
           })}
 
@@ -261,15 +277,35 @@ export default function LoveClock() {
               return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="rgba(255,255,255,0.45)" strokeWidth={i % 3 === 0 ? 2 : 1} strokeLinecap="round" />
             })}
 
-            {/* Hour hand — heart tip */}
-            <g transform={`rotate(${hAngle}, 140, 140)`}>
-              <line x1="140" y1="140" x2="140" y2="82" stroke="white" strokeWidth="4" strokeLinecap="round" />
-              <text x="140" y="76" textAnchor="middle" fontSize="14" fill="#ff6b8a">❤️</text>
+            <defs>
+              <linearGradient id="hhandGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="#ff8fab"/>
+                <stop offset="100%" stopColor="#c84b8b"/>
+              </linearGradient>
+              <filter id="handGlow" x="-60%" y="-60%" width="220%" height="220%">
+                <feGaussianBlur stdDeviation="2.5" result="b"/>
+                <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+            </defs>
+
+            {/* Hour hand — SVG heart tip */}
+            <g transform={`rotate(${hAngle}, 140, 140)`} filter="url(#handGlow)">
+              <line x1="140" y1="140" x2="140" y2="90" stroke="white" strokeWidth="4" strokeLinecap="round" />
+              {/* mini heart at tip */}
+              <path
+                d="M140 82 C140 79.5 136.5 77 134 79 C131.5 81 133 84 136 86.5 C138 88.2 140 89.5 140 89.5 C140 89.5 142 88.2 144 86.5 C147 84 148.5 81 146 79 C143.5 77 140 79.5 140 82 Z"
+                fill="url(#hhandGrad)"
+              />
             </g>
-            {/* Minute hand */}
+            {/* Minute hand — diamond tip */}
             <g transform={`rotate(${mAngle}, 140, 140)`}>
-              <line x1="140" y1="140" x2="140" y2="66" stroke="rgba(255,180,210,0.9)" strokeWidth="3" strokeLinecap="round" />
-              <text x="140" y="60" textAnchor="middle" fontSize="11" fill="#ffb6d9">🩷</text>
+              <line x1="140" y1="140" x2="140" y2="74" stroke="rgba(255,180,210,0.9)" strokeWidth="3" strokeLinecap="round" />
+              {/* diamond */}
+              <polygon
+                points="140,66 143.5,70 140,74 136.5,70"
+                fill="rgba(255,180,210,0.95)"
+                filter="url(#handGlow)"
+              />
             </g>
             {/* Second hand */}
             <g transform={`rotate(${sAngle}, 140, 140)`}>

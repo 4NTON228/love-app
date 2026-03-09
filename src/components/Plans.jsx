@@ -12,30 +12,67 @@ function getCat(value) {
   return CATEGORIES.find(c => c.value === value) || CATEGORIES[0]
 }
 
+// Pre-defined positions so no re-randomise on render
+const CONFETTI_ITEMS = [
+  { x:8,  shape:'heart',   s:14, c:'#e8466a', dur:1.0, del:0.00 },
+  { x:18, shape:'star',    s:10, c:'#f7a8c4', dur:0.9, del:0.05 },
+  { x:28, shape:'diamond', s:12, c:'#c84b8b', dur:1.1, del:0.10 },
+  { x:38, shape:'heart',   s:10, c:'#ff8fab', dur:0.8, del:0.15 },
+  { x:48, shape:'star',    s:14, c:'#ffb6d9', dur:1.2, del:0.00 },
+  { x:58, shape:'diamond', s:9,  c:'#e8466a', dur:0.9, del:0.08 },
+  { x:68, shape:'heart',   s:12, c:'#9b4dca', dur:1.0, del:0.12 },
+  { x:78, shape:'star',    s:11, c:'#f7a8c4', dur:0.85,del:0.04 },
+  { x:88, shape:'diamond', s:13, c:'#c84b8b', dur:1.1, del:0.18 },
+  { x:13, shape:'star',    s:9,  c:'#ff8fab', dur:0.95,del:0.22 },
+  { x:23, shape:'heart',   s:11, c:'#ffb6d9', dur:1.05,del:0.07 },
+  { x:33, shape:'diamond', s:8,  c:'#e8466a', dur:0.9, del:0.13 },
+  { x:43, shape:'star',    s:13, c:'#9b4dca', dur:1.2, del:0.03 },
+  { x:53, shape:'heart',   s:10, c:'#f7a8c4', dur:0.85,del:0.20 },
+  { x:63, shape:'diamond', s:12, c:'#c84b8b', dur:1.0, del:0.09 },
+  { x:73, shape:'star',    s:10, c:'#ff8fab', dur:0.95,del:0.16 },
+  { x:83, shape:'heart',   s:14, c:'#ffb6d9', dur:1.1, del:0.01 },
+  { x:93, shape:'diamond', s:9,  c:'#e8466a', dur:0.9, del:0.24 },
+]
+
+const STAR_PATH    = 'M10 0L11.8 7.2L19 10L11.8 12.8L10 20L8.2 12.8L1 10L8.2 7.2Z'
+const HEART_PATH_S = 'M10 16.5C10 16.5 1.5 10 1.5 4.5C1.5 2.2 3.4 0.5 5.8 0.5C7.3 0.5 8.6 1.3 10 2.8C11.4 1.3 12.7 0.5 14.2 0.5C16.6 0.5 18.5 2.2 18.5 4.5C18.5 10 10 16.5 10 16.5Z'
+
+function ConfettiShape({ shape, size, color }) {
+  if (shape === 'heart')
+    return <svg viewBox="0 0 20 18" width={size} height={size * 0.9} fill={color}><path d={HEART_PATH_S}/></svg>
+  if (shape === 'star')
+    return <svg viewBox="0 0 20 20" width={size} height={size} fill={color}><path d={STAR_PATH}/></svg>
+  // diamond
+  return (
+    <svg viewBox="0 0 12 16" width={size * 0.7} height={size} fill={color}>
+      <path d="M6 0 L12 6 L6 16 L0 6 Z"/>
+    </svg>
+  )
+}
+
 function Confetti({ active }) {
   if (!active) return null
   return (
     <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 300, overflow: 'hidden' }}>
-      {Array.from({ length: 18 }).map((_, i) => (
-        <span
-          key={i}
-          style={{
-            position: 'absolute',
-            left: `${5 + Math.random() * 90}%`,
-            top: '-20px',
-            fontSize: `${12 + Math.random() * 12}px`,
-            animation: `confettiFall ${0.8 + Math.random() * 0.8}s ${Math.random() * 0.4}s ease-in forwards`,
-          }}
-        >
-          {['🎉','💕','⭐','🎊','✨','🌸'][i % 6]}
-        </span>
-      ))}
       <style>{`
         @keyframes confettiFall {
-          0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
+          0%   { transform: translateY(-10px) rotate(0deg);   opacity: 1; }
           100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
         }
       `}</style>
+      {CONFETTI_ITEMS.map((it, i) => (
+        <div
+          key={i}
+          style={{
+            position: 'absolute',
+            left: `${it.x}%`,
+            top: 0,
+            animation: `confettiFall ${it.dur}s ${it.del}s ease-in forwards`,
+          }}
+        >
+          <ConfettiShape shape={it.shape} size={it.s} color={it.c} />
+        </div>
+      ))}
     </div>
   )
 }

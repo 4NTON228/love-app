@@ -375,7 +375,13 @@ export default function LoveLetter({ session, profile }) {
       `}</style>
 
       <div className="letter-wrap">
-        <div className="letter-page-title">Письма любви 💌</div>
+        <div className="letter-page-title" style={{ display:'flex', alignItems:'center', gap:10 }}>
+          <svg width="22" height="16" viewBox="0 0 22 16" fill="none" aria-hidden>
+            <rect x="1" y="1" width="20" height="14" rx="2" stroke="rgba(255,255,255,0.9)" strokeWidth="1.5"/>
+            <polyline points="1,1 11,9.5 21,1" stroke="rgba(255,255,255,0.9)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          Письма любви
+        </div>
         <div className="letter-page-sub">Твои слова хранятся здесь навсегда</div>
 
         {/* Envelope */}
@@ -389,9 +395,25 @@ export default function LoveLetter({ session, profile }) {
               </div>
             </div>
             <div className={`envelope-flap${envelopeOpen ? ' open' : ''}`} />
-            <div className={`envelope-heart${envelopeOpen ? ' hidden' : ''}`}>💌</div>
+            {/* SVG envelope icon instead of emoji */}
+            <div className={`envelope-heart${envelopeOpen ? ' hidden' : ''}`}>
+              <svg width="28" height="20" viewBox="0 0 28 20" fill="none" aria-hidden>
+                <rect x="1" y="1" width="26" height="18" rx="2" fill="none" stroke="rgba(200,75,139,0.5)" strokeWidth="1.5"/>
+                <polyline points="1,1 14,12 27,1" fill="none" stroke="rgba(200,75,139,0.5)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                {/* wax seal */}
+                <circle cx="14" cy="10" r="3" fill="rgba(200,75,139,0.4)"/>
+                <path d="M14 8.5C14 8.5 12.5 9.5 12.5 10.5C12.5 11 13 11.5 14 11.5C15 11.5 15.5 11 15.5 10.5C15.5 9.5 14 8.5 14 8.5Z" fill="rgba(200,75,139,0.7)"/>
+              </svg>
+            </div>
           </div>
-          {!envelopeOpen && <div className="open-hint">Нажми, чтобы открыть ✨</div>}
+          {!envelopeOpen && (
+            <div className="open-hint" style={{ display:'flex', alignItems:'center', gap:6 }}>
+              <svg width="12" height="12" viewBox="0 0 20 20" fill="rgba(255,255,255,0.7)" aria-hidden>
+                <path d="M10 0L11.2 8.8L20 10L11.2 11.2L10 20L8.8 11.2L0 10L8.8 8.8Z"/>
+              </svg>
+              Нажми, чтобы открыть
+            </div>
+          )}
         </div>
 
         {/* Letter sheet (modal) */}
@@ -413,7 +435,7 @@ export default function LoveLetter({ session, profile }) {
                   />
                   <div className="letter-btn-row">
                     <button className="letter-btn-save" onClick={saveLetter} disabled={saving}>
-                      {saving ? '💕 Сохраняю...' : 'Сохранить'}
+                      {saving ? 'Сохраняю...' : 'Сохранить'}
                     </button>
                     <button className="letter-btn-cancel" onClick={() => { setEditing(false); setDraft(myMessage) }}>
                       Отмена
@@ -427,7 +449,7 @@ export default function LoveLetter({ session, profile }) {
                     <div className="letter-body">{myMessage}</div>
                   ) : (
                     <div className="letter-body letter-empty">
-                      Ты ещё не написал(а) письмо... Нажми «Написать», чтобы оставить слова для любимого человека 💕
+                      Ты ещё не написал(а) письмо... Нажми «Написать», чтобы оставить слова для любимого человека
                     </div>
                   )}
                   <div className="letter-signature">С любовью, {myName} ❤️</div>
@@ -467,7 +489,7 @@ export default function LoveLetter({ session, profile }) {
                 <div className="letter-body">{partnerMessage}</div>
               ) : (
                 <div className="letter-body letter-empty">
-                  {partnerName} ещё не написал(а) письмо... 💕
+                  {partnerName} ещё не написал(а) письмо...
                 </div>
               )}
               <div className="letter-signature">С любовью, {partnerName} ❤️</div>

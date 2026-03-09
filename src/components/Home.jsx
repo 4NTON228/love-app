@@ -164,54 +164,48 @@ function FloatingLayer() {
 }
 
 /* ─────────────────────────────────────────
-   SVG gradient heart between avatars
+   SVG gradient heart between avatars — bright, high-contrast
 ───────────────────────────────────────── */
 function CentreHeart() {
   return (
-    <svg width="52" height="48" viewBox="0 0 52 48" fill="none" aria-hidden>
-      <defs>
-        <linearGradient id="hg" x1="0" y1="0" x2="52" y2="48" gradientUnits="userSpaceOnUse">
-          <stop offset="0%"   stopColor="#ff8fab" />
-          <stop offset="100%" stopColor="#c84b8b" />
-        </linearGradient>
-        <filter id="hf" x="-40%" y="-40%" width="180%" height="180%">
-          <feGaussianBlur stdDeviation="3.5" result="blur" />
-          <feMerge>
-            <feMergeNode in="blur" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
-      </defs>
-      {/* drop shadow layer */}
-      <path
-        d="M26 44 C26 44 4 30 4 15.5 C4 9 9.4 4 16 4 C19.5 4 22.8 5.6 26 9.2 C29.2 5.6 32.5 4 36 4 C42.6 4 48 9 48 15.5 C48 30 26 44 26 44 Z"
-        fill="rgba(200,75,139,0.4)"
-        filter="url(#hf)"
-      />
-      {/* main heart */}
-      <path
-        d="M26 44 C26 44 4 30 4 15.5 C4 9 9.4 4 16 4 C19.5 4 22.8 5.6 26 9.2 C29.2 5.6 32.5 4 36 4 C42.6 4 48 9 48 15.5 C48 30 26 44 26 44 Z"
-        fill="url(#hg)"
-      />
-      {/* inner highlight */}
-      <path
-        d="M18 10 C15 10 12 12.5 12 16"
-        fill="none"
-        stroke="rgba(255,255,255,0.35)"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-      />
-      <style>{`
-        @keyframes heartbeat {
-          0%,100% { transform: scale(1); }
-          14%      { transform: scale(1.18); }
-          28%      { transform: scale(1); }
-          42%      { transform: scale(1.10); }
-          56%      { transform: scale(1); }
-        }
-        .centre-heart-svg { animation: heartbeat 1.6s ease-in-out infinite; }
-      `}</style>
-    </svg>
+    <div style={{
+      width: 60, height: 56,
+      filter: 'drop-shadow(0 0 18px rgba(255,45,85,0.95)) drop-shadow(0 0 6px rgba(255,255,255,0.4))',
+      animation: 'heartbeatBig 1.4s cubic-bezier(0.37,0,0.63,1) infinite',
+      flexShrink: 0,
+    }}>
+      <svg width="60" height="56" viewBox="0 0 60 56" fill="none" aria-hidden>
+        <defs>
+          <linearGradient id="hg" x1="0" y1="0" x2="60" y2="56" gradientUnits="userSpaceOnUse">
+            <stop offset="0%"   stopColor="#FF6B8A" />
+            <stop offset="50%"  stopColor="#FF2D55" />
+            <stop offset="100%" stopColor="#D10043" />
+          </linearGradient>
+        </defs>
+        {/* Bright solid fill heart */}
+        <path
+          d="M30 52 C30 52 3 35 3 16 C3 8 9.5 2 18 2 C22.5 2 26.5 4.5 30 9 C33.5 4.5 37.5 2 42 2 C50.5 2 57 8 57 16 C57 35 30 52 30 52 Z"
+          fill="url(#hg)"
+        />
+        {/* White highlight for depth */}
+        <path
+          d="M16 9 C13 12 12 16 13 20"
+          stroke="rgba(255,255,255,0.55)"
+          strokeWidth="3"
+          strokeLinecap="round"
+          fill="none"
+        />
+        <style>{`
+          @keyframes heartbeatBig {
+            0%,100% { transform: scale(1); }
+            20%      { transform: scale(1.35); }
+            40%      { transform: scale(1.05); }
+            60%      { transform: scale(1.22); }
+            80%      { transform: scale(1); }
+          }
+        `}</style>
+      </svg>
+    </div>
   )
 }
 
@@ -294,24 +288,40 @@ function GlowDigit({ value, prevValue }) {
 }
 
 /* ─────────────────────────────────────────
-   Avatar ring — CSS animated conic gradient
+   Avatar ring — clickable, CSS animated gradient
 ───────────────────────────────────────── */
-function AvatarRing({ src, name, initials }) {
+function AvatarRing({ src, name, initials, onClick }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+    <div
+      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7, cursor: 'pointer' }}
+      onClick={onClick}
+    >
       {/* outer spinning gradient ring */}
-      <div className="av-ring">
-        {/* 3-px gap with bg colour between ring and photo */}
+      <div className="av-ring" style={{ transition: 'opacity 0.15s, transform 0.15s' }}
+        onTouchStart={e => e.currentTarget.style.opacity = '0.75'}
+        onTouchEnd={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = '' }}
+      >
         <div className="av-gap">
           <div className="av-inner">
             {src
               ? <img src={src} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
-              : <span className="av-initials">{initials}</span>
+              : <div className="av-initials-wrap">
+                  <svg viewBox="0 0 40 40" width="36" height="36" fill="none">
+                    <circle cx="20" cy="16" r="8" fill="rgba(200,75,139,0.7)"/>
+                    <path d="M4 38c0-8.8 7.2-16 16-16s16 7.2 16 16" fill="rgba(200,75,139,0.5)"/>
+                  </svg>
+                </div>
             }
           </div>
         </div>
       </div>
-      <span style={{ fontFamily: 'var(--font-body)', fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.9)' }}>
+      <span style={{
+        fontFamily: 'var(--font-body)',
+        fontSize: 12,
+        fontWeight: 700,
+        color: 'white',
+        textShadow: '0 1px 4px rgba(0,0,0,0.5)',
+      }}>
         {name}
       </span>
     </div>

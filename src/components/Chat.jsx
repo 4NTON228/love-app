@@ -1101,12 +1101,12 @@ function TGStyles() {
         z-index: 5;
         overflow: hidden;
       }
-      /* subtle heart pattern */
+      /* subtle dot pattern overlay on chat */
       .tg-chat::before {
         content: '';
         position: absolute;
         inset: 0;
-        background-image: radial-gradient(circle, rgba(255,255,255,0.025) 1px, transparent 1px);
+        background-image: radial-gradient(circle, rgba(255,255,255,0.012) 1px, transparent 1px);
         background-size: 24px 24px;
         pointer-events: none;
         z-index: 0;
@@ -1185,6 +1185,16 @@ function TGStyles() {
         gap: 0;
         -webkit-overflow-scrolling: touch;
         position: relative; z-index: 1;
+        /* subtle theme-color tint at top and bottom */
+        background:
+          radial-gradient(circle at 50% 0%, rgba(255,255,255,0.015) 1px, transparent 1px),
+          linear-gradient(180deg,
+            color-mix(in srgb, var(--theme-accent, #E8466A) 8%, #0D0D15) 0%,
+            #0D0D15 28%,
+            #0D0D15 72%,
+            color-mix(in srgb, var(--theme-accent, #E8466A) 5%, #0D0D15) 100%
+          );
+        background-size: 24px 24px, 100% 100%;
       }
       .tg-messages::-webkit-scrollbar { display: none; }
       .tg-empty {

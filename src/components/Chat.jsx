@@ -547,7 +547,7 @@ export default function Chat({ session, profile, darkMode }) {
     return messages.find(m => m.id === msg.reply_to_id)
   }
 
-  if (loading) return <div className="tg-loading"><div className="loading-heart">💕</div></div>
+  if (loading) return <div className="tg-loading"><svg viewBox="0 0 40 36" width="48" height="48"><path d="M20 34S3 22 3 11a9 9 0 0116-5.66A9 9 0 0137 11c0 11-17 23-17 23z" fill="var(--theme-accent,#E8466A)" opacity="0.9"/></svg></div>
 
   return (
     <>
@@ -556,10 +556,13 @@ export default function Chat({ session, profile, darkMode }) {
       {/* HEADER — click to open media */}
       <div className="tg-header" style={{ cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); setShowMedia(true) }}>
         <div className="tg-header-avatar">
-          {profile?.avatar_url ? <img src={profile.avatar_url} alt="" /> : '💕'}
+          {partnerProfile?.avatar_url
+            ? <img src={partnerProfile.avatar_url} alt="" />
+            : <svg viewBox="0 0 40 40" width="28" height="28" fill="none"><circle cx="20" cy="16" r="8" fill="rgba(255,255,255,0.8)"/><path d="M4 38c0-8.8 7.2-16 16-16s16 7.2 16 16" fill="rgba(255,255,255,0.6)"/></svg>
+          }
         </div>
         <div className="tg-header-info" style={{ flex: 1 }}>
-          <div className="tg-header-name">Наш чат 💕</div>
+          <div className="tg-header-name">{partnerProfile?.name || 'Наш чат'}</div>
           <div className="tg-header-status">
             {partnerTyping ? (
               <span className="tg-typing-status">
@@ -572,7 +575,13 @@ export default function Chat({ session, profile, darkMode }) {
             )}
           </div>
         </div>
-        <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12, paddingRight: 4, flexShrink: 0 }}>Медиа ›</span>
+        {/* Decorative video call button */}
+        <button className="tg-header-video-btn" onClick={e => e.stopPropagation()} style={{ marginLeft: 'auto' }}>
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polygon points="23 7 16 12 23 17 23 7"/>
+            <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+          </svg>
+        </button>
       </div>
 
       {/* PINNED MESSAGE */}
@@ -583,7 +592,7 @@ export default function Chat({ session, profile, darkMode }) {
         }}>
           <div className="tg-pinned-bar" />
           <div className="tg-pinned-content">
-            <div className="tg-pinned-label">📌 Закреплено</div>
+            <div className="tg-pinned-label">Закреплено</div>
             <div className="tg-pinned-text">{pinnedMessage.text || (pinnedMessage.photo_url ? '📷 Фото' : pinnedMessage.is_video_circle ? '🔵 Кружочек' : '🎤 Голосовое')}</div>
           </div>
           <button className="tg-pinned-close" onClick={(e) => { e.stopPropagation(); pinMessage(pinnedMessage) }}>
@@ -601,7 +610,11 @@ export default function Chat({ session, profile, darkMode }) {
       >
         {messages.length === 0 ? (
           <div className="tg-empty">
-            <div style={{ fontSize: 56, marginBottom: 12 }}>💌</div>
+            <svg viewBox="0 0 64 64" width="64" height="64" fill="none" style={{ marginBottom: 12, opacity: 0.5 }}>
+              <rect x="4" y="12" width="56" height="40" rx="6" stroke="white" strokeWidth="2.5"/>
+              <path d="M4 18l28 20 28-20" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
+              <path d="M26 36l-18 14M38 36l18 14" stroke="white" strokeWidth="2" strokeOpacity="0.6"/>
+            </svg>
             <p>Напишите первое сообщение!</p>
           </div>
         ) : messages.map((msg, index) => {
@@ -807,7 +820,7 @@ export default function Chat({ session, profile, darkMode }) {
         <div className="tg-reply-bar editing">
           <div className="tg-reply-bar-line edit" />
           <div className="tg-reply-bar-content">
-            <div className="tg-reply-bar-name edit">✏️ Редактирование</div>
+            <div className="tg-reply-bar-name edit">Редактирование</div>
             <div className="tg-reply-bar-text">{editingMsg.text}</div>
           </div>
           <button onClick={() => { setEditingMsg(null); setNewText('') }} className="tg-reply-bar-close"><X size={18} /></button>
@@ -843,7 +856,7 @@ export default function Chat({ session, profile, darkMode }) {
           )}
           <div className="tg-rec-actions">
             <button onClick={cancelRecording} className="tg-rec-cancel">Отмена</button>
-            {recordingType === 'video' && <button onClick={switchCamera} className="tg-rec-switch">🔄</button>}
+            {recordingType === 'video' && <button onClick={switchCamera} className="tg-rec-switch"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg></button>}
             <button onClick={stopRecording} className="tg-rec-send"><Send size={16} /> Отправить</button>
           </div>
         </div>
@@ -1084,47 +1097,56 @@ function TGStyles() {
         position: fixed;
         top: 0; left: 0; right: 0; bottom: 110px;
         display: flex; flex-direction: column;
-        background: #FFF0F4;
+        background: linear-gradient(180deg, #1A1025 0%, #0D0D15 100%);
         z-index: 5;
         overflow: hidden;
       }
-      /* TG background pattern */
+      /* subtle heart pattern */
       .tg-chat::before {
         content: '';
         position: absolute;
         inset: 0;
-        background-image: radial-gradient(circle, rgba(232,70,106,0.06) 1px, transparent 1px);
-        background-size: 20px 20px;
+        background-image: radial-gradient(circle, rgba(255,255,255,0.025) 1px, transparent 1px);
+        background-size: 24px 24px;
         pointer-events: none;
         z-index: 0;
       }
       .tg-loading {
         display: flex; align-items: center; justify-content: center;
-        height: 100vh; background: var(--bg);
+        height: 100vh; background: #0D0D15;
       }
       /* HEADER */
       .tg-header {
         position: relative; z-index: 10;
         padding: 10px 16px;
         padding-top: calc(10px + env(safe-area-inset-top, 0px));
-        background: linear-gradient(135deg, #E8466A, #F06292);
+        background: var(--theme-gradient, linear-gradient(135deg, #E8466A, #9C27B0));
         display: flex; align-items: center; gap: 12px;
         flex-shrink: 0;
-        box-shadow: 0 2px 12px rgba(232,70,106,0.3);
+        box-shadow: 0 2px 20px rgba(0,0,0,0.4);
+        min-height: 70px;
       }
       .tg-header-avatar {
         width: 42px; height: 42px; border-radius: 50%;
-        background: rgba(255,255,255,0.25);
+        background: rgba(255,255,255,0.2);
         display: flex; align-items: center; justify-content: center;
-        font-size: 20px; flex-shrink: 0; overflow: hidden;
-        border: 2px solid rgba(255,255,255,0.4);
+        flex-shrink: 0; overflow: hidden;
+        border: 2px solid rgba(255,255,255,0.35);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
       }
       .tg-header-avatar img { width: 100%; height: 100%; object-fit: cover; }
       .tg-header-name {
         font-weight: 700; font-size: 17px; color: white;
         font-family: var(--font-display);
       }
-      .tg-header-status { font-size: 12px; color: rgba(255,255,255,0.8); margin-top: 1px; }
+      .tg-header-status { font-size: 12px; color: rgba(255,255,255,0.75); margin-top: 1px; }
+      .tg-header-video-btn {
+        background: rgba(255,255,255,0.15); border: none; border-radius: 50%;
+        width: 36px; height: 36px; flex-shrink: 0; cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .tg-header-video-btn:active { background: rgba(255,255,255,0.25); }
       .tg-typing-status { display: flex; align-items: center; gap: 2px; }
       .tg-typing-dots {
         display: inline-flex; gap: 2px; align-items: center; margin-left: 2px;
@@ -1144,15 +1166,17 @@ function TGStyles() {
       .tg-pinned {
         position: relative; z-index: 9;
         display: flex; align-items: center; gap: 10px;
-        padding: 8px 14px; background: white;
-        border-bottom: 1px solid rgba(232,70,106,0.1);
+        padding: 8px 14px;
+        background: rgba(255,255,255,0.06);
+        backdrop-filter: blur(10px);
+        border-bottom: 1px solid rgba(255,255,255,0.06);
         cursor: pointer; flex-shrink: 0;
       }
-      .tg-pinned-bar { width: 3px; height: 32px; background: var(--primary); border-radius: 3px; flex-shrink: 0; }
+      .tg-pinned-bar { width: 3px; height: 32px; background: var(--theme-accent, #E8466A); border-radius: 3px; flex-shrink: 0; }
       .tg-pinned-content { flex: 1; min-width: 0; }
-      .tg-pinned-label { font-size: 11px; font-weight: 700; color: var(--primary); margin-bottom: 2px; }
-      .tg-pinned-text { font-size: 13px; color: var(--text-light); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-      .tg-pinned-close { background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 4px; }
+      .tg-pinned-label { font-size: 11px; font-weight: 700; color: var(--theme-accent, #E8466A); margin-bottom: 2px; }
+      .tg-pinned-text { font-size: 13px; color: rgba(255,255,255,0.6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .tg-pinned-close { background: none; border: none; cursor: pointer; color: rgba(255,255,255,0.4); padding: 4px; }
       /* MESSAGES AREA */
       .tg-messages {
         flex: 1; overflow-y: auto; overflow-x: hidden;
@@ -1165,17 +1189,18 @@ function TGStyles() {
       .tg-messages::-webkit-scrollbar { display: none; }
       .tg-empty {
         text-align: center; padding: 60px 20px;
-        color: var(--text-muted); margin: auto;
+        color: rgba(255,255,255,0.5); margin: auto;
       }
-      .tg-empty p { font-size: 16px; font-family: var(--font-display); margin-top: 8px; }
+      .tg-empty p { font-size: 16px; font-family: var(--font-display); margin-top: 8px; color: rgba(255,255,255,0.5); }
       /* DATE SEPARATOR */
       .tg-date-sep {
         text-align: center; margin: 12px 0 6px; pointer-events: none;
       }
       .tg-date-sep span {
-        background: rgba(0,0,0,0.15); backdrop-filter: blur(8px);
+        background: rgba(255,255,255,0.1); backdrop-filter: blur(8px);
         padding: 4px 14px; border-radius: 14px;
-        font-size: 12px; color: white; font-weight: 600;
+        font-size: 12px; color: rgba(255,255,255,0.7); font-weight: 600;
+        border: 1px solid rgba(255,255,255,0.08);
       }
       /* MESSAGE ROW */
       .tg-msg-row {
@@ -1195,41 +1220,44 @@ function TGStyles() {
         max-width: 78%;
         word-break: break-word;
         position: relative;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
       }
       .tg-bubble.mine {
-        background: linear-gradient(135deg, #E8466A, #F06292);
+        background: var(--theme-gradient, linear-gradient(135deg, #E8466A, #9C27B0));
         color: white;
-        border-radius: 18px 18px 4px 18px;
+        border-radius: 20px 20px 4px 20px;
         padding: 8px 12px 6px;
+        box-shadow: 0 2px 12px rgba(var(--theme-accent-rgb, 232,70,106), 0.3);
       }
       .tg-bubble.theirs {
-        background: white;
-        color: var(--text);
-        border-radius: 18px 18px 18px 4px;
+        background: rgba(255,255,255,0.08);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255,255,255,0.06);
+        color: rgba(255,255,255,0.92);
+        border-radius: 20px 20px 20px 4px;
         padding: 8px 12px 6px;
       }
       /* TAILS — only on last in group */
       .tg-bubble.mine.tail {
-        border-radius: 18px 18px 4px 18px;
+        border-radius: 20px 20px 4px 20px;
       }
       .tg-bubble.mine.tail::after {
         content: '';
         position: absolute;
         bottom: 0; right: -7px;
         width: 12px; height: 16px;
-        background: #F06292;
+        background: var(--theme-accent, #E8466A);
         clip-path: polygon(0 0, 0 100%, 100% 100%);
       }
       .tg-bubble.theirs.tail {
-        border-radius: 18px 18px 18px 4px;
+        border-radius: 20px 20px 20px 4px;
       }
       .tg-bubble.theirs.tail::after {
         content: '';
         position: absolute;
         bottom: 0; left: -7px;
         width: 12px; height: 16px;
-        background: white;
+        background: rgba(255,255,255,0.08);
         clip-path: polygon(100% 0, 0 100%, 100% 100%);
       }
       .tg-bubble.photo-only { padding: 3px; }
@@ -1237,16 +1265,16 @@ function TGStyles() {
         max-width: 100%; max-height: 300px;
         border-radius: 15px; display: block;
       }
-      .tg-text { font-size: 15px; line-height: 1.45; white-space: pre-wrap; user-select: text; -webkit-user-select: text; }
+      .tg-text { font-size: 15px; line-height: 1.45; white-space: pre-wrap; user-select: text; -webkit-user-select: text; color: white; }
+      .tg-bubble.theirs .tg-text { color: rgba(255,255,255,0.92); }
       .tg-meta {
         display: flex; align-items: center; justify-content: flex-end;
         gap: 3px; margin-top: 3px;
       }
-      .tg-edited { font-size: 10px; opacity: 0.6; }
-      .tg-time { font-size: 11px; opacity: 0.65; }
-      .tg-tick { font-size: 11px; opacity: 0.65; }
+      .tg-edited { font-size: 10px; opacity: 0.6; color: rgba(255,255,255,0.7); }
+      .tg-time { font-size: 11px; opacity: 0.65; color: rgba(255,255,255,0.7); }
+      .tg-tick { font-size: 11px; opacity: 0.65; color: rgba(255,255,255,0.7); }
       .tg-tick.read { opacity: 1; color: #4FC3F7; }
-      .tg-bubble.mine .tg-time, .tg-bubble.mine .tg-tick, .tg-bubble.mine .tg-edited { color: rgba(255,255,255,0.85); }
       /* VIDEO CIRCLE */
       .tg-circle-wrap {
         position: relative; display: inline-block;
@@ -1256,7 +1284,8 @@ function TGStyles() {
       .tg-circle-video {
         width: 180px; height: 180px; border-radius: 50%;
         object-fit: cover; display: block;
-        border: 3px solid #E8466A; cursor: pointer;
+        box-shadow: 0 0 0 3px var(--theme-accent, #E8466A), 0 4px 20px rgba(0,0,0,0.5);
+        cursor: pointer;
       }
       .tg-circle-time {
         position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
@@ -1273,9 +1302,10 @@ function TGStyles() {
         width: 38px; height: 38px; border-radius: 50%; border: none;
         cursor: pointer; flex-shrink: 0;
         display: flex; align-items: center; justify-content: center;
+        backdrop-filter: blur(8px);
       }
-      .tg-bubble.mine .tg-voice-play-btn { background: rgba(255,255,255,0.25); color: white; }
-      .tg-bubble.theirs .tg-voice-play-btn { background: rgba(232,70,106,0.12); color: var(--primary); }
+      .tg-bubble.mine .tg-voice-play-btn { background: rgba(255,255,255,0.22); color: white; }
+      .tg-bubble.theirs .tg-voice-play-btn { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.12); }
       .tg-voice-right { flex: 1; min-width: 0; }
       .tg-voice-progress-wrap {
         cursor: pointer; padding: 6px 0;
@@ -1288,21 +1318,21 @@ function TGStyles() {
         height: 3px; border-radius: 2px; z-index: 2; transition: width 0.1s;
       }
       .tg-voice-fill.mine { background: rgba(255,255,255,0.9); }
-      .tg-voice-fill.theirs { background: var(--primary); }
+      .tg-voice-fill.theirs { background: var(--theme-accent, #E8466A); }
       .tg-voice-wave {
         display: flex; align-items: center; gap: 2px; width: 100%;
       }
       .tg-wave-bar {
         width: 2px; border-radius: 2px; flex: 1; min-width: 2px;
       }
-      .tg-wave-bar.mine { background: rgba(255,255,255,0.4); }
-      .tg-wave-bar.theirs { background: rgba(232,70,106,0.25); }
+      .tg-wave-bar.mine { background: rgba(255,255,255,0.35); }
+      .tg-wave-bar.theirs { background: rgba(255,255,255,0.2); }
       .tg-voice-footer {
         display: flex; justify-content: space-between; align-items: center;
         margin-top: 2px;
       }
-      .tg-voice-duration { font-size: 11px; opacity: 0.65; }
-      .tg-msg-time { font-size: 11px; opacity: 0.65; }
+      .tg-voice-duration { font-size: 11px; opacity: 0.65; color: rgba(255,255,255,0.7); }
+      .tg-msg-time { font-size: 11px; opacity: 0.65; color: rgba(255,255,255,0.7); }
       /* TYPING BUBBLE */
       .tg-typing-bubble { padding: 10px 16px; }
       .tg-typing-indicator {
@@ -1310,7 +1340,7 @@ function TGStyles() {
       }
       .tg-typing-indicator span {
         width: 7px; height: 7px; border-radius: 50%;
-        background: #C0A0A8;
+        background: rgba(255,255,255,0.4);
         animation: tgBounce 1.2s ease-in-out infinite;
       }
       .tg-typing-indicator span:nth-child(2) { animation-delay: 0.15s; }
@@ -1323,27 +1353,29 @@ function TGStyles() {
       .tg-scroll-btn {
         position: fixed; bottom: 170px; right: 14px;
         width: 42px; height: 42px; border-radius: 50%;
-        background: white; border: none;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        background: rgba(30,20,50,0.85); backdrop-filter: blur(12px);
+        border: 1px solid rgba(255,255,255,0.12); cursor: pointer;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.4);
         display: flex; align-items: center; justify-content: center;
-        cursor: pointer; z-index: 20; color: var(--primary);
+        cursor: pointer; z-index: 20; color: rgba(255,255,255,0.8);
       }
       .tg-scroll-badge {
         position: absolute; top: -4px; right: -4px;
-        background: var(--primary); color: white;
+        background: var(--theme-accent, #E8466A); color: white;
         border-radius: 10px; font-size: 10px; font-weight: 700;
         padding: 1px 5px; min-width: 18px; text-align: center;
       }
       /* CONTEXT MENU */
       .tg-ctx-overlay {
         position: fixed; inset: 0; z-index: 100;
-        background: rgba(0,0,0,0.3); backdrop-filter: blur(2px);
+        background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
         display: flex; align-items: center; justify-content: center;
       }
       .tg-ctx-menu {
-        background: white; border-radius: 16px;
-        overflow: hidden;
-        box-shadow: 0 8px 40px rgba(0,0,0,0.25);
+        background: rgba(28,20,45,0.97); backdrop-filter: blur(20px);
+        border-radius: 18px; overflow: hidden;
+        border: 1px solid rgba(255,255,255,0.1);
+        box-shadow: 0 16px 48px rgba(0,0,0,0.6);
         min-width: 200px;
         animation: tgCtxIn 0.15s ease;
       }
@@ -1362,18 +1394,18 @@ function TGStyles() {
         transition: transform 0.15s;
       }
       .tg-ctx-reaction-btn:active { transform: scale(0.8); }
-      .tg-ctx-divider { height: 1px; background: #f0f0f0; }
+      .tg-ctx-divider { height: 1px; background: rgba(255,255,255,0.08); }
       .tg-ctx-item {
         width: 100%; padding: 13px 18px;
         display: flex; align-items: center; gap: 12px;
         background: none; border: none; cursor: pointer;
         font-size: 15px; font-family: var(--font-body);
-        color: var(--text); text-align: left;
-        border-bottom: 1px solid #fafafa;
+        color: rgba(255,255,255,0.85); text-align: left;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
       }
       .tg-ctx-item:last-child { border-bottom: none; }
-      .tg-ctx-item:active { background: #f8f8f8; }
-      .tg-ctx-item.danger { color: #E8466A; }
+      .tg-ctx-item:active { background: rgba(255,255,255,0.06); }
+      .tg-ctx-item.danger { color: #FF6B8A; }
       /* REPLY PREVIEW inside bubble */
       .tg-reply-preview {
         display: flex; gap: 6px; margin-bottom: 6px;
@@ -1381,55 +1413,59 @@ function TGStyles() {
         cursor: pointer;
       }
       .tg-reply-preview.mine { background: rgba(255,255,255,0.15); }
-      .tg-reply-preview.theirs { background: rgba(232,70,106,0.08); }
+      .tg-reply-preview.theirs { background: rgba(255,255,255,0.06); }
       .tg-reply-preview-line {
         width: 3px; border-radius: 2px; flex-shrink: 0;
-        background: var(--primary);
+        background: var(--theme-accent, #E8466A);
       }
       .tg-reply-preview.mine .tg-reply-preview-line { background: rgba(255,255,255,0.7); }
       .tg-reply-preview-body { flex: 1; min-width: 0; }
-      .tg-reply-preview-name { font-size: 12px; font-weight: 700; color: var(--primary); margin-bottom: 2px; }
+      .tg-reply-preview-name { font-size: 12px; font-weight: 700; color: var(--theme-accent, #E8466A); margin-bottom: 2px; }
       .tg-reply-preview.mine .tg-reply-preview-name { color: rgba(255,255,255,0.9); }
-      .tg-reply-preview-text { font-size: 12px; opacity: 0.75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .tg-reply-preview-text { font-size: 12px; opacity: 0.7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: rgba(255,255,255,0.7); }
       .tg-reply-photo-thumb { width: 32px; height: 32px; object-fit: cover; border-radius: 6px; float: right; margin-left: 6px; }
       /* REPLY BAR */
       .tg-reply-bar {
         display: flex; align-items: center; gap: 10px;
-        padding: 8px 14px; background: white;
-        border-top: 1px solid rgba(232,70,106,0.1);
+        padding: 8px 14px;
+        background: rgba(15,10,25,0.9); backdrop-filter: blur(12px);
+        border-top: 1px solid rgba(255,255,255,0.06);
         flex-shrink: 0; position: relative; z-index: 5;
       }
-      .tg-reply-bar-line { width: 3px; height: 32px; background: var(--primary); border-radius: 3px; flex-shrink: 0; }
-      .tg-reply-bar-line.edit { background: #2196F3; }
+      .tg-reply-bar-line { width: 3px; height: 32px; background: var(--theme-accent, #E8466A); border-radius: 3px; flex-shrink: 0; }
+      .tg-reply-bar-line.edit { background: #4FC3F7; }
       .tg-reply-bar-content { flex: 1; min-width: 0; }
-      .tg-reply-bar-name { font-size: 12px; font-weight: 700; color: var(--primary); margin-bottom: 2px; }
-      .tg-reply-bar-name.edit { color: #2196F3; }
-      .tg-reply-bar-text { font-size: 13px; color: var(--text-light); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-      .tg-reply-bar-close { background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 4px; }
+      .tg-reply-bar-name { font-size: 12px; font-weight: 700; color: var(--theme-accent, #E8466A); margin-bottom: 2px; }
+      .tg-reply-bar-name.edit { color: #4FC3F7; }
+      .tg-reply-bar-text { font-size: 13px; color: rgba(255,255,255,0.5); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .tg-reply-bar-close { background: none; border: none; cursor: pointer; color: rgba(255,255,255,0.4); padding: 4px; }
       /* PHOTO PREVIEW BAR */
       .tg-photo-preview-bar {
-        padding: 8px 14px; background: white;
-        border-top: 1px solid #eee;
+        padding: 8px 14px;
+        background: rgba(15,10,25,0.9); backdrop-filter: blur(12px);
+        border-top: 1px solid rgba(255,255,255,0.06);
         display: flex; align-items: center; gap: 10px; flex-shrink: 0;
       }
       .tg-photo-preview-bar img { width: 48px; height: 48px; object-fit: cover; border-radius: 8px; }
-      .tg-photo-preview-bar span { font-size: 13px; color: var(--text-light); flex: 1; }
-      .tg-photo-preview-bar button { background: none; border: none; cursor: pointer; color: var(--text-muted); }
+      .tg-photo-preview-bar span { font-size: 13px; color: rgba(255,255,255,0.6); flex: 1; }
+      .tg-photo-preview-bar button { background: none; border: none; cursor: pointer; color: rgba(255,255,255,0.4); }
       /* RECORDING */
       .tg-recording-panel {
-        padding: 16px; background: white;
-        border-top: 1px solid rgba(232,70,106,0.1);
+        padding: 16px;
+        background: rgba(15,10,25,0.95); backdrop-filter: blur(20px);
+        border-top: 1px solid rgba(255,255,255,0.06);
         display: flex; flex-direction: column;
         align-items: center; gap: 12px; flex-shrink: 0;
       }
       .tg-rec-preview {
         width: 140px; height: 140px; border-radius: 50%;
-        object-fit: cover; border: 4px solid #E8466A;
+        object-fit: cover;
+        box-shadow: 0 0 0 4px var(--theme-accent, #E8466A), 0 0 20px rgba(var(--theme-accent-rgb,232,70,106),0.4);
         animation: tgPulse 1.5s ease-in-out infinite;
       }
       .tg-rec-timer {
         position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%);
-        background: #E8466A; border-radius: 12px;
+        background: var(--theme-accent, #E8466A); border-radius: 12px;
         padding: 3px 12px; font-size: 13px; color: white; font-weight: 700;
       }
       .tg-rec-audio {
@@ -1437,26 +1473,32 @@ function TGStyles() {
       }
       .tg-rec-mic-pulse {
         width: 52px; height: 52px; border-radius: 50%;
-        background: rgba(232,70,106,0.1);
+        background: rgba(255,255,255,0.08);
         display: flex; align-items: center; justify-content: center;
         animation: tgPulse 1.5s ease-in-out infinite;
       }
       @keyframes tgPulse {
-        0%, 100% { box-shadow: 0 0 0 4px rgba(232,70,106,0.15); }
-        50% { box-shadow: 0 0 0 10px rgba(232,70,106,0.25); }
+        0%, 100% { box-shadow: 0 0 0 4px rgba(232,70,106,0.2); }
+        50% { box-shadow: 0 0 0 10px rgba(232,70,106,0.1); }
       }
       .tg-rec-actions { display: flex; gap: 10px; }
       .tg-rec-cancel {
-        padding: 10px 22px; background: #F5F0F3; border: none;
+        padding: 10px 22px;
+        background: rgba(255,255,255,0.08); backdrop-filter: blur(8px);
+        border: 1px solid rgba(255,255,255,0.1);
         border-radius: 22px; font-size: 14px; font-weight: 600;
-        font-family: var(--font-body); color: var(--text-light); cursor: pointer;
+        font-family: var(--font-body); color: rgba(255,255,255,0.7); cursor: pointer;
       }
       .tg-rec-switch {
-        padding: 10px 16px; background: #F5F0F3; border: none;
+        padding: 10px 16px;
+        background: rgba(255,255,255,0.08); backdrop-filter: blur(8px);
+        border: 1px solid rgba(255,255,255,0.1);
         border-radius: 22px; font-size: 18px; cursor: pointer;
+        color: rgba(255,255,255,0.8);
+        display: flex; align-items: center; justify-content: center;
       }
       .tg-rec-send {
-        padding: 10px 22px; background: linear-gradient(135deg, #E8466A, #F06292);
+        padding: 10px 22px; background: var(--theme-gradient, linear-gradient(135deg, #E8466A, #9C27B0));
         border: none; border-radius: 22px; font-size: 14px; font-weight: 700;
         font-family: var(--font-body); color: white; cursor: pointer;
         display: flex; align-items: center; gap: 6px;
@@ -1465,8 +1507,8 @@ function TGStyles() {
       .tg-input-bar {
         padding: 8px 10px;
         padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
-        background: white;
-        border-top: 1px solid rgba(232,70,106,0.06);
+        background: rgba(15,10,25,0.95); backdrop-filter: blur(20px);
+        border-top: 1px solid rgba(255,255,255,0.06);
         display: flex; align-items: flex-end; gap: 4px;
         flex-shrink: 0; position: relative; z-index: 5;
       }
@@ -1475,31 +1517,37 @@ function TGStyles() {
         padding: 8px; border-radius: 50%;
         display: flex; flex-shrink: 0;
         -webkit-tap-highlight-color: transparent;
+        color: rgba(255,255,255,0.5);
       }
+      .tg-input-icon-btn:active { background: rgba(255,255,255,0.06); }
       .tg-input-field {
-        flex: 1; background: #F5F0F3; border-radius: 22px;
+        flex: 1; background: rgba(255,255,255,0.08); border-radius: 22px;
+        border: 1px solid rgba(255,255,255,0.08);
         padding: 0 14px; display: flex; align-items: flex-end;
         min-width: 0;
       }
       .tg-input-field textarea {
         flex: 1; border: none; background: none;
         padding: 10px 0; font-size: 15px;
-        font-family: var(--font-body); color: var(--text);
+        font-family: var(--font-body); color: rgba(255,255,255,0.9);
         resize: none; outline: none; max-height: 120px; line-height: 1.4;
         width: 100%;
       }
+      .tg-input-field textarea::placeholder { color: rgba(255,255,255,0.3); }
       .tg-send-btn {
         width: 42px; height: 42px;
-        background: linear-gradient(135deg, #E8466A, #F06292);
+        background: var(--theme-gradient, linear-gradient(135deg, #E8466A, #9C27B0));
         border: none; cursor: pointer; border-radius: 50%;
         display: flex; align-items: center; justify-content: center;
-        flex-shrink: 0; box-shadow: 0 2px 8px rgba(232,70,106,0.35);
+        flex-shrink: 0; box-shadow: 0 2px 12px rgba(0,0,0,0.3);
       }
       /* EMOJI PICKER */
       .tg-emoji-picker {
         position: absolute; bottom: calc(100% + 8px); left: 8px;
-        background: white; border-radius: 16px;
-        box-shadow: 0 4px 24px rgba(0,0,0,0.18);
+        background: rgba(28,20,45,0.97); backdrop-filter: blur(20px);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 16px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.5);
         padding: 12px;
         display: flex; flex-wrap: wrap; gap: 4px;
         max-width: calc(100% - 16px);
@@ -1512,7 +1560,7 @@ function TGStyles() {
         border-radius: 8px;
         display: flex; align-items: center; justify-content: center;
       }
-      .tg-emoji-btn:active { background: #f0f0f0; }
+      .tg-emoji-btn:active { background: rgba(255,255,255,0.08); }
       /* REACTIONS */
       .tg-reactions {
         display: flex; flex-wrap: wrap; gap: 4px;
@@ -1521,45 +1569,14 @@ function TGStyles() {
       .tg-reaction {
         display: flex; align-items: center; gap: 3px;
         padding: 2px 8px; border-radius: 12px;
-        background: rgba(0,0,0,0.06); border: 1px solid transparent;
+        background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1);
         font-size: 14px; cursor: pointer;
       }
       .tg-reaction.mine {
-        background: rgba(232,70,106,0.12);
-        border-color: rgba(232,70,106,0.3);
+        background: rgba(var(--theme-accent-rgb,232,70,106), 0.2);
+        border-color: rgba(var(--theme-accent-rgb,232,70,106), 0.4);
       }
-      .tg-reaction span { font-size: 12px; font-weight: 600; }
-      /* DARK MODE — triggered by .app.dark on parent */
-      .app.dark .tg-chat { background: #1A1825; }
-      .app.dark .tg-chat::before { background-image: radial-gradient(circle, rgba(232,70,106,0.04) 1px, transparent 1px); }
-      .app.dark .tg-bubble.theirs { background: #2A2540; color: #EDE4F0; }
-      .app.dark .tg-bubble.theirs.tail::after { background: #2A2540; }
-      .app.dark .tg-input-bar { background: #1A1825; border-top-color: rgba(232,70,106,0.15); }
-      .app.dark .tg-input-field { background: #2A2540; }
-      .app.dark .tg-input-field textarea { color: #EDE4F0; }
-      .app.dark .tg-input-field textarea::placeholder { color: #7A6880; }
-      .app.dark .tg-input-icon-btn svg { filter: brightness(0.7) sepia(0.3); }
-      .app.dark .tg-recording-panel { background: #1A1825; border-top-color: rgba(232,70,106,0.15); }
-      .app.dark .tg-pinned { background: #2A2540; border-bottom-color: rgba(232,70,106,0.15); }
-      .app.dark .tg-pinned-text { color: #9A8098; }
-      .app.dark .tg-pinned-close { color: #7A6880; }
-      .app.dark .tg-reply-bar { background: #1A1825; border-top-color: rgba(232,70,106,0.15); }
-      .app.dark .tg-reply-bar-text { color: #9A8098; }
-      .app.dark .tg-reply-bar-close { color: #7A6880; }
-      .app.dark .tg-photo-preview-bar { background: #1A1825; border-top-color: #333; }
-      .app.dark .tg-photo-preview-bar span { color: #9A8098; }
-      .app.dark .tg-ctx-menu { background: #2A2540; }
-      .app.dark .tg-ctx-item { color: #EDE4F0; border-bottom-color: #3A3050; }
-      .app.dark .tg-ctx-item:active { background: #3A3050; }
-      .app.dark .tg-ctx-divider { background: #3A3050; }
-      .app.dark .tg-emoji-picker { background: #2A2540; }
-      .app.dark .tg-emoji-btn:active { background: #3A3050; }
-      .app.dark .tg-scroll-btn { background: #2A2540; box-shadow: 0 2px 10px rgba(0,0,0,0.5); }
-      .app.dark .tg-reply-preview.theirs { background: rgba(232,70,106,0.1); }
-      .app.dark .tg-bubble.theirs .tg-voice-play-btn { background: rgba(232,70,106,0.2); }
-      .app.dark .tg-reaction { background: rgba(255,255,255,0.08); }
-      .app.dark .tg-rec-cancel { background: #3A3050; color: #9A8098; }
-      .app.dark .tg-rec-switch { background: #3A3050; }
+      .tg-reaction span { font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.7); }
       /* MEDIA BUTTON */
       .tg-media-btn {
         background: rgba(255,255,255,0.2); border: none; border-radius: 50%;
@@ -1577,7 +1594,7 @@ function TGStyles() {
       }
       .tg-media-panel {
         width: 100%; height: 100%;
-        background: white; border-radius: 0;
+        background: #1A1025; border-radius: 0;
         display: flex; flex-direction: column;
         animation: slideUp 0.3s ease;
         overflow: hidden;
@@ -1586,38 +1603,38 @@ function TGStyles() {
       .tg-media-header {
         display: flex; align-items: center; justify-content: space-between;
         padding: 16px 20px 12px;
-        border-bottom: 1px solid rgba(232,70,106,0.1);
+        border-bottom: 1px solid rgba(255,255,255,0.08);
         flex-shrink: 0;
       }
-      .tg-media-title { font-weight: 700; font-size: 17px; font-family: var(--font-display); }
-      .tg-media-close { background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 4px; }
+      .tg-media-title { font-weight: 700; font-size: 17px; font-family: var(--font-display); color: rgba(255,255,255,0.9); }
+      .tg-media-close { background: none; border: none; cursor: pointer; color: rgba(255,255,255,0.4); padding: 4px; }
       .tg-media-tabs {
         display: flex; gap: 0; overflow-x: auto; flex-shrink: 0;
-        border-bottom: 1px solid rgba(232,70,106,0.08);
+        border-bottom: 1px solid rgba(255,255,255,0.06);
         padding: 0 12px;
       }
       .tg-media-tabs::-webkit-scrollbar { display: none; }
       .tg-media-tab {
         background: none; border: none; cursor: pointer;
         padding: 10px 12px; font-size: 13px; font-weight: 600;
-        color: var(--text-muted); white-space: nowrap;
+        color: rgba(255,255,255,0.4); white-space: nowrap;
         border-bottom: 2px solid transparent;
         font-family: var(--font-body);
         display: flex; align-items: center; gap: 5px;
         transition: color 0.2s;
       }
-      .tg-media-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+      .tg-media-tab.active { color: var(--theme-accent, #E8466A); border-bottom-color: var(--theme-accent, #E8466A); }
       .tg-media-tab-count {
-        background: var(--primary); color: white;
+        background: var(--theme-accent, #E8466A); color: white;
         font-size: 10px; padding: 1px 6px; border-radius: 10px;
       }
       .tg-media-content { flex: 1; overflow-y: auto; padding: 12px; }
       .tg-media-content::-webkit-scrollbar { display: none; }
       .tg-media-empty {
         text-align: center; padding: 40px 20px;
-        color: var(--text-muted); font-size: 40px;
+        color: rgba(255,255,255,0.3); font-size: 40px;
       }
-      .tg-media-empty p { font-size: 15px; margin-top: 8px; }
+      .tg-media-empty p { font-size: 15px; margin-top: 8px; color: rgba(255,255,255,0.4); }
       /* PHOTO GRID */
       .tg-media-grid {
         display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px;
@@ -1645,38 +1662,31 @@ function TGStyles() {
       .tg-media-voice-item {
         display: flex; align-items: center; gap: 12px;
         padding: 10px 12px; border-radius: 12px;
-        background: var(--bg);
+        background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.05);
       }
       .tg-media-voice-play {
         width: 38px; height: 38px; border-radius: 50%;
-        background: var(--primary); color: white; border: none; cursor: pointer;
+        background: var(--theme-gradient, linear-gradient(135deg,#E8466A,#9C27B0)); color: white; border: none; cursor: pointer;
         display: flex; align-items: center; justify-content: center; flex-shrink: 0;
       }
       .tg-media-voice-info { flex: 1; }
-      .tg-media-voice-name { font-size: 13px; font-weight: 600; color: var(--text); display: block; }
-      .tg-media-voice-dur { font-size: 12px; color: var(--text-muted); }
-      .tg-media-voice-time { font-size: 11px; color: var(--text-muted); }
+      .tg-media-voice-name { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.85); display: block; }
+      .tg-media-voice-dur { font-size: 12px; color: rgba(255,255,255,0.4); }
+      .tg-media-voice-time { font-size: 11px; color: rgba(255,255,255,0.4); }
       /* LINKS LIST */
       .tg-media-link-item {
         display: flex; align-items: center; gap: 12px; padding: 10px 12px;
-        border-radius: 12px; background: var(--bg); text-decoration: none; color: inherit;
+        border-radius: 12px; background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.05);
+        text-decoration: none; color: inherit;
       }
       .tg-media-link-icon { font-size: 20px; flex-shrink: 0; }
       .tg-media-link-info { flex: 1; min-width: 0; }
       .tg-media-link-url {
-        font-size: 13px; color: #2196F3; display: block;
+        font-size: 13px; color: #4FC3F7; display: block;
         white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
       }
-      .tg-media-link-from { font-size: 11px; color: var(--text-muted); }
-      /* DARK MODE — media (класс dark на самом оверлее, т.к. портал рендерится в body) */
-      .tg-media-overlay.dark .tg-media-panel { background: #2A2540; }
-      .tg-media-overlay.dark .tg-media-header { border-bottom-color: rgba(232,70,106,0.15); }
-      .tg-media-overlay.dark .tg-media-title { color: #EDE4F0; }
-      .tg-media-overlay.dark .tg-media-close { color: #7A6880; }
-      .tg-media-overlay.dark .tg-media-tab { color: #7A6880; }
-      .tg-media-overlay.dark .tg-media-voice-item { background: #3A3050; }
-      .tg-media-overlay.dark .tg-media-link-item { background: #3A3050; }
-      .tg-media-overlay.dark .tg-media-empty { color: #7A6880; }
+      .tg-media-link-from { font-size: 11px; color: rgba(255,255,255,0.4); }
       /* LIGHTBOX */
       .tg-lightbox {
         position: fixed; inset: 0; z-index: 500;

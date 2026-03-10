@@ -603,7 +603,7 @@ export default function Home({ session, profile, onNavigate }) {
           width: 100%; height: 100%;
           border-radius: 50%;
           padding: 2px;
-          background: linear-gradient(160deg, #e8466a 0%, #9b4dca 100%);
+          background: var(--theme-gradient, linear-gradient(160deg, #e8466a 0%, #9b4dca 100%));
         }
         .av-inner {
           width: 100%; height: 100%;
@@ -648,7 +648,7 @@ export default function Home({ session, profile, onNavigate }) {
 
         /* ── Hero banner ── */
         .home-banner {
-          background: linear-gradient(160deg, #e8466a 0%, #c84b8b 45%, #9b4dca 100%);
+          background: var(--theme-gradient, linear-gradient(160deg, #e8466a 0%, #c84b8b 45%, #9b4dca 100%));
           border-radius: 0 0 40px 40px;
           padding: 56px 24px 36px;
           display: flex;

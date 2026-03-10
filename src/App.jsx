@@ -15,22 +15,37 @@ import Navigation from './components/Navigation'
 // Apply saved theme on load
 ;(function applyStoredTheme() {
   const THEMES = {
-    rose:    { a: '#e8466a', b: '#c84b8b' },
-    purple:  { a: '#9b4dca', b: '#6d28d9' },
-    sunset:  { a: '#f97316', b: '#ec4899' },
-    ocean:   { a: '#0ea5e9', b: '#6366f1' },
-    forest:  { a: '#22c55e', b: '#059669' },
-    cherry:  { a: '#be123c', b: '#9f1239' },
-    gold:    { a: '#f59e0b', b: '#d97706' },
-    night:   { a: '#1e1b4b', b: '#312e81' },
+    rose:     { a: '#E8466A', b: '#9C27B0' },
+    cherry:   { a: '#AD1457', b: '#4A0072' },
+    violet:   { a: '#6A1B9A', b: '#1A0A2E' },
+    lavender: { a: '#7E57C2', b: '#EC407A' },
+    ocean:    { a: '#0277BD', b: '#00838F' },
+    sky:      { a: '#039BE5', b: '#B388FF' },
+    forest:   { a: '#2E7D32', b: '#004D40' },
+    northern: { a: '#00C853', b: '#00BCD4' },
+    sunset:   { a: '#FF6F00', b: '#C62828' },
+    fire:     { a: '#D50000', b: '#FF6D00' },
+    gold:     { a: '#F57F17', b: '#E65100' },
+    night:    { a: '#1A237E', b: '#0D0D1A' },
   }
-  const saved = localStorage.getItem('loveTheme')
-  if (saved && THEMES[saved]) {
-    const t = THEMES[saved]
+  // Try full theme data first, fall back to id lookup
+  let t = null
+  try {
+    const raw = localStorage.getItem('loveThemeData')
+    if (raw) t = JSON.parse(raw)
+  } catch (_) {}
+  if (!t) {
+    const saved = localStorage.getItem('loveTheme')
+    if (saved && THEMES[saved]) t = THEMES[saved]
+  }
+  if (t) {
+    const gradient = `linear-gradient(135deg, ${t.a} 0%, ${t.b} 100%)`
     document.documentElement.style.setProperty('--primary', t.a)
     document.documentElement.style.setProperty('--primary-dark', t.b)
-    document.documentElement.style.setProperty('--gradient', `linear-gradient(135deg, ${t.a} 0%, ${t.b} 100%)`)
-    document.documentElement.style.setProperty('--gradient-warm', `linear-gradient(135deg, ${t.a} 0%, ${t.b} 100%)`)
+    document.documentElement.style.setProperty('--gradient', gradient)
+    document.documentElement.style.setProperty('--gradient-warm', gradient)
+    document.documentElement.style.setProperty('--theme-gradient', gradient)
+    document.documentElement.style.setProperty('--theme-accent', t.a)
   }
 })()
 

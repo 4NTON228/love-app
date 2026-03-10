@@ -138,12 +138,16 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
   }
 
   function applyTheme(theme) {
+    const gradient = `linear-gradient(135deg, ${theme.a} 0%, ${theme.b} 100%)`
     setActiveTheme(theme.id)
     localStorage.setItem('loveTheme', theme.id)
+    localStorage.setItem('loveThemeData', JSON.stringify(theme))
     document.documentElement.style.setProperty('--primary', theme.a)
     document.documentElement.style.setProperty('--primary-dark', theme.b)
-    document.documentElement.style.setProperty('--gradient', `linear-gradient(135deg, ${theme.a} 0%, ${theme.b} 100%)`)
-    document.documentElement.style.setProperty('--gradient-warm', `linear-gradient(135deg, ${theme.a} 0%, ${theme.b} 100%)`)
+    document.documentElement.style.setProperty('--gradient', gradient)
+    document.documentElement.style.setProperty('--gradient-warm', gradient)
+    document.documentElement.style.setProperty('--theme-gradient', gradient)
+    document.documentElement.style.setProperty('--theme-accent', theme.a)
   }
 
   async function handleLogout() {
@@ -157,7 +161,7 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
       <style>{`
         .settings-wrap { padding: 0 0 120px; }
         .settings-header {
-          background: linear-gradient(160deg, #e8466a 0%, #c84b8b 50%, #9b4dca 100%);
+          background: var(--theme-gradient, linear-gradient(160deg, #e8466a 0%, #c84b8b 50%, #9b4dca 100%));
           padding: 60px 20px 30px;
           border-radius: 0 0 32px 32px;
           display: flex;

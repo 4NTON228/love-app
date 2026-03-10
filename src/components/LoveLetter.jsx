@@ -68,7 +68,7 @@ export default function LoveLetter({ session, profile }) {
       <style>{`
         .letter-wrap {
           min-height: 100%;
-          background: linear-gradient(160deg, #2d1457 0%, #6b1a6e 40%, #c84b8b 80%, #e8466a 100%);
+          background: var(--theme-gradient, linear-gradient(160deg, #2d1457 0%, #6b1a6e 40%, #c84b8b 80%, #e8466a 100%));
           display: flex;
           flex-direction: column;
           align-items: center;

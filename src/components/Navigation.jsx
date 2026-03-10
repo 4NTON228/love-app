@@ -233,8 +233,8 @@ export default function Navigation({ activeTab, setActiveTab }) {
 
         .nav-tab.active .nav-tab-icon {
           transform: translateY(-3px) scale(1.1);
-          background: rgba(232,70,106,0.12);
-          color: var(--primary);
+          background: rgba(var(--theme-accent-rgb,232,70,106),0.12);
+          color: var(--theme-accent, var(--primary));
         }
 
         .nav-tab.pressing .nav-tab-icon {
@@ -251,7 +251,7 @@ export default function Navigation({ activeTab, setActiveTab }) {
           white-space: nowrap;
         }
         .nav-tab.active .nav-tab-label {
-          color: var(--primary);
+          color: var(--theme-accent, var(--primary));
         }
 
         /* Active dot indicator */
@@ -262,7 +262,7 @@ export default function Navigation({ activeTab, setActiveTab }) {
           transform: translateX(-50%) scaleX(0);
           width: 18px; height: 3px;
           border-radius: 99px;
-          background: linear-gradient(90deg, var(--primary), #c84b8b);
+          background: var(--theme-gradient, linear-gradient(90deg, var(--primary), #c84b8b));
           transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
         }
         .nav-tab.active .nav-tab-dot {
@@ -327,9 +327,9 @@ export default function Navigation({ activeTab, setActiveTab }) {
           -webkit-tap-highlight-color: transparent;
         }
         .more-item:active, .more-item.active-item {
-          background: rgba(232,70,106,0.15);
+          background: rgba(var(--theme-accent-rgb,232,70,106),0.15);
           transform: scale(0.95);
-          border-color: rgba(232,70,106,0.3);
+          border-color: rgba(var(--theme-accent-rgb,232,70,106),0.3);
         }
 
         .more-item-icon {
@@ -338,7 +338,7 @@ export default function Navigation({ activeTab, setActiveTab }) {
           display: flex; align-items: center; justify-content: center;
         }
         .more-item-icon svg { width: 26px; height: 26px; }
-        .more-item.active-item .more-item-icon { color: var(--primary); }
+        .more-item.active-item .more-item-icon { color: var(--theme-accent, var(--primary)); }
 
         .more-item-label {
           font-family: var(--font-body);

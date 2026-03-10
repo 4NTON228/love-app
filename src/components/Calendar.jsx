@@ -155,11 +155,11 @@ export default function Calendar({ session, profile }) {
       <style>{`
         .cal-wrap { padding: 0 0 120px; }
         .cal-header {
-          background: linear-gradient(160deg, #e8466a 0%, #c84b8b 50%, #9b4dca 100%);
+          background: var(--theme-gradient, linear-gradient(160deg, #e8466a 0%, #c84b8b 50%, #9b4dca 100%));
           padding: 60px 20px 24px;
           border-radius: 0 0 32px 32px;
           margin-bottom: 18px;
-          box-shadow: 0 8px 32px rgba(200,75,139,0.3);
+          box-shadow: 0 8px 32px rgba(0,0,0,0.3);
         }
         .cal-header-title {
           font-family: var(--font-display);

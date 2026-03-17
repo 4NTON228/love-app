@@ -62,13 +62,40 @@ export async function subscribeToPush(userId) {
   }
 }
 
-export async function sendPushNotification(title, body, senderId) {
+export async function sendPushNotification(title, body, recipientId, senderId) {
   try {
-    await fetch('/api/send-push', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title, body, senderId })
-    })
+    // Получаем текущую сессию пользователя для авторизации
+    const { data: { session } } = await supabase.auth.getSession()
+    
+    if (!session) {
+      console.error('No active session')
+      return
+    }
+
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+    const response = await fetch(
+      `${supabaseUrl}/functions/v1/send-push`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          title,
+          body,
+          recipientId,
+          senderId
+        })
+      }
+    )
+
+    if (!response.ok) {
+      const errorData = await response.json()
+      console.error('Push send failed:', errorData)
+    } else {
+      console.log('Push sent successfully')
+    }
   } catch (err) {
     console.error('Send push error:', err)
   }

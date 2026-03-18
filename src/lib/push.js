@@ -1,36 +1,70 @@
 import { supabase } from './supabase'
 
+// Функция для конвертации VAPID ключа
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4)
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
+  const rawData = window.atob(base64)
+  const outputArray = new Uint8Array(rawData.length)
+  for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i)
+  return outputArray
+}
+
 export async function subscribeToPush(userId) {
   if (!('Notification' in window)) return false;
   
   try {
+    console.log('📱 Запрашиваем разрешение...');
     const permission = await Notification.requestPermission();
-    if (permission !== 'granted') return false;
+    if (permission !== 'granted') {
+      console.log('❌ Нет разрешения');
+      return false;
+    }
+    
+    console.log('✅ Разрешение получено');
     
     const reg = await navigator.serviceWorker.ready;
     let sub = await reg.pushManager.getSubscription();
     
     if (!sub) {
+      console.log('📦 Создаём новую подписку...');
+      
+      // Получаем VAPID ключ из переменных окружения
+      const vapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+      console.log('VAPID ключ:', vapidKey ? 'найден' : 'не найден');
+      
+      if (!vapidKey) {
+        throw new Error('VAPID ключ не найден в переменных окружения');
+      }
+      
       sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(vapidKey) // ← ВАЖНО!
       });
     }
     
-    // Сохраняем в Supabase
-    await supabase.from('push_subscriptions').upsert({
-      user_id: userId,
-      subscription: sub.toJSON(),
-      updated_at: new Date().toISOString()
-    });
+    console.log('✅ Подписка создана:', sub);
     
-    console.log('✅ Подписка сохранена');
+    // Сохраняем в Supabase
+    const { error } = await supabase
+      .from('push_subscriptions')
+      .upsert({
+        user_id: userId,
+        subscription: sub.toJSON(),
+        updated_at: new Date().toISOString()
+      });
+    
+    if (error) throw error;
+    console.log('✅ Подписка сохранена в Supabase');
     return true;
+    
   } catch (err) {
-    console.error('Ошибка:', err);
+    console.error('❌ Ошибка подписки:', err);
     return false;
   }
 }
 
-export async function sendPushNotification(title, body, recipientId) {
-  console.log('Отправка через свой сервер');
+export async function sendPushNotification(title, body, recipientId, senderId) {
+  console.log('📨 Отправка уведомления:', { title, body, recipientId });
+  // Здесь будет вызов Edge Function
 }

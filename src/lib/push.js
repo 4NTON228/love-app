@@ -1,102 +1,36 @@
 import { supabase } from './supabase'
 
-const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY
-
-function urlBase64ToUint8Array(base64String) {
-  const padding = '='.repeat((4 - base64String.length % 4) % 4)
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
-  const rawData = window.atob(base64)
-  const outputArray = new Uint8Array(rawData.length)
-  for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i)
-  return outputArray
-}
-
 export async function subscribeToPush(userId) {
-  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return false
-
+  if (!('Notification' in window)) return false;
+  
   try {
-    // 1. Запросить разрешение
-    const permission = await Notification.requestPermission()
-    if (permission !== 'granted') return false
-
-    // 2. Зарегистрировать service worker если ещё не зарегистрирован
-    let reg = await navigator.serviceWorker.getRegistration('/')
-    if (!reg) {
-      reg = await navigator.serviceWorker.register('/sw.js')
-    }
-
-    // 3. Дождаться активации
-    await navigator.serviceWorker.ready
-
-    // 4. Получить или создать push-подписку
-    let sub = await reg.pushManager.getSubscription()
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') return false;
+    
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    
     if (!sub) {
       sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
-      })
+        userVisibleOnly: true
+      });
     }
-
-    // 5. Сохранить подписку в базу данных
-    const { data: existing } = await supabase
-      .from('push_subscriptions')
-      .select('id')
-      .eq('user_id', userId)
-      .maybeSingle()
-
-    if (!existing) {
-      await supabase.from('push_subscriptions').insert({
-        user_id: userId,
-        subscription: sub.toJSON()
-      })
-    } else {
-      await supabase.from('push_subscriptions')
-        .update({ subscription: sub.toJSON() })
-        .eq('user_id', userId)
-    }
-
-    return true
+    
+    // Сохраняем в Supabase
+    await supabase.from('push_subscriptions').upsert({
+      user_id: userId,
+      subscription: sub.toJSON(),
+      updated_at: new Date().toISOString()
+    });
+    
+    console.log('✅ Подписка сохранена');
+    return true;
   } catch (err) {
-    console.error('Push subscription error:', err)
-    return false
+    console.error('Ошибка:', err);
+    return false;
   }
 }
 
-export async function sendPushNotification(title, body, recipientId, senderId) {
-  try {
-    // Получаем текущую сессию пользователя для авторизации
-    const { data: { session } } = await supabase.auth.getSession()
-    
-    if (!session) {
-      console.error('No active session')
-      return
-    }
-
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-    const response = await fetch(
-      `${supabaseUrl}/functions/v1/send-push`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify({
-          title,
-          body,
-          recipientId,
-          senderId
-        })
-      }
-    )
-
-    if (!response.ok) {
-      const errorData = await response.json()
-      console.error('Push send failed:', errorData)
-    } else {
-      console.log('Push sent successfully')
-    }
-  } catch (err) {
-    console.error('Send push error:', err)
-  }
+export async function sendPushNotification(title, body, recipientId) {
+  console.log('Отправка через свой сервер');
 }

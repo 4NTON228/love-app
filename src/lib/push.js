@@ -39,7 +39,7 @@ export async function subscribeToPush(userId) {
       
       sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(vapidKey) // ← ВАЖНО!
+        applicationServerKey: urlBase64ToUint8Array(vapidKey)
       });
     }
     
@@ -65,6 +65,42 @@ export async function subscribeToPush(userId) {
 }
 
 export async function sendPushNotification(title, body, recipientId, senderId) {
-  console.log('📨 Отправка уведомления:', { title, body, recipientId });
-  // Здесь будет вызов Edge Function
+  try {
+    console.log('📨 Отправка уведомления:', { title, body, recipientId });
+    
+    // Получаем текущую сессию
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session) {
+      console.error('❌ Нет активной сессии');
+      return;
+    }
+
+    // Вызываем Edge Function
+    const response = await fetch(
+      'https://bqyisdgwtgxxomukozko.supabase.co/functions/v1/send-notification',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          title,
+          body,
+          recipientId
+        })
+      }
+    );
+
+    if (response.ok) {
+      const result = await response.json();
+      console.log('✅ Уведомление отправлено через Edge Function:', result);
+    } else {
+      const error = await response.text();
+      console.error('❌ Ошибка от Edge Function:', error);
+    }
+  } catch (err) {
+    console.error('❌ Ошибка при вызове Edge Function:', err);
+  }
 }

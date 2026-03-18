@@ -14,7 +14,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet" />
     
     <!-- OneSignal SDK -->
-    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js"></script>
     <script>
       window.OneSignalDeferred = window.OneSignalDeferred || [];
       OneSignalDeferred.push(async function(OneSignal) {
@@ -23,33 +23,24 @@
           serviceWorkerParam: { scope: '/' },
           serviceWorkerPath: '/OneSignalSDKWorker.js',
           notifyButton: {
-            enable: false // Отключаем кнопку, будем вызывать сами
-          },
-          allowLocalhostAsSecureOrigin: true
+            enable: false
+          }
         });
         
         console.log('✅ OneSignal инициализирован');
       });
     </script>
     
-    <!-- vConsole для отладки -->
+    <!-- vConsole -->
     <script src="https://cdn.jsdelivr.net/npm/vconsole@latest/dist/vconsole.min.js"></script>
     <script>
-      // Включаем vConsole если в URL есть ?debug
-      (function() {
-        if (window.location.search.includes('debug')) {
-          // Ждём загрузки скрипта
-          setTimeout(function() {
-            if (typeof VConsole !== 'undefined') {
-              var vConsole = new VConsole();
-              console.log('✅ vConsole активирован');
-              console.log('📱 OneSignal готов:', !!window.OneSignal);
-            } else {
-              console.error('❌ vConsole не загрузился');
-            }
-          }, 1000);
+      setTimeout(function() {
+        if (typeof VConsole !== 'undefined') {
+          var vConsole = new VConsole();
+          console.log('✅ vConsole активирован');
+          console.log('📱 OneSignal готов:', !!window.OneSignal);
         }
-      })();
+      }, 2000);
     </script>
     
     <title>💕 Love App</title>

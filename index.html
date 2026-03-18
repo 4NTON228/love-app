@@ -27,6 +27,8 @@
           },
           allowLocalhostAsSecureOrigin: true
         });
+        
+        console.log('✅ OneSignal инициализирован');
       });
     </script>
     
@@ -38,7 +40,9 @@
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js');
+          navigator.serviceWorker.register('/sw.js')
+            .then(reg => console.log('✅ Service Worker зарегистрирован'))
+            .catch(err => console.error('❌ SW ошибка:', err));
         });
       }
     </script>

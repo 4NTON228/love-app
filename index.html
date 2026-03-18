@@ -12,6 +12,24 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    
+    <!-- OneSignal SDK -->
+    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+    <script>
+      window.OneSignalDeferred = window.OneSignalDeferred || [];
+      OneSignalDeferred.push(async function(OneSignal) {
+        await OneSignal.init({
+          appId: "a5c337f8-f8fb-4799-bb4a-78b6faf5c2e5",
+          serviceWorkerParam: { scope: '/' },
+          serviceWorkerPath: '/OneSignalSDKWorker.js',
+          notifyButton: {
+            enable: false // Отключаем кнопку, будем вызывать сами
+          },
+          allowLocalhostAsSecureOrigin: true
+        });
+      });
+    </script>
+    
     <title>💕 Love App</title>
   </head>
   <body>

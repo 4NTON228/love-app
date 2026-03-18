@@ -32,6 +32,26 @@
       });
     </script>
     
+    <!-- vConsole для отладки -->
+    <script src="https://cdn.jsdelivr.net/npm/vconsole@latest/dist/vconsole.min.js"></script>
+    <script>
+      // Включаем vConsole если в URL есть ?debug
+      (function() {
+        if (window.location.search.includes('debug')) {
+          // Ждём загрузки скрипта
+          setTimeout(function() {
+            if (typeof VConsole !== 'undefined') {
+              var vConsole = new VConsole();
+              console.log('✅ vConsole активирован');
+              console.log('📱 OneSignal готов:', !!window.OneSignal);
+            } else {
+              console.error('❌ vConsole не загрузился');
+            }
+          }, 1000);
+        }
+      })();
+    </script>
+    
     <title>💕 Love App</title>
   </head>
   <body>

@@ -211,14 +211,15 @@ export default function Chat({ session, profile, darkMode }) {
         reactions: {}
       }).select().single()
       
-      const partnerId = partnerProfile?.id || 'ab73068c-b71a-4a57-9fa0-867543f1a2b0'
+      // ID Эльвиры (получатель)
+      const elviraId = 'ab73068c-b71a-4a57-9fa0-867543f1a2b0'
       const senderName = profile?.name || 'Кто-то'
       
-      // ОТПРАВКА УВЕДОМЛЕНИЯ
+      // ОТПРАВКА УВЕДОМЛЕНИЯ ЭЛЬВИРЕ
       sendPushNotification(
         senderName, 
         photoUrl ? '📷 Фото' : text, 
-        partnerId,
+        elviraId,  // ← ВАЖНО: теперь всегда Эльвира
         myId
       )
       
@@ -400,7 +401,7 @@ export default function Chat({ session, profile, darkMode }) {
       try {
         const videoUrl = await uploadFile(file, 'circles')
         await supabase.from('messages').insert({ user_id: myId, video_url: videoUrl, is_video_circle: true, reactions: {} })
-        sendPushNotification(profile?.name || 'Кто-то', '🔵 Видео-кружочек', partnerProfile?.id, myId)
+        sendPushNotification(profile?.name || 'Кто-то', '🔵 Видео-кружочек', elviraId, myId)
       } catch {}
       setSending(false); setRecording(false); setRecordingType(null); setRecordingTime(0)
     }
@@ -465,7 +466,7 @@ export default function Chat({ session, profile, darkMode }) {
             user_id: myId, video_url: audioUrl, is_video_circle: false, is_voice: true,
             reply_to_id: replyTo?.id || null, reactions: {}
           })
-          sendPushNotification(profile?.name || 'Кто-то', '🎤 Голосовое сообщение', partnerProfile?.id, myId)
+          sendPushNotification(profile?.name || 'Кто-то', '🎤 Голосовое сообщение', elviraId, myId)
           setReplyTo(null)
         } catch {}
         setSending(false); setRecording(false); setRecordingType(null); setRecordingTime(0)

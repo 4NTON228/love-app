@@ -1,6 +1,5 @@
 import { supabase } from './supabase'
 
-// Функция для конвертации VAPID ключа
 function urlBase64ToUint8Array(base64String) {
   const padding = '='.repeat((4 - base64String.length % 4) % 4)
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
@@ -24,31 +23,37 @@ export async function subscribeToPush(userId) {
     console.log('✅ Разрешение получено');
     
     const reg = await navigator.serviceWorker.ready;
+
+    // Всегда пересоздаём подписку, чтобы не было протухших дублей
     let sub = await reg.pushManager.getSubscription();
-    
-    if (!sub) {
-      console.log('📦 Создаём новую подписку...');
-      
-      // Получаем VAPID ключ из переменных окружения
-      const vapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
-      console.log('VAPID ключ:', vapidKey ? 'найден' : 'не найден');
-      
-      if (!vapidKey) {
-        throw new Error('VAPID ключ не найден в переменных окружения');
-      }
-      
-      sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(vapidKey)
-      });
+    if (sub) {
+      await sub.unsubscribe();
     }
+
+    const vapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+    console.log('VAPID ключ:', vapidKey ? 'найден' : 'не найден');
+    
+    if (!vapidKey) {
+      throw new Error('VAPID ключ не найден в переменных окружения');
+    }
+    
+    sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(vapidKey)
+    });
     
     console.log('✅ Подписка создана:', sub);
     
-    // Сохраняем в Supabase
+    // Сначала удаляем старые записи этого пользователя
+    await supabase
+      .from('push_subscriptions')
+      .delete()
+      .eq('user_id', userId);
+
+    // Вставляем свежую подписку
     const { error } = await supabase
       .from('push_subscriptions')
-      .upsert({
+      .insert({
         user_id: userId,
         subscription: sub.toJSON(),
         updated_at: new Date().toISOString()
@@ -68,7 +73,6 @@ export async function sendPushNotification(title, body, recipientId, senderId) {
   try {
     console.log('📨 Отправка уведомления:', { title, body, recipientId });
     
-    // Получаем текущую сессию
     const { data: { session } } = await supabase.auth.getSession();
     
     if (!session) {
@@ -76,7 +80,6 @@ export async function sendPushNotification(title, body, recipientId, senderId) {
       return;
     }
 
-    // Вызываем Edge Function
     const response = await fetch(
       'https://bqyisdgwtgxxomukozko.supabase.co/functions/v1/send-notification',
       {
@@ -85,17 +88,13 @@ export async function sendPushNotification(title, body, recipientId, senderId) {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`
         },
-        body: JSON.stringify({
-          title,
-          body,
-          recipientId
-        })
+        body: JSON.stringify({ title, body, recipientId })
       }
     );
 
     if (response.ok) {
       const result = await response.json();
-      console.log('✅ Уведомление отправлено через Edge Function:', result);
+      console.log('✅ Уведомление отправлено:', result);
     } else {
       const error = await response.text();
       console.error('❌ Ошибка от Edge Function:', error);

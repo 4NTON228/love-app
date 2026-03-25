@@ -1,14 +1,8 @@
-
-# Создаю полностью исправленный Home.jsx с правильным синтаксисом
-
-home_jsx_fixed = '''import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 
 const COUPLE_START = new Date('2025-10-17T00:00:00')
 
-/* ─────────────────────────────────────────
-   Helpers
-───────────────────────────────────────── */
 function getRelTime(start) {
   const now = new Date()
   const diff = now - start
@@ -59,9 +53,6 @@ function utcToLocal(s) {
 
 const pad = n => String(n).padStart(2, '0')
 
-/* ─────────────────────────────────────────
-   Typewriter hook with cursor
-───────────────────────────────────────── */
 function useTypewriter(text, speed = 50) {
   const [out, setOut] = useState('')
   const [done, setDone] = useState(false)
@@ -84,9 +75,6 @@ function useTypewriter(text, speed = 50) {
   return { out, done }
 }
 
-/* ─────────────────────────────────────────
-   Ambient Background - Floating Orbs
-───────────────────────────────────────── */
 function AmbientBackground() {
   return (
     <div className="ambient-bg">
@@ -97,9 +85,6 @@ function AmbientBackground() {
   )
 }
 
-/* ─────────────────────────────────────────
-   3D Avatar Component with Glass Ring
-───────────────────────────────────────── */
 function Avatar3D({ src, name, onClick }) {
   return (
     <div className="avatar-3d" onClick={onClick}>
@@ -127,9 +112,6 @@ function Avatar3D({ src, name, onClick }) {
   )
 }
 
-/* ─────────────────────────────────────────
-   Animated Heart with Glow
-───────────────────────────────────────── */
 function HeartCenter() {
   return (
     <div className="heart-center">
@@ -165,9 +147,6 @@ function HeartCenter() {
   )
 }
 
-/* ─────────────────────────────────────────
-   Glow Digit for Clock
-───────────────────────────────────────── */
 function GlowDigit({ value }) {
   return (
     <span 
@@ -181,9 +160,6 @@ function GlowDigit({ value }) {
   )
 }
 
-/* ─────────────────────────────────────────
-   MAIN HOME COMPONENT
-───────────────────────────────────────── */
 export default function Home({ session, profile, onNavigate }) {
   const [time, setTime] = useState(getRelTime(COUPLE_START))
   const [settings, setSettings] = useState(null)
@@ -199,13 +175,11 @@ export default function Home({ session, profile, onNavigate }) {
   const loveMsg = settings?.love_message || 'Ты — лучшее, что случилось в моей жизни'
   const { out, done } = useTypewriter(loveMsg, 45)
 
-  // Live counter
   useEffect(() => {
     const id = setInterval(() => setTime(getRelTime(COUPLE_START)), 1000)
     return () => clearInterval(id)
   }, [])
 
-  // Meeting countdown
   useEffect(() => {
     if (!settings?.next_meeting) { 
       setCountdown(null)
@@ -217,7 +191,6 @@ export default function Home({ session, profile, onNavigate }) {
     return () => clearInterval(id)
   }, [settings?.next_meeting])
 
-  // Load data
   const loadData = useCallback(async () => {
     if (!session?.user?.id) return
     const pid = profile?.partner_id
@@ -357,7 +330,6 @@ export default function Home({ session, profile, onNavigate }) {
       <AmbientBackground />
       
       <div className="home-wrap">
-        {/* Hero Section */}
         <div className="home-hero">
           <div className="hero-avatars">
             <Avatar3D 
@@ -373,7 +345,6 @@ export default function Home({ session, profile, onNavigate }) {
             />
           </div>
 
-          {/* Day Counter */}
           <div className="day-counter">
             <div className="day-number">{time.totalDays}</div>
             <div className="day-label">
@@ -397,7 +368,6 @@ export default function Home({ session, profile, onNavigate }) {
               </div>
             </div>
 
-            {/* Live Clock */}
             <div className="live-clock">
               <GlowDigit value={pad(time.hours)} />
               <span className="clock-separator">:</span>
@@ -408,9 +378,7 @@ export default function Home({ session, profile, onNavigate }) {
           </div>
         </div>
 
-        {/* Content */}
         <div className="home-content">
-          {/* Love Message */}
           <div className="love-message-card animate-slide-up">
             {editMsg ? (
               <div>
@@ -471,7 +439,6 @@ export default function Home({ session, profile, onNavigate }) {
             ) : (
               <>
                 <button 
-                  className="love-edit-btn" 
                   onClick={() => setEditMsg(true)}
                   style={{
                     position: 'absolute',
@@ -515,7 +482,6 @@ export default function Home({ session, profile, onNavigate }) {
             )}
           </div>
 
-          {/* Quick Actions Grid */}
           <div className="action-grid">
             {actions.map((action, idx) => (
               <button 
@@ -532,7 +498,6 @@ export default function Home({ session, profile, onNavigate }) {
             ))}
           </div>
 
-          {/* Next Event Card */}
           {nextEvent && (
             <div 
               className="glass-card animate-slide-up" 
@@ -593,7 +558,6 @@ export default function Home({ session, profile, onNavigate }) {
             </div>
           )}
 
-          {/* Meeting Countdown */}
           <div 
             className="glass-card animate-slide-up" 
             style={{ padding: '20px', animationDelay: '0.6s' }}
@@ -748,7 +712,6 @@ export default function Home({ session, profile, onNavigate }) {
             )}
           </div>
 
-          {/* Anniversary Progress */}
           <div 
             className="glass-card animate-slide-up" 
             style={{ 
@@ -807,17 +770,3 @@ export default function Home({ session, profile, onNavigate }) {
     </>
   )
 }
-'''
-
-with open('/mnt/kimi/output/glass-bloom-redesign/src/components/Home.jsx', 'w', encoding='utf-8') as f:
-    f.write(home_jsx_fixed)
-
-print("✅ Home.jsx полностью исправлен!")
-print(f"📊 Размер: {len(home_jsx_fixed):,} символов")
-print()
-print("🔧 Исправлено:")
-print("   • Правильные отступы и скобки")
-print("   • Корректные JSX выражения")
-print("   • Правильные обратные кавычки для шаблонных строк")
-print("   • Все импорты на месте")
-print("   • Корректная структура компонентов")

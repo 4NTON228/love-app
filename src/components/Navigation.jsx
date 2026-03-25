@@ -1,10 +1,5 @@
+import { useState } from 'react'
 
-# Создаю улучшенную версию Navigation.jsx с Glass Bloom эффектами
-# Сохраняя всю твою функциональность
-
-navigation_glass = '''import { useState } from 'react'
-
-/* ── Shared SVG gradient / glow defs ── */
 function SvgDefs() {
   return (
     <svg width="0" height="0" style={{ position: 'absolute', overflow: 'hidden' }} aria-hidden>
@@ -33,7 +28,6 @@ function SvgDefs() {
   )
 }
 
-/* ── Hand-drawn SVG icons with Glass Bloom glow ── */
 function IconHome({ active }) {
   const s = active ? 'url(#nav-g)' : 'currentColor'
   const f = active ? 'url(#nav-g)' : 'none'
@@ -155,7 +149,6 @@ function IconPerson({ active }) {
   )
 }
 
-// Tabs shown in the main nav bar
 const MAIN_TABS = [
   { id: 'home',   label: 'Главная', Icon: IconHome   },
   { id: 'chat',   label: 'Чат',     Icon: IconChat   },
@@ -164,7 +157,6 @@ const MAIN_TABS = [
   { id: 'more',   label: 'Ещё',     Icon: IconMore   },
 ]
 
-// Items inside the "More" drawer
 const MORE_ITEMS = [
   { id: 'moments',  label: 'Фото',      Icon: IconCamera   },
   { id: 'calendar', label: 'Дни',       Icon: IconCalendar },
@@ -199,7 +191,6 @@ export default function Navigation({ activeTab, setActiveTab }) {
   return (
     <>
       <style>{`
-        /* ── Glass Bloom Navigation ── */
         .nav-glass {
           position: fixed;
           bottom: 0; left: 0; right: 0;
@@ -303,7 +294,6 @@ export default function Navigation({ activeTab, setActiveTab }) {
           font-weight: 700;
         }
 
-        /* Active indicator dot */
         .nav-tab-dot {
           position: absolute;
           bottom: calc(env(safe-area-inset-bottom, 0px) + 6px);
@@ -320,7 +310,6 @@ export default function Navigation({ activeTab, setActiveTab }) {
           transform: translateX(-50%) scaleX(1);
         }
 
-        /* ── More Drawer - Glass Bloom Style ── */
         .more-overlay {
           position: fixed;
           inset: 0;
@@ -435,7 +424,6 @@ export default function Navigation({ activeTab, setActiveTab }) {
 
       <SvgDefs />
 
-      {/* More drawer + overlay */}
       {showMore && (
         <>
           <div className="more-overlay" onClick={() => setShowMore(false)} />
@@ -480,15 +468,3 @@ export default function Navigation({ activeTab, setActiveTab }) {
     </>
   )
 }
-'''
-
-with open('/mnt/kimi/output/glass-bloom-redesign/src/components/Navigation.jsx', 'w', encoding='utf-8') as f:
-    f.write(navigation_glass)
-
-print("✅ Navigation.jsx обновлён с Glass Bloom эффектами!")
-print("   Сохранена вся твоя функциональность:")
-print("   • Drawer 'Ещё' с grid'ом")
-print("   • Кастомные SVG-иконки с градиентами")
-print("   • Glow-эффекты для активных табов")
-print("   • Press-анимации")
-print("   • Адаптация под тёмную тему")

@@ -11,36 +11,33 @@ import LoveClock from './components/LoveClock'
 import LoveLetter from './components/LoveLetter'
 import Settings from './components/Settings'
 import Navigation from './components/Navigation'
-import ThemeToggle from './components/ThemeToggle'
-import FloatingHearts from './components/FloatingHearts'
 
+// Apply saved theme on load
 ;(function applyStoredTheme() {
   const THEMES = {
-    rose:     { a: '#E8466A', b: '#9C27B0', name: 'Розовый' },
-    cherry:   { a: '#AD1457', b: '#4A0072', name: 'Вишнёвый' },
-    violet:   { a: '#6A1B9A', b: '#1A0A2E', name: 'Фиолетовый' },
-    lavender: { a: '#7E57C2', b: '#EC407A', name: 'Лавандовый' },
-    ocean:    { a: '#0277BD', b: '#00838F', name: 'Океан' },
-    sky:      { a: '#039BE5', b: '#B388FF', name: 'Небо' },
-    forest:   { a: '#2E7D32', b: '#004D40', name: 'Лес' },
-    northern: { a: '#00C853', b: '#00BCD4', name: 'Северное сияние' },
-    sunset:   { a: '#FF6F00', b: '#C62828', name: 'Закат' },
-    fire:     { a: '#D50000', b: '#FF6D00', name: 'Пламя' },
-    gold:     { a: '#F57F17', b: '#E65100', name: 'Золото' },
-    night:    { a: '#1A237E', b: '#0D0D1A', name: 'Ночь' },
+    rose:     { a: '#E8466A', b: '#9C27B0' },
+    cherry:   { a: '#AD1457', b: '#4A0072' },
+    violet:   { a: '#6A1B9A', b: '#1A0A2E' },
+    lavender: { a: '#7E57C2', b: '#EC407A' },
+    ocean:    { a: '#0277BD', b: '#00838F' },
+    sky:      { a: '#039BE5', b: '#B388FF' },
+    forest:   { a: '#2E7D32', b: '#004D40' },
+    northern: { a: '#00C853', b: '#00BCD4' },
+    sunset:   { a: '#FF6F00', b: '#C62828' },
+    fire:     { a: '#D50000', b: '#FF6D00' },
+    gold:     { a: '#F57F17', b: '#E65100' },
+    night:    { a: '#1A237E', b: '#0D0D1A' },
   }
-  
+  // Try full theme data first, fall back to id lookup
   let t = null
   try {
     const raw = localStorage.getItem('loveThemeData')
     if (raw) t = JSON.parse(raw)
   } catch (_) {}
-  
   if (!t) {
     const saved = localStorage.getItem('loveTheme')
     if (saved && THEMES[saved]) t = THEMES[saved]
   }
-  
   if (t) {
     const gradient = `linear-gradient(135deg, ${t.a} 0%, ${t.b} 100%)`
     document.documentElement.style.setProperty('--primary', t.a)
@@ -95,26 +92,15 @@ export default function App() {
     return (
       <div className="loading">
         <div className="loading-heart">
-          <svg viewBox="0 0 60 56" width="80" height="74" fill="none">
+          <svg viewBox="0 0 60 56" width="60" height="56" fill="none">
+            <path d="M30 52C30 52 3 35 3 16C3 8 9.5 2 18 2C22.5 2 26.5 4.5 30 9C33.5 4.5 37.5 2 42 2C50.5 2 57 8 57 16C57 35 30 52 30 52Z"
+              fill="url(#lg-load)"/>
             <defs>
-              <linearGradient id="lg-load" x1="0" y1="0" x2="60" y2="56">
+              <linearGradient id="lg-load" x1="0" y1="0" x2="60" y2="56" gradientUnits="userSpaceOnUse">
                 <stop offset="0%" stopColor="#FF6B8A"/>
-                <stop offset="50%" stopColor="#FF2D55"/>
-                <stop offset="100%" stopColor="#D10043"/>
+                <stop offset="100%" stopColor="#FF2D55"/>
               </linearGradient>
-              <filter id="glow-load">
-                <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-                <feMerge>
-                  <feMergeNode in="coloredBlur"/>
-                  <feMergeNode in="SourceGraphic"/>
-                </feMerge>
-              </filter>
             </defs>
-            <path 
-              d="M30 52C30 52 3 35 3 16C3 8 9.5 2 18 2C22.5 2 26.5 4.5 30 9C33.5 4.5 37.5 2 42 2C50.5 2 57 8 57 16C57 35 30 52 30 52Z"
-              fill="url(#lg-load)"
-              filter="url(#glow-load)"
-            />
           </svg>
         </div>
       </div>
@@ -128,7 +114,7 @@ export default function App() {
   const renderTab = () => {
     switch (activeTab) {
       case 'home':
-        return <Home session={session} profile={profile} onNavigate={setActiveTab} />
+        return <Home session={session} profile={profile} darkMode={darkMode} onNavigate={setActiveTab} />
       case 'chat':
         return <Chat session={session} profile={profile} darkMode={darkMode} />
       case 'clock':
@@ -152,7 +138,7 @@ export default function App() {
           />
         )
       default:
-        return <Home session={session} profile={profile} onNavigate={setActiveTab} />
+        return <Home session={session} profile={profile} darkMode={darkMode} onNavigate={setActiveTab} />
     }
   }
 
@@ -160,16 +146,12 @@ export default function App() {
 
   return (
     <div className={`app${darkMode ? ' dark' : ''}`}>
-      <FloatingHearts />
-      <ThemeToggle darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
-      
       <div
         className="app-content"
         style={noPadding ? { padding: 0, paddingTop: activeTab === 'chat' ? 'var(--safe-top)' : 0 } : {}}
       >
         {renderTab()}
       </div>
-      
       <Navigation activeTab={activeTab} setActiveTab={setActiveTab} />
     </div>
   )

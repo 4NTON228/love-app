@@ -1207,8 +1207,6 @@ export default function Home({ session, profile, onNavigate }) {
               <GlowDigit value={pad(time.seconds)} />
             </div>
           </div>
-
-          </div>
           </OrbitalRing>
 
           {/* Heart progress bar */}

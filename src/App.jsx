@@ -91,23 +91,52 @@ export default function App() {
   if (loading) {
     return (
       <div style={{
-        position: 'fixed', inset: 0, zIndex: 9999,
-        background: 'var(--blush)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        flexDirection: 'column', gap: 16
+        position: 'fixed',
+        inset: 0,
+        zIndex: 9999,
+        background: '#FBF0F2',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 20,
       }}>
-        <div style={{ animation: 'heartbeat 1.5s ease-in-out infinite' }}>
-          <svg viewBox="0 0 60 56" width="64" height="60" fill="none">
+        <div style={{ animation: 'heartbeat 1.4s ease-in-out infinite' }}>
+          <svg viewBox="0 0 60 56" width="80" height="75" fill="none">
             <path d="M30 52C30 52 3 35 3 16C3 8 9.5 2 18 2C22.5 2 26.5 4.5 30 9C33.5 4.5 37.5 2 42 2C50.5 2 57 8 57 16C57 35 30 52 30 52Z"
-              fill="url(#lg)"/>
+              fill="url(#lgload)"/>
             <defs>
-              <linearGradient id="lg" x1="0" y1="0" x2="60" y2="56" gradientUnits="userSpaceOnUse">
+              <linearGradient id="lgload" x1="0" y1="0" x2="60" y2="56" gradientUnits="userSpaceOnUse">
                 <stop offset="0%" stopColor="#E8556A"/>
                 <stop offset="100%" stopColor="#C8334A"/>
               </linearGradient>
             </defs>
           </svg>
         </div>
+        <div style={{
+          fontFamily: "'Cormorant Garamond', Georgia, serif",
+          fontStyle: 'italic',
+          fontSize: 22,
+          color: '#C8334A',
+          letterSpacing: 1,
+        }}>
+          Love App
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {[0, 0.2, 0.4].map((delay, i) => (
+            <div key={i} style={{
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              background: '#C8334A',
+              animation: `pulse 0.9s ${delay}s ease-in-out infinite`,
+            }}/>
+          ))}
+        </div>
+        <style>{`
+          @keyframes heartbeat { 0%,100%{transform:scale(1)} 15%{transform:scale(1.3)} 30%{transform:scale(1.05)} 45%{transform:scale(1.2)} }
+          @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+        `}</style>
       </div>
     )
   }

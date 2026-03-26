@@ -264,8 +264,12 @@ export default function Chat({ session, profile }) {
 
   if (loading) {
     return (
-      <div className="empty-state">
-        <div className="loading-heart">💕</div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1, height: '100%' }}>
+        <div style={{ animation: 'heartbeat 1.4s ease-in-out infinite' }}>
+          <svg viewBox="0 0 34 30" width="48" height="42" fill="none">
+            <path d="M17 28C17 28 1 18 1 7.5C1 3.5 4.5 0.5 8.5 0.5C11.5 0.5 14 2 17 5C20 2 22.5 0.5 25.5 0.5C29.5 0.5 33 3.5 33 7.5C33 18 17 28 17 28Z" fill="var(--rose)"/>
+          </svg>
+        </div>
       </div>
     )
   }
@@ -274,50 +278,47 @@ export default function Chat({ session, profile }) {
     <div style={{
       display: 'flex',
       flexDirection: 'column',
-      height: 'calc(100dvh - 56px - env(safe-area-inset-bottom, 0px))'
+      height: '100%',
+      position: 'relative',
     }}>
       {/* Шапка чата */}
       <div style={{
+        flexShrink: 0,
         padding: '10px 16px',
-        paddingTop: 'calc(10px + var(--safe-top, 0px))',
+        paddingTop: 'calc(10px + env(safe-area-inset-top, 0px))',
         background: 'var(--surface)',
         borderBottom: '0.5px solid var(--border)',
         display: 'flex',
         alignItems: 'center',
-        gap: '12px',
-        flexShrink: 0
+        gap: 12,
+        zIndex: 10,
       }}>
         <div style={{
-          width: '38px',
-          height: '38px',
+          width: 44,
+          height: 44,
           borderRadius: '50%',
           background: 'linear-gradient(135deg, #C8334A, #8B1A2C)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          position: 'relative'
+          flexShrink: 0,
         }}>
-          <svg viewBox="0 0 20 18" width="18" height="16" fill="white">
-            <path d="M10 16.5C10 16.5 1.5 10.5 1.5 5C1.5 2.5 3.6 0.5 6 0.5C7.5 0.5 8.8 1.3 10 2.8C11.2 1.3 12.5 0.5 14 0.5C16.4 0.5 18.5 2.5 18.5 5C18.5 10.5 10 16.5 10 16.5Z"/>
+          <svg viewBox="0 0 34 30" width="22" height="20" fill="white">
+            <path d="M17 28C17 28 1 18 1 7.5C1 3.5 4.5 0.5 8.5 0.5C11.5 0.5 14 2 17 5C20 2 22.5 0.5 25.5 0.5C29.5 0.5 33 3.5 33 7.5C33 18 17 28 17 28Z"/>
           </svg>
-          <div style={{
-            width: '10px', height: '10px', background: '#4CAF50',
-            borderRadius: '50%', border: '2px solid var(--surface)',
-            position: 'absolute', bottom: '1px', right: '1px',
-            animation: 'pulse 2s ease-in-out infinite'
-          }} />
         </div>
-        <div>
+        <div style={{ flex: 1 }}>
           <div style={{
             fontFamily: 'var(--font-display)',
             fontWeight: 700,
-            fontSize: '17px'
+            fontSize: 17,
+            color: 'var(--ink)',
           }}>
             Наш чат
           </div>
           <div style={{
-            fontSize: '12px',
-            color: 'var(--text-muted)'
+            fontSize: 12,
+            color: 'var(--muted)',
           }}>
             Только для нас двоих
           </div>
@@ -331,7 +332,7 @@ export default function Chat({ session, profile }) {
         style={{
           flex: 1,
           overflowY: 'auto',
-          padding: '12px 16px',
+          padding: '12px 14px',
           display: 'flex',
           flexDirection: 'column',
           gap: '4px',
@@ -345,7 +346,12 @@ export default function Chat({ session, profile }) {
             padding: '40px 20px',
             color: 'var(--text-muted)'
           }}>
-            <div style={{ fontSize: '48px', marginBottom: '12px' }}>💌</div>
+            <div style={{ marginBottom: '12px' }}>
+              <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="var(--rose)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="2" y="5" width="20" height="14" rx="2"/>
+                <polyline points="2,5 12,13 22,5"/>
+              </svg>
+            </div>
             <p>Напишите первое сообщение!</p>
           </div>
         ) : (
@@ -359,9 +365,9 @@ export default function Chat({ session, profile }) {
                 }}>
                   <span style={{
                     background: 'rgba(200,51,74,0.08)',
-                    padding: '3px 12px',
+                    padding: '4px 14px',
                     borderRadius: '20px',
-                    fontSize: '11px',
+                    fontSize: '12px',
                     color: 'var(--muted)',
                     fontWeight: 600
                   }}>
@@ -387,7 +393,7 @@ export default function Chat({ session, profile }) {
                     borderRadius: isMyMessage(msg)
                       ? '18px 18px 4px 18px'
                       : '18px 18px 18px 4px',
-                    padding: msg.is_video_circle ? '4px' : (msg.photo_url && !msg.text ? '4px' : '8px 12px 6px'),
+                    padding: msg.is_video_circle ? '4px' : (msg.photo_url && !msg.text ? '4px' : '8px 14px 6px'),
                     background: isMyMessage(msg)
                       ? 'linear-gradient(135deg, #C8334A, #8B1A2C)'
                       : 'var(--surface)',
@@ -436,9 +442,8 @@ export default function Chat({ session, profile }) {
                   {/* Текст */}
                   {msg.text && (
                     <div style={{
-                      fontSize: '15px',
-                      lineHeight: '1.4',
-                      whiteSpace: 'pre-wrap'
+                      fontSize: 15,
+                      lineHeight: 1.45,
                     }}>
                       {msg.text}
                     </div>
@@ -531,8 +536,8 @@ export default function Chat({ session, profile }) {
       {recording && (
         <div style={{
           padding: '12px 16px',
-          background: 'rgba(232,70,106,0.05)',
-          borderTop: '1px solid #eee',
+          background: 'rgba(200,51,74,0.05)',
+          borderTop: '0.5px solid var(--border)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -570,6 +575,7 @@ export default function Chat({ session, profile }) {
 
       {/* Поле ввода */}
       <div style={{
+        flexShrink: 0,
         padding: '8px 12px',
         paddingBottom: 'calc(8px + env(safe-area-inset-bottom, 0px))',
         background: 'var(--surface)',
@@ -577,23 +583,18 @@ export default function Chat({ session, profile }) {
         display: 'flex',
         alignItems: 'flex-end',
         gap: '8px',
-        flexShrink: 0
       }}>
         {/* Кнопка фото */}
         <button
           onClick={() => fileInputRef.current?.click()}
           style={{
-            width: '34px', height: '34px',
-            background: 'var(--blush)',
+            background: 'none',
             border: 'none',
             cursor: 'pointer',
+            padding: '8px',
             borderRadius: '50%',
             display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
-            color: 'var(--rose)',
-            transition: 'transform 0.15s'
+            flexShrink: 0
           }}
         >
           <Image size={24} color="var(--primary)" />
@@ -610,16 +611,13 @@ export default function Chat({ session, profile }) {
         <button
           onClick={recording ? stopVideoCircle : startVideoCircle}
           style={{
-            width: '34px', height: '34px',
-            background: recording ? 'var(--rose)' : 'var(--blush)',
+            background: recording ? 'var(--primary)' : 'none',
             border: 'none',
             cursor: 'pointer',
+            padding: '8px',
             borderRadius: '50%',
             display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
-            transition: 'transform 0.15s'
+            flexShrink: 0
           }}
         >
           <Video size={24} color={recording ? 'white' : 'var(--primary)'} />
@@ -636,9 +634,9 @@ export default function Chat({ session, profile }) {
         <div style={{
           flex: 1,
           background: 'var(--blush)',
-          borderRadius: '22px',
           border: '0.5px solid var(--border)',
-          padding: '0 14px',
+          borderRadius: '22px',
+          padding: '0 16px',
           display: 'flex',
           alignItems: 'flex-end'
         }}>
@@ -673,18 +671,14 @@ export default function Chat({ session, profile }) {
           onClick={handleSend}
           disabled={sending || (!newText.trim() && !photoFile)}
           style={{
-            width: '36px',
-            height: '36px',
             background: (newText.trim() || photoFile) ? 'linear-gradient(135deg, #C8334A, #8B1A2C)' : '#E8E0E6',
             border: 'none',
             cursor: (newText.trim() || photoFile) ? 'pointer' : 'default',
+            padding: '10px',
             borderRadius: '50%',
             display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
             flexShrink: 0,
-            transition: 'transform 0.15s, background 0.2s',
-            animation: (newText.trim() || photoFile) ? 'glow 3s ease-in-out infinite' : 'none'
+            transition: 'all 0.2s ease'
           }}
         >
           <Send size={20} color="white" />
@@ -692,10 +686,9 @@ export default function Chat({ session, profile }) {
       </div>
 
       <style>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.3; }
-        }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+        @keyframes heartbeat { 0%,100%{transform:scale(1)} 15%{transform:scale(1.3)} 30%{transform:scale(1.05)} 45%{transform:scale(1.2)} }
+        @keyframes msgIn { from{transform:translateY(8px) scale(0.95);opacity:0} to{transform:translateY(0) scale(1);opacity:1} }
       `}</style>
     </div>
   )

@@ -147,7 +147,7 @@ function StoriesViewer({ stories, startIdx, onClose }) {
   if (!story) return null
 
   return (
-    <div className="stories-overlay" style={{ position:'fixed', inset:0, zIndex:300, background:'#000', display:'flex', flexDirection:'column', userSelect:'none', touchAction:'none' }}>
+    <div className="stories-overlay" style={{ position:'fixed', inset:0, zIndex:300, background:'#200A10', display:'flex', flexDirection:'column', userSelect:'none', touchAction:'none' }}>
       <style>{`
         .stories-prog-track {
           flex: 1; height: 2.5px;

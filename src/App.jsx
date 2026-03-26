@@ -90,15 +90,20 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="loading">
-        <div className="loading-heart">
-          <svg viewBox="0 0 60 56" width="60" height="56" fill="none">
+      <div style={{
+        position: 'fixed', inset: 0, zIndex: 9999,
+        background: 'var(--blush)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        flexDirection: 'column', gap: 16
+      }}>
+        <div style={{ animation: 'heartbeat 1.5s ease-in-out infinite' }}>
+          <svg viewBox="0 0 60 56" width="64" height="60" fill="none">
             <path d="M30 52C30 52 3 35 3 16C3 8 9.5 2 18 2C22.5 2 26.5 4.5 30 9C33.5 4.5 37.5 2 42 2C50.5 2 57 8 57 16C57 35 30 52 30 52Z"
-              fill="url(#lg-load)"/>
+              fill="url(#lg)"/>
             <defs>
-              <linearGradient id="lg-load" x1="0" y1="0" x2="60" y2="56" gradientUnits="userSpaceOnUse">
-                <stop offset="0%" stopColor="#FF6B8A"/>
-                <stop offset="100%" stopColor="#FF2D55"/>
+              <linearGradient id="lg" x1="0" y1="0" x2="60" y2="56" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stopColor="#E8556A"/>
+                <stop offset="100%" stopColor="#C8334A"/>
               </linearGradient>
             </defs>
           </svg>

@@ -93,7 +93,7 @@ export default function LoveClock() {
       <style>{`
         .clock-wrap {
           min-height: 100%;
-          background: linear-gradient(180deg, #200A10 0%, #3D1520 50%, #8B1A2C 100%);
+          background: linear-gradient(180deg, var(--bg, #200A10) 0%, #3D1520 50%, #8B1A2C 100%);
           position: relative;
           overflow: hidden;
           display: flex;

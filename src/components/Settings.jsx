@@ -169,7 +169,7 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
           background-size: 200% 200%;
           animation: gradientShift 8s ease infinite;
           padding: 60px 20px 30px;
-          border-radius: 0 0 32px 32px;
+          border-radius: 0 0 28px 28px;
           display: flex;
           flex-direction: column;
           align-items: center;

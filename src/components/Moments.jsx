@@ -377,9 +377,9 @@ export default function Moments({ session }) {
           background-size: 200% 200%;
           animation: gradientShift 8s ease infinite;
           padding: 60px 20px 24px;
-          border-radius: 0 0 32px 32px;
+          border-radius: 0 0 28px 28px;
           margin-bottom: 18px;
-          box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+          box-shadow: 0 8px 32px rgba(139,26,44,0.3);
         }
         .moments-header-title {
           font-family: var(--font-display);

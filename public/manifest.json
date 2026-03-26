@@ -1,11 +1,11 @@
 {
   "name": "Love App — Наша история",
-  "short_name": "💕 Love",
+  "short_name": "Love",
   "description": "Приложение для нашей пары",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#FFF5F7",
-  "theme_color": "#E8466A",
+  "background_color": "#FBF0F2",
+  "theme_color": "#C8334A",
   "orientation": "portrait",
   "icons": [
     {
@@ -21,5 +21,5 @@
       "purpose": "any maskable"
     }
   ],
-  "gcm_sender_id": "482941778795"  // ← Добавлено для Chrome
+  "gcm_sender_id": "482941778795"
 }

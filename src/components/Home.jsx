@@ -815,8 +815,8 @@ export default function Home({ session, profile, onNavigate }) {
           background: var(--gradient-banner, linear-gradient(160deg, #C8334A 0%, #8B1A2C 100%));
           background-size: 200% 200%;
           animation: gradientShift 8s ease infinite;
-          border-radius: 0 0 32px 32px;
-          padding: 56px 24px 36px;
+          border-radius: 0 0 28px 28px;
+          padding: 56px 20px 20px;
           display: flex;
           flex-direction: column;
           align-items: center;

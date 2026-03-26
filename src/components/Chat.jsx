@@ -1178,42 +1178,59 @@ function TGStyles() {
         position: relative; z-index: 10;
         padding: 10px 16px;
         padding-top: calc(10px + env(safe-area-inset-top, 0px));
-        background: var(--gradient-main, linear-gradient(160deg, #C8334A, #8B1A2C));
+        background: var(--surface, #FFFFFF);
+        border-bottom: 0.5px solid var(--border, rgba(200,51,74,0.13));
         display: flex; align-items: center; gap: 12px;
         flex-shrink: 0;
-        box-shadow: 0 2px 20px rgba(0,0,0,0.4);
+        box-shadow: 0 2px 12px rgba(200,51,74,0.08);
         min-height: 70px;
+      }
+      .app.dark .tg-header {
+        background: var(--gradient-main, linear-gradient(160deg, #C8334A, #8B1A2C));
+        border-bottom: none;
+        box-shadow: 0 2px 20px rgba(0,0,0,0.4);
       }
       .tg-header-avatar {
         width: 42px; height: 42px; border-radius: 50%;
-        background: rgba(255,255,255,0.2);
+        background: var(--blush-2, #F2D0D6);
         display: flex; align-items: center; justify-content: center;
         flex-shrink: 0; overflow: hidden;
-        border: 2px solid rgba(255,255,255,0.35);
+        border: 2px solid var(--border, rgba(200,51,74,0.2));
+        box-shadow: 0 2px 8px rgba(200,51,74,0.12);
+      }
+      .app.dark .tg-header-avatar {
+        background: rgba(255,255,255,0.2);
+        border-color: rgba(255,255,255,0.35);
         box-shadow: 0 2px 8px rgba(0,0,0,0.3);
       }
       .tg-header-avatar img { width: 100%; height: 100%; object-fit: cover; }
       .tg-header-name {
-        font-weight: 700; font-size: 17px; color: white;
+        font-weight: 700; font-size: 17px; color: var(--ink, #1C0A0E);
         font-family: var(--font-display);
       }
-      .tg-header-status { font-size: 12px; color: rgba(255,255,255,0.75); margin-top: 1px; }
+      .app.dark .tg-header-name { color: white; }
+      .tg-header-status { font-size: 12px; color: var(--muted, #9A6070); margin-top: 1px; }
+      .app.dark .tg-header-status { color: rgba(255,255,255,0.75); }
       .tg-header-video-btn {
-        background: rgba(255,255,255,0.15); border: none; border-radius: 50%;
+        background: rgba(200,51,74,0.08); border: none; border-radius: 50%;
         width: 36px; height: 36px; flex-shrink: 0; cursor: pointer;
         display: flex; align-items: center; justify-content: center;
+        color: var(--rose, #C8334A);
         -webkit-tap-highlight-color: transparent;
       }
-      .tg-header-video-btn:active { background: rgba(255,255,255,0.25); }
+      .app.dark .tg-header-video-btn { background: rgba(255,255,255,0.15); color: white; }
+      .tg-header-video-btn:active { background: rgba(200,51,74,0.15); }
+      .app.dark .tg-header-video-btn:active { background: rgba(255,255,255,0.25); }
       .tg-typing-status { display: flex; align-items: center; gap: 2px; }
       .tg-typing-dots {
         display: inline-flex; gap: 2px; align-items: center; margin-left: 2px;
       }
       .tg-typing-dots span {
         width: 4px; height: 4px; border-radius: 50%;
-        background: rgba(255,255,255,0.8);
+        background: var(--rose, #C8334A);
         animation: tgDot 1.2s ease-in-out infinite;
       }
+      .app.dark .tg-typing-dots span { background: rgba(255,255,255,0.8); }
       .tg-typing-dots span:nth-child(2) { animation-delay: 0.2s; }
       .tg-typing-dots span:nth-child(3) { animation-delay: 0.4s; }
       @keyframes tgDot {
@@ -1225,16 +1242,22 @@ function TGStyles() {
         position: relative; z-index: 9;
         display: flex; align-items: center; gap: 10px;
         padding: 8px 14px;
-        background: rgba(255,255,255,0.06);
-        backdrop-filter: blur(10px);
-        border-bottom: 1px solid rgba(255,255,255,0.06);
+        background: var(--blush, #FBF0F2);
+        border-bottom: 0.5px solid var(--border, rgba(200,51,74,0.13));
         cursor: pointer; flex-shrink: 0;
       }
-      .tg-pinned-bar { width: 3px; height: 32px; background: var(--theme-accent, #C8334A); border-radius: 3px; flex-shrink: 0; }
+      .app.dark .tg-pinned {
+        background: rgba(255,255,255,0.06);
+        backdrop-filter: blur(10px);
+        border-bottom-color: rgba(255,255,255,0.06);
+      }
+      .tg-pinned-bar { width: 3px; height: 32px; background: var(--rose, #C8334A); border-radius: 3px; flex-shrink: 0; }
       .tg-pinned-content { flex: 1; min-width: 0; }
-      .tg-pinned-label { font-size: 11px; font-weight: 700; color: var(--theme-accent, #C8334A); margin-bottom: 2px; }
-      .tg-pinned-text { font-size: 13px; color: rgba(255,255,255,0.6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-      .tg-pinned-close { background: none; border: none; cursor: pointer; color: rgba(255,255,255,0.4); padding: 4px; }
+      .tg-pinned-label { font-size: 11px; font-weight: 700; color: var(--rose, #C8334A); margin-bottom: 2px; }
+      .tg-pinned-text { font-size: 13px; color: var(--muted, #9A6070); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .app.dark .tg-pinned-text { color: rgba(255,255,255,0.6); }
+      .tg-pinned-close { background: none; border: none; cursor: pointer; color: var(--muted, #9A6070); padding: 4px; }
+      .app.dark .tg-pinned-close { color: rgba(255,255,255,0.4); }
       /* MESSAGES AREA */
       .tg-messages {
         flex: 1; overflow-y: auto; overflow-x: hidden;
@@ -1243,32 +1266,38 @@ function TGStyles() {
         gap: 0;
         -webkit-overflow-scrolling: touch;
         position: relative; z-index: 1;
-        /* subtle theme-color tint at top and bottom */
-        background:
-          radial-gradient(circle at 50% 0%, rgba(255,255,255,0.015) 1px, transparent 1px),
-          linear-gradient(180deg,
-            color-mix(in srgb, var(--theme-accent, #C8334A) 8%, var(--bg, #200A10)) 0%,
-            var(--bg, #200A10) 28%,
-            var(--bg, #200A10) 72%,
-            color-mix(in srgb, var(--theme-accent, #C8334A) 5%, var(--bg, #200A10)) 100%
-          );
-        background-size: 24px 24px, 100% 100%;
+        background: var(--blush, #FBF0F2);
+      }
+      .app.dark .tg-messages {
+        background: linear-gradient(180deg,
+          rgba(35,8,16,0.98) 0%,
+          var(--bg, #200A10) 28%,
+          var(--bg, #200A10) 72%,
+          rgba(35,8,16,0.98) 100%
+        );
       }
       .tg-messages::-webkit-scrollbar { display: none; }
       .tg-empty {
         text-align: center; padding: 60px 20px;
-        color: rgba(255,255,255,0.5); margin: auto;
+        color: var(--muted, #9A6070); margin: auto;
       }
-      .tg-empty p { font-size: 16px; font-family: var(--font-display); margin-top: 8px; color: rgba(255,255,255,0.5); }
+      .app.dark .tg-empty { color: rgba(255,255,255,0.5); }
+      .tg-empty p { font-size: 16px; font-family: var(--font-display); margin-top: 8px; color: var(--muted, #9A6070); }
+      .app.dark .tg-empty p { color: rgba(255,255,255,0.5); }
       /* DATE SEPARATOR */
       .tg-date-sep {
         text-align: center; margin: 12px 0 6px; pointer-events: none;
       }
       .tg-date-sep span {
-        background: rgba(255,255,255,0.1); backdrop-filter: blur(8px);
+        background: rgba(200,51,74,0.08);
         padding: 4px 14px; border-radius: 14px;
-        font-size: 12px; color: rgba(255,255,255,0.7); font-weight: 600;
-        border: 1px solid rgba(255,255,255,0.08);
+        font-size: 12px; color: var(--muted, #9A6070); font-weight: 600;
+        border: 1px solid var(--border, rgba(200,51,74,0.13));
+      }
+      .app.dark .tg-date-sep span {
+        background: rgba(255,255,255,0.1); backdrop-filter: blur(8px);
+        color: rgba(255,255,255,0.7);
+        border-color: rgba(255,255,255,0.08);
       }
       /* MESSAGE ROW */
       .tg-msg-row {
@@ -1330,9 +1359,10 @@ function TGStyles() {
         position: absolute;
         bottom: 0; left: -7px;
         width: 12px; height: 16px;
-        background: rgba(255,255,255,0.08);
+        background: var(--surface, #FFFFFF);
         clip-path: polygon(100% 0, 0 100%, 100% 100%);
       }
+      .app.dark .tg-bubble.theirs.tail::after { background: rgba(255,255,255,0.08); }
       .tg-bubble.photo-only { padding: 3px; }
       .tg-photo {
         max-width: 100%; max-height: 300px;
@@ -1381,7 +1411,8 @@ function TGStyles() {
         backdrop-filter: blur(8px);
       }
       .tg-bubble.mine .tg-voice-play-btn { background: rgba(255,255,255,0.22); color: white; }
-      .tg-bubble.theirs .tg-voice-play-btn { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.12); }
+      .tg-bubble.theirs .tg-voice-play-btn { background: rgba(200,51,74,0.08); color: var(--rose, #C8334A); border: 1px solid var(--border, rgba(200,51,74,0.13)); }
+      .app.dark .tg-bubble.theirs .tg-voice-play-btn { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.85); border-color: rgba(255,255,255,0.12); }
       .tg-voice-right { flex: 1; min-width: 0; }
       .tg-voice-progress-wrap {
         cursor: pointer; padding: 6px 0;
@@ -1402,12 +1433,15 @@ function TGStyles() {
         width: 2px; border-radius: 2px; flex: 1; min-width: 2px;
       }
       .tg-wave-bar.mine { background: rgba(255,255,255,0.35); }
-      .tg-wave-bar.theirs { background: rgba(255,255,255,0.2); }
+      .tg-wave-bar.theirs { background: rgba(200,51,74,0.2); }
+      .app.dark .tg-wave-bar.theirs { background: rgba(255,255,255,0.2); }
       .tg-voice-footer {
         display: flex; justify-content: space-between; align-items: center;
         margin-top: 2px;
       }
       .tg-voice-duration { font-size: 11px; opacity: 0.65; color: rgba(255,255,255,0.7); }
+      .tg-bubble.theirs .tg-voice-duration { color: var(--muted, #9A6070); opacity: 1; }
+      .app.dark .tg-bubble.theirs .tg-voice-duration { color: rgba(255,255,255,0.7); }
       .tg-msg-time { font-size: 11px; opacity: 0.65; color: rgba(255,255,255,0.7); }
       /* TYPING BUBBLE */
       .tg-typing-bubble { padding: 10px 16px; }
@@ -1416,9 +1450,10 @@ function TGStyles() {
       }
       .tg-typing-indicator span {
         width: 7px; height: 7px; border-radius: 50%;
-        background: rgba(255,255,255,0.4);
+        background: var(--muted, #9A6070);
         animation: tgBounce 1.2s ease-in-out infinite;
       }
+      .app.dark .tg-typing-indicator span { background: rgba(255,255,255,0.4); }
       .tg-typing-indicator span:nth-child(2) { animation-delay: 0.15s; }
       .tg-typing-indicator span:nth-child(3) { animation-delay: 0.3s; }
       @keyframes tgBounce {
@@ -1429,11 +1464,17 @@ function TGStyles() {
       .tg-scroll-btn {
         position: fixed; bottom: 170px; right: 14px;
         width: 42px; height: 42px; border-radius: 50%;
-        background: rgba(30,20,50,0.85); backdrop-filter: blur(12px);
-        border: 1px solid rgba(255,255,255,0.12); cursor: pointer;
-        box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+        background: var(--surface, #FFFFFF); backdrop-filter: blur(12px);
+        border: 0.5px solid var(--border, rgba(200,51,74,0.13)); cursor: pointer;
+        box-shadow: 0 4px 16px rgba(200,51,74,0.15);
         display: flex; align-items: center; justify-content: center;
-        cursor: pointer; z-index: 20; color: rgba(255,255,255,0.8);
+        z-index: 20; color: var(--rose, #C8334A);
+      }
+      .app.dark .tg-scroll-btn {
+        background: rgba(30,20,50,0.85);
+        border-color: rgba(255,255,255,0.12);
+        box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+        color: rgba(255,255,255,0.8);
       }
       .tg-scroll-badge {
         position: absolute; top: -4px; right: -4px;
@@ -1504,38 +1545,49 @@ function TGStyles() {
       .tg-reply-bar {
         display: flex; align-items: center; gap: 10px;
         padding: 8px 14px;
-        background: rgba(15,10,25,0.9); backdrop-filter: blur(12px);
-        border-top: 1px solid rgba(255,255,255,0.06);
+        background: var(--blush, #FBF0F2);
+        border-top: 0.5px solid var(--border, rgba(200,51,74,0.13));
         flex-shrink: 0; position: relative; z-index: 5;
       }
-      .tg-reply-bar-line { width: 3px; height: 32px; background: var(--theme-accent, #C8334A); border-radius: 3px; flex-shrink: 0; }
+      .app.dark .tg-reply-bar {
+        background: rgba(15,10,25,0.9); backdrop-filter: blur(12px);
+        border-top-color: rgba(255,255,255,0.06);
+      }
+      .tg-reply-bar-line { width: 3px; height: 32px; background: var(--rose, #C8334A); border-radius: 3px; flex-shrink: 0; }
       .tg-reply-bar-line.edit { background: #4FC3F7; }
       .tg-reply-bar-content { flex: 1; min-width: 0; }
-      .tg-reply-bar-name { font-size: 12px; font-weight: 700; color: var(--theme-accent, #C8334A); margin-bottom: 2px; }
+      .tg-reply-bar-name { font-size: 12px; font-weight: 700; color: var(--rose, #C8334A); margin-bottom: 2px; }
       .tg-reply-bar-name.edit { color: #4FC3F7; }
-      .tg-reply-bar-text { font-size: 13px; color: rgba(255,255,255,0.5); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-      .tg-reply-bar-close { background: none; border: none; cursor: pointer; color: rgba(255,255,255,0.4); padding: 4px; }
+      .tg-reply-bar-text { font-size: 13px; color: var(--muted, #9A6070); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .app.dark .tg-reply-bar-text { color: rgba(255,255,255,0.5); }
+      .tg-reply-bar-close { background: none; border: none; cursor: pointer; color: var(--muted, #9A6070); padding: 4px; }
+      .app.dark .tg-reply-bar-close { color: rgba(255,255,255,0.4); }
       /* PHOTO PREVIEW BAR */
       .tg-photo-preview-bar {
         padding: 8px 14px;
-        background: rgba(15,10,25,0.9); backdrop-filter: blur(12px);
-        border-top: 1px solid rgba(255,255,255,0.06);
+        background: var(--blush, #FBF0F2);
+        border-top: 0.5px solid var(--border, rgba(200,51,74,0.13));
         display: flex; align-items: center; gap: 10px; flex-shrink: 0;
       }
+      .app.dark .tg-photo-preview-bar {
+        background: rgba(15,10,25,0.9); backdrop-filter: blur(12px);
+        border-top-color: rgba(255,255,255,0.06);
+      }
       .tg-photo-preview-bar img { width: 48px; height: 48px; object-fit: cover; border-radius: 8px; }
-      .tg-photo-preview-bar span { font-size: 13px; color: rgba(255,255,255,0.6); flex: 1; }
-      .tg-photo-preview-bar button { background: none; border: none; cursor: pointer; color: rgba(255,255,255,0.4); }
+      .tg-photo-preview-bar span { font-size: 13px; color: var(--muted, #9A6070); flex: 1; }
+      .app.dark .tg-photo-preview-bar span { color: rgba(255,255,255,0.6); }
+      .tg-photo-preview-bar button { background: none; border: none; cursor: pointer; color: var(--muted, #9A6070); }
+      .app.dark .tg-photo-preview-bar button { color: rgba(255,255,255,0.4); }
       /* RECORDING */
       .tg-recording-panel {
         padding: 16px;
-        background: rgba(251,240,242,0.97); backdrop-filter: blur(20px);
+        background: var(--surface, rgba(251,240,242,0.97)); backdrop-filter: blur(20px);
         border-top: 0.5px solid var(--border, rgba(200,51,74,0.13));
+        display: flex; flex-direction: column; align-items: center; gap: 12px; flex-shrink: 0;
       }
-      .app.dark .tg-input-bar {
+      .app.dark .tg-recording-panel {
         background: rgba(19,5,8,0.97);
         border-top-color: rgba(200,51,74,0.18);
-        display: flex; flex-direction: column;
-        align-items: center; gap: 12px; flex-shrink: 0;
       }
       .tg-rec-preview {
         width: 140px; height: 140px; border-radius: 50%;
@@ -1564,18 +1616,28 @@ function TGStyles() {
       .tg-rec-actions { display: flex; gap: 10px; }
       .tg-rec-cancel {
         padding: 10px 22px;
-        background: rgba(255,255,255,0.08); backdrop-filter: blur(8px);
-        border: 1px solid rgba(255,255,255,0.1);
+        background: rgba(200,51,74,0.08);
+        border: 1px solid var(--border, rgba(200,51,74,0.13));
         border-radius: 22px; font-size: 14px; font-weight: 600;
-        font-family: var(--font-body); color: rgba(255,255,255,0.7); cursor: pointer;
+        font-family: var(--font-body); color: var(--muted, #9A6070); cursor: pointer;
+      }
+      .app.dark .tg-rec-cancel {
+        background: rgba(255,255,255,0.08); backdrop-filter: blur(8px);
+        border-color: rgba(255,255,255,0.1);
+        color: rgba(255,255,255,0.7);
       }
       .tg-rec-switch {
         padding: 10px 16px;
-        background: rgba(255,255,255,0.08); backdrop-filter: blur(8px);
-        border: 1px solid rgba(255,255,255,0.1);
+        background: rgba(200,51,74,0.08);
+        border: 1px solid var(--border, rgba(200,51,74,0.13));
         border-radius: 22px; font-size: 18px; cursor: pointer;
-        color: rgba(255,255,255,0.8);
+        color: var(--rose, #C8334A);
         display: flex; align-items: center; justify-content: center;
+      }
+      .app.dark .tg-rec-switch {
+        background: rgba(255,255,255,0.08); backdrop-filter: blur(8px);
+        border-color: rgba(255,255,255,0.1);
+        color: rgba(255,255,255,0.8);
       }
       .tg-rec-send {
         padding: 10px 22px; background: var(--gradient-main, linear-gradient(160deg, #C8334A, #8B1A2C));
@@ -1587,14 +1649,14 @@ function TGStyles() {
       .tg-input-bar {
         padding: 8px 10px;
         padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
-        background: rgba(251,240,242,0.97); backdrop-filter: blur(20px);
+        background: var(--surface, rgba(251,240,242,0.97)); backdrop-filter: blur(20px);
         border-top: 0.5px solid var(--border, rgba(200,51,74,0.13));
+        display: flex; align-items: flex-end; gap: 4px;
+        flex-shrink: 0; position: relative; z-index: 5;
       }
       .app.dark .tg-input-bar {
         background: rgba(19,5,8,0.97);
         border-top-color: rgba(200,51,74,0.18);
-        display: flex; align-items: flex-end; gap: 4px;
-        flex-shrink: 0; position: relative; z-index: 5;
       }
       .tg-input-icon-btn {
         background: none; border: none; cursor: pointer;
@@ -1605,25 +1667,23 @@ function TGStyles() {
       }
       .tg-input-icon-btn:active { background: rgba(200,51,74,0.08); }
       .tg-input-field {
-        flex: 1; background: var(--surface, #FFFFFF); border-radius: 22px;
+        flex: 1; background: var(--blush, #FBF0F2); border-radius: 22px;
         border: 0.5px solid var(--border, rgba(200,51,74,0.13));
+        padding: 0 14px; display: flex; align-items: flex-end;
+        min-width: 0;
       }
       .app.dark .tg-input-field {
         background: rgba(255,255,255,0.08);
         border-color: rgba(255,255,255,0.06);
-        padding: 0 14px; display: flex; align-items: flex-end;
-        min-width: 0;
       }
       .tg-input-field textarea {
         flex: 1; border: none; background: none;
         padding: 10px 0; font-size: 15px;
         font-family: var(--font-body); color: var(--ink, #1C0A0E);
-      }
-      .app.dark .tg-input-field textarea {
-        color: rgba(255,255,255,0.9);
         resize: none; outline: none; max-height: 120px; line-height: 1.4;
         width: 100%;
       }
+      .app.dark .tg-input-field textarea { color: rgba(255,255,255,0.9); }
       .tg-input-field textarea::placeholder { color: var(--muted, #9A6070); }
       .tg-send-btn {
         width: 42px; height: 42px;

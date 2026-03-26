@@ -203,6 +203,13 @@ export default function Plans({ session }) {
           border-radius: 99px;
           background: linear-gradient(90deg, var(--blush-2, #F2D0D6), var(--blush, #FBF0F2));
           transition: width 0.8s cubic-bezier(0.34,1.56,0.64,1);
+          position: relative; overflow: hidden;
+        }
+        .plans-progress-fill::after {
+          content: '';
+          position: absolute; inset: 0;
+          background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.55) 50%, transparent 100%);
+          animation: shimmer 2s ease-in-out infinite;
         }
         .plans-progress-label {
           font-family: var(--font-body);

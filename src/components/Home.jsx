@@ -164,6 +164,43 @@ function FloatingLayer() {
 }
 
 /* ─────────────────────────────────────────
+   Floating hearts rising from bottom
+───────────────────────────────────────── */
+function FloatingHearts() {
+  const [hearts, setHearts] = useState([])
+  useEffect(() => {
+    const spawn = () => {
+      const h = {
+        id: Date.now() + Math.random(),
+        left: 10 + Math.random() * 80,
+        dur: 6 + Math.random() * 6,
+        size: 8 + Math.random() * 10,
+        delay: Math.random() * 2,
+      }
+      setHearts(prev => [...prev.slice(-8), h])
+    }
+    spawn(); spawn()
+    const id = setInterval(spawn, 1800)
+    return () => clearInterval(id)
+  }, [])
+  return (
+    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
+      {hearts.map(h => (
+        <div key={h.id} style={{
+          position: 'absolute', bottom: 0, left: `${h.left}%`,
+          animation: `floatUp ${h.dur}s ${h.delay}s linear forwards`,
+          opacity: 0,
+        }}>
+          <svg width={h.size} viewBox="0 0 34 30" fill="rgba(255,255,255,0.5)">
+            <path d="M17 28C17 28 1 18 1 7.5C1 3.5 4.5 0.5 8.5 0.5C11.5 0.5 14 2 17 5C20 2 22.5 0.5 25.5 0.5C29.5 0.5 33 3.5 33 7.5C33 18 17 28 17 28Z"/>
+          </svg>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/* ─────────────────────────────────────────
    SVG gradient heart between avatars — bright, high-contrast
 ───────────────────────────────────────── */
 function CentreHeart() {
@@ -568,6 +605,26 @@ function PartnerCard({ profile, onClose }) {
 }
 
 /* ─────────────────────────────────────────
+   Ripple + mouse-glow helpers
+───────────────────────────────────────── */
+function addRipple(e) {
+  const el = e.currentTarget
+  const rect = el.getBoundingClientRect()
+  const rip = document.createElement('div')
+  rip.className = 'ripple-el'
+  rip.style.left = (e.clientX - rect.left) + 'px'
+  rip.style.top = (e.clientY - rect.top) + 'px'
+  el.appendChild(rip)
+  setTimeout(() => rip.remove(), 700)
+}
+
+function mouseGlow(e) {
+  const rect = e.currentTarget.getBoundingClientRect()
+  e.currentTarget.style.setProperty('--mx', ((e.clientX - rect.left) / rect.width * 100) + '%')
+  e.currentTarget.style.setProperty('--my', ((e.clientY - rect.top) / rect.height * 100) + '%')
+}
+
+/* ─────────────────────────────────────────
    MAIN COMPONENT
 ───────────────────────────────────────── */
 export default function Home({ session, profile, onNavigate }) {
@@ -874,6 +931,21 @@ export default function Home({ session, profile, onNavigate }) {
           position: relative; overflow: hidden;
         }
         .app.dark .hc { background: var(--surface-2, #1E0A10); border-color: rgba(200,51,74,0.18); }
+        /* Mouse glow effect */
+        .hc::after {
+          content: ''; position: absolute; inset: 0; border-radius: inherit;
+          background: radial-gradient(circle at var(--mx, 50%) var(--my, 50%), rgba(200,51,74,0.07), transparent 60%);
+          opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 0;
+        }
+        .hc:hover::after { opacity: 1; }
+        /* Ripple */
+        .ripple-el {
+          position: absolute; border-radius: 50%;
+          width: 60px; height: 60px; margin-left: -30px; margin-top: -30px;
+          background: rgba(200,51,74,0.2);
+          transform: scale(0); animation: ripple 0.6s ease-out forwards;
+          pointer-events: none; z-index: 1;
+        }
         .hc-title {
           font-family: var(--font-body);
           font-size: 11px;
@@ -994,7 +1066,9 @@ export default function Home({ session, profile, onNavigate }) {
           align-items: center;
           justify-content: center;
           color: var(--rose, #C8334A);
+          transition: transform 0.2s ease;
         }
+        .action-btn:hover .action-btn-icon { transform: scale(1.1) rotate(-3deg); }
         .action-btn-label {
           font-family: var(--font-body);
           font-size: 12px;
@@ -1148,6 +1222,7 @@ export default function Home({ session, profile, onNavigate }) {
           {/* Avatars + Heart */}
           {/* Floating particle hearts */}
           <ParticleField />
+          <FloatingHearts />
 
           <div className="av-row">
             <AvatarRing
@@ -1278,7 +1353,7 @@ export default function Home({ session, profile, onNavigate }) {
 
           {/* Next event */}
           {nextEvent && (
-            <div className="hc" style={{ animationDelay: '0.1s' }}>
+            <div className="hc" style={{ animationDelay: '0.1s' }} onMouseMove={mouseGlow} onClick={addRipple}>
               <div className="hc-title">Ближайшее событие</div>
               <div className="event-row">
                 <div className="event-emoji-block">{nextEvent.emoji || '📅'}</div>
@@ -1296,7 +1371,7 @@ export default function Home({ session, profile, onNavigate }) {
           )}
 
           {/* Meeting countdown */}
-          <div className="hc" style={{ animationDelay: '0.18s' }}>
+          <div className="hc" style={{ animationDelay: '0.18s' }} onMouseMove={mouseGlow} onClick={addRipple}>
             <div className="hc-title">До встречи</div>
             {editMeet ? (
               <div>

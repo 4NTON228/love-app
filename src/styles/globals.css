@@ -247,6 +247,26 @@ input, textarea, button, select {
 /* ── Utility animations ── */
 .animate-slide-up { animation: slideUp 0.4s ease both; }
 .animate-fade-in  { animation: fadeIn 0.3s ease both; }
+@keyframes navIconBounce {
+  0%   { transform: scale(1) translateY(0); }
+  18%  { transform: scale(0.80) translateY(3px); }
+  52%  { transform: scale(1.28) translateY(-7px); }
+  72%  { transform: scale(0.96) translateY(-2px); }
+  100% { transform: scale(1.1) translateY(-3px); }
+}
+@keyframes checkPop {
+  0%   { transform: scale(0.8); }
+  60%  { transform: scale(1.25); }
+  100% { transform: scale(1.1); }
+}
+@keyframes typewriter {
+  from { width: 0; }
+}
+@keyframes cursorBlink {
+  0%,100% { opacity: 1; }
+  50%     { opacity: 0; }
+}
+
 .tab-anim {
   animation: tabFadeIn 0.28s cubic-bezier(0.22,1,0.36,1) both;
   height: 100%;

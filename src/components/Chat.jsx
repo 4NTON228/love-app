@@ -273,7 +273,7 @@ export default function Chat({ session, profile }) {
     <div style={{
       display: 'flex',
       flexDirection: 'column',
-      height: '100%',
+      height: 'calc(100dvh - env(safe-area-inset-top, 0px) - 56px - env(safe-area-inset-bottom, 0px))',
       position: 'relative',
     }}>
       <style>{`

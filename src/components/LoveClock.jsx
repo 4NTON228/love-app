@@ -93,7 +93,7 @@ export default function LoveClock() {
       <style>{`
         .clock-wrap {
           min-height: 100%;
-          background: var(--theme-gradient, linear-gradient(160deg, #1a0a2e 0%, #2d1457 40%, #6b1a6e 80%, #e8466a 100%));
+          background: linear-gradient(180deg, #200A10 0%, #3D1520 50%, #8B1A2C 100%);
           position: relative;
           overflow: hidden;
           display: flex;
@@ -266,7 +266,7 @@ export default function LoveClock() {
 
           <svg className="clock-svg" viewBox="0 0 280 280">
             {/* Outer glow ring */}
-            <circle cx="140" cy="140" r="100" fill="none" stroke="rgba(232,70,106,0.25)" strokeWidth="2" />
+            <circle cx="140" cy="140" r="100" fill="none" stroke="rgba(200,51,74,0.25)" strokeWidth="2" />
             <circle cx="140" cy="140" r="88" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.15)" strokeWidth="1" />
 
             {/* Hour markers */}
@@ -280,7 +280,7 @@ export default function LoveClock() {
             <defs>
               <linearGradient id="hhandGrad" x1="0%" y1="0%" x2="0%" y2="100%">
                 <stop offset="0%" stopColor="#ff8fab"/>
-                <stop offset="100%" stopColor="#c84b8b"/>
+                <stop offset="100%" stopColor="#8B1A2C"/>
               </linearGradient>
               <filter id="handGlow" x="-60%" y="-60%" width="220%" height="220%">
                 <feGaussianBlur stdDeviation="2.5" result="b"/>
@@ -313,7 +313,7 @@ export default function LoveClock() {
             </g>
             {/* Centre dot */}
             <circle cx="140" cy="140" r="5" fill="white" />
-            <circle cx="140" cy="140" r="2.5" fill="#e8466a" />
+            <circle cx="140" cy="140" r="2.5" fill="#C8334A" />
           </svg>
         </div>
 

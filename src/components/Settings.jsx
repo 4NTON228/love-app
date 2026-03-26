@@ -60,14 +60,14 @@ function IcoSpinner() {
 function IcoPersonFill() {
   return (
     <svg viewBox="0 0 40 40" width="44" height="44" fill="none">
-      <circle cx="20" cy="16" r="8" fill="rgba(200,75,139,0.7)"/>
-      <path d="M4 38c0-8.8 7.2-16 16-16s16 7.2 16 16" fill="rgba(200,75,139,0.5)"/>
+      <circle cx="20" cy="16" r="8" fill="rgba(139,26,44,0.7)"/>
+      <path d="M4 38c0-8.8 7.2-16 16-16s16 7.2 16 16" fill="rgba(139,26,44,0.5)"/>
     </svg>
   )
 }
 
 const THEMES = [
-  { id: 'rose',      label: 'Роза',       a: '#E8466A', b: '#9C27B0' },
+  { id: 'rose',      label: 'Роза',       a: '#C8334A', b: '#9C27B0' },
   { id: 'cherry',    label: 'Вишня',      a: '#AD1457', b: '#4A0072' },
   { id: 'violet',    label: 'Фиалка',     a: '#6A1B9A', b: '#1A0A2E' },
   { id: 'lavender',  label: 'Лаванда',    a: '#7E57C2', b: '#EC407A' },
@@ -148,6 +148,10 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
     document.documentElement.style.setProperty('--gradient-warm', gradient)
     document.documentElement.style.setProperty('--theme-gradient', gradient)
     document.documentElement.style.setProperty('--theme-accent', theme.a)
+    document.documentElement.style.setProperty('--gradient-main', gradient)
+    document.documentElement.style.setProperty('--gradient-banner', gradient)
+    document.documentElement.style.setProperty('--rose', theme.a)
+    document.documentElement.style.setProperty('--rose-dark', theme.b)
   }
 
   async function handleLogout() {
@@ -161,14 +165,16 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
       <style>{`
         .settings-wrap { padding: 0 0 120px; }
         .settings-header {
-          background: var(--theme-gradient, linear-gradient(160deg, #e8466a 0%, #c84b8b 50%, #9b4dca 100%));
+          background: var(--gradient-banner, linear-gradient(160deg, #C8334A 0%, #8B1A2C 100%));
+          background-size: 200% 200%;
+          animation: gradientShift 8s ease infinite;
           padding: 60px 20px 30px;
           border-radius: 0 0 32px 32px;
           display: flex;
           flex-direction: column;
           align-items: center;
           margin-bottom: 20px;
-          box-shadow: 0 8px 32px rgba(200,75,139,0.3);
+          box-shadow: 0 8px 32px rgba(139,26,44,0.3);
         }
         .settings-avatar-wrap {
           position: relative;
@@ -260,7 +266,7 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
         .settings-toggle {
           width: 48px;
           height: 28px;
-          background: var(--primary);
+          background: var(--rose, #C8334A);
           border-radius: 99px;
           position: relative;
           cursor: pointer;
@@ -341,7 +347,7 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
           display: block;
           width: calc(100% - 28px);
           margin: 0 14px 14px;
-          background: linear-gradient(135deg, #e8466a, #c84b8b);
+          background: linear-gradient(135deg, #C8334A, #8B1A2C);
           color: white;
           border: none;
           border-radius: 16px;
@@ -350,7 +356,7 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
           font-weight: 700;
           font-size: 15px;
           cursor: pointer;
-          box-shadow: 0 4px 20px rgba(200,75,139,0.3);
+          box-shadow: 0 4px 20px rgba(139,26,44,0.3);
         }
         .settings-save-btn:active { transform: scale(0.98); }
         .settings-save-btn.saved { background: linear-gradient(135deg, #22c55e, #16a34a); }
@@ -360,9 +366,9 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
           display: block;
           width: calc(100% - 28px);
           margin: 0 14px;
-          background: rgba(232,70,106,0.06);
-          border: 1.5px solid rgba(232,70,106,0.2);
-          color: var(--primary);
+          background: rgba(200,51,74,0.06);
+          border: 1.5px solid rgba(200,51,74,0.2);
+          color: var(--rose, #C8334A);
           border-radius: 16px;
           padding: 14px;
           font-family: var(--font-body);
@@ -372,9 +378,9 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
         }
 
         /* dark */
-        .app.dark .settings-section { background: #2A2540; }
-        .app.dark .settings-row-label { color: #EDE4F0; }
-        .app.dark .settings-input { color: #EDE4F0; }
+        .app.dark .settings-section { background: var(--surface-2, #1E0A10); }
+        .app.dark .settings-row-label { color: var(--ink, #F5E8EA); }
+        .app.dark .settings-input { color: var(--ink, #F5E8EA); }
       `}</style>
 
       <div className="settings-wrap">
@@ -387,7 +393,7 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
                 : <IcoPersonFill />
               }
             </div>
-            <button className="settings-avatar-btn" onClick={() => fileRef.current?.click()} disabled={savingAvatar} style={{ color: '#c84b8b' }}>
+            <button className="settings-avatar-btn" onClick={() => fileRef.current?.click()} disabled={savingAvatar} style={{ color: '#8B1A2C' }}>
               {savingAvatar ? <IcoSpinner /> : <IcoCamera />}
             </button>
             <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatarChange} />
@@ -400,7 +406,7 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
         <div className="settings-section">
           <div className="settings-section-title">Профиль</div>
           <div className="settings-row">
-            <span className="settings-row-icon" style={{ color: 'var(--primary)' }}><IcoUser /></span>
+            <span className="settings-row-icon" style={{ color: 'var(--rose, #C8334A)' }}><IcoUser /></span>
             <span className="settings-row-label">Имя</span>
             <input
               className="settings-input"
@@ -410,7 +416,7 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
             />
           </div>
           <div className="settings-row">
-            <span className="settings-row-icon" style={{ color: 'var(--primary)' }}><IcoBirthday /></span>
+            <span className="settings-row-icon" style={{ color: 'var(--rose, #C8334A)' }}><IcoBirthday /></span>
             <span className="settings-row-label">День рождения</span>
             <input
               className="settings-input"
@@ -456,7 +462,7 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
         <div className="settings-section">
           <div className="settings-section-title">Оформление</div>
           <div className="settings-row">
-            <span className="settings-row-icon" style={{ color: 'var(--primary)' }}>{darkMode ? <IcoMoon /> : <IcoSun />}</span>
+            <span className="settings-row-icon" style={{ color: 'var(--rose, #C8334A)' }}>{darkMode ? <IcoMoon /> : <IcoSun />}</span>
             <span className="settings-row-label">Тёмная тема</span>
             <button
               className={`settings-toggle${darkMode ? '' : ' off'}`}

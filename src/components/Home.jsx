@@ -146,7 +146,7 @@ function FloatingLayer() {
 
         if (f.type === 'heart') return (
           <svg key={f.id} style={{ ...base, width: f.s, height: f.s * 0.9 }}
-            viewBox="0 0 20 18" fill="rgba(232,70,106,0.7)">
+            viewBox="0 0 20 18" fill="rgba(200,51,74,0.7)">
             <path d={HEART_PATH} />
           </svg>
         )
@@ -177,7 +177,7 @@ function CentreHeart() {
       <svg width="60" height="56" viewBox="0 0 60 56" fill="none" aria-hidden>
         <defs>
           <linearGradient id="hg" x1="0" y1="0" x2="60" y2="56" gradientUnits="userSpaceOnUse">
-            <stop offset="0%"   stopColor="#FF6B8A" />
+            <stop offset="0%"   stopColor="#E8556A" />
             <stop offset="50%"  stopColor="#FF2D55" />
             <stop offset="100%" stopColor="#D10043" />
           </linearGradient>
@@ -329,7 +329,7 @@ function BinaryConnection() {
           position:absolute;
           width:8px; height:8px; border-radius:50%;
           background:white;
-          box-shadow:0 0 10px 3px rgba(255,255,255,0.7),0 0 20px 6px rgba(232,70,106,0.3);
+          box-shadow:0 0 10px 3px rgba(255,255,255,0.7),0 0 20px 6px rgba(200,51,74,0.3);
           animation:orbTrack 3s ease-in-out infinite;
           pointer-events:none;
         }
@@ -442,8 +442,8 @@ function AvatarRing({ src, name, birthday, onClick }) {
               ? <img src={src} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
               : <div className="av-initials-wrap">
                   <svg viewBox="0 0 40 40" width="36" height="36" fill="none">
-                    <circle cx="20" cy="16" r="8" fill="rgba(200,75,139,0.7)"/>
-                    <path d="M4 38c0-8.8 7.2-16 16-16s16 7.2 16 16" fill="rgba(200,75,139,0.5)"/>
+                    <circle cx="20" cy="16" r="8" fill="rgba(139,26,44,0.7)"/>
+                    <path d="M4 38c0-8.8 7.2-16 16-16s16 7.2 16 16" fill="rgba(139,26,44,0.5)"/>
                   </svg>
                 </div>
             }
@@ -494,12 +494,12 @@ function PartnerCard({ profile, onClose }) {
       <div
         onClick={e => e.stopPropagation()}
         style={{
-          background: 'linear-gradient(160deg, #1a0a2e 0%, #2d0a40 60%, #3d1545 100%)',
+          background: 'linear-gradient(160deg, #200A10 0%, #3D1520 60%, #4A2030 100%)',
           borderRadius: 24,
           padding: '32px 24px 28px',
           maxWidth: 300, width: '100%',
           boxShadow: '0 24px 80px rgba(0,0,0,0.6)',
-          border: '1px solid rgba(232,70,106,0.2)',
+          border: '1px solid rgba(200,51,74,0.2)',
           textAlign: 'center',
           position: 'relative',
           animation: 'slideUp 0.3s cubic-bezier(0.34,1.56,0.64,1) both',
@@ -524,15 +524,15 @@ function PartnerCard({ profile, onClose }) {
         <div style={{
           width: 88, height: 88, borderRadius: '50%', margin: '0 auto 16px',
           border: '3px solid rgba(255,255,255,0.25)',
-          boxShadow: '0 0 20px rgba(232,70,106,0.3)',
-          overflow: 'hidden', background: '#2d1457',
+          boxShadow: '0 0 20px rgba(200,51,74,0.3)',
+          overflow: 'hidden', background: 'var(--blush-2, #F2D0D6)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
           {profile.avatar_url
             ? <img src={profile.avatar_url} alt={profile.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             : <svg viewBox="0 0 40 40" width="44" height="44" fill="none">
-                <circle cx="20" cy="16" r="8" fill="rgba(200,75,139,0.7)"/>
-                <path d="M4 38c0-8.8 7.2-16 16-16s16 7.2 16 16" fill="rgba(200,75,139,0.5)"/>
+                <circle cx="20" cy="16" r="8" fill="rgba(139,26,44,0.7)"/>
+                <path d="M4 38c0-8.8 7.2-16 16-16s16 7.2 16 16" fill="rgba(139,26,44,0.5)"/>
               </svg>
           }
         </div>
@@ -550,14 +550,14 @@ function PartnerCard({ profile, onClose }) {
         {zodiac && (
           <div style={{
             display: 'inline-block',
-            background: 'rgba(232,70,106,0.15)',
-            border: '1px solid rgba(232,70,106,0.3)',
+            background: 'rgba(200,51,74,0.15)',
+            border: '1px solid rgba(200,51,74,0.3)',
             borderRadius: 20,
             padding: '6px 18px',
             fontFamily: 'var(--font-body)',
             fontSize: 13,
             fontWeight: 600,
-            color: '#f7a8c4',
+            color: 'var(--rose-light, #E8556A)',
           }}>
             {zodiac}
           </div>
@@ -687,7 +687,7 @@ export default function Home({ session, profile, onNavigate }) {
           border-radius: 50%;
           padding: 2.5px;
           background: conic-gradient(from var(--ring-a),
-            #ff6b8a, #c84b8b, #9b4dca, #4a8fe7, #ff6b8a);
+            #E8556A, #8B1A2C, #8B1A2C, #8B1A2C, #E8556A);
           animation: ringRotate 4s linear infinite;
         }
         @keyframes ringRotate { to { --ring-a: 360deg; } }
@@ -695,7 +695,7 @@ export default function Home({ session, profile, onNavigate }) {
         /* Fallback for browsers without @property */
         @supports not (background: conic-gradient(from 0deg, red, blue)) {
           .av-ring {
-            background: linear-gradient(135deg, #ff6b8a, #c84b8b, #9b4dca, #4a8fe7);
+            background: linear-gradient(135deg, #E8556A, #8B1A2C, #8B1A2C, #8B1A2C);
             background-size: 300% 300%;
             animation: gradShift 4s ease infinite;
           }
@@ -710,12 +710,12 @@ export default function Home({ session, profile, onNavigate }) {
           width: 100%; height: 100%;
           border-radius: 50%;
           padding: 2px;
-          background: var(--theme-gradient, linear-gradient(160deg, #e8466a 0%, #9b4dca 100%));
+          background: var(--theme-gradient, linear-gradient(160deg, #C8334A 0%, #8B1A2C 100%));
         }
         .av-inner {
           width: 100%; height: 100%;
           border-radius: 50%;
-          background: #ffe8f0;
+          background: var(--blush-2, #F2D0D6);
           overflow: hidden;
           display: flex;
           align-items: center;
@@ -725,7 +725,7 @@ export default function Home({ session, profile, onNavigate }) {
           font-family: var(--font-display);
           font-size: 26px;
           font-weight: 600;
-          color: #c84b8b;
+          color: #8B1A2C;
           line-height: 1;
           /* SVG-style person silhouette as text fallback */
         }
@@ -737,7 +737,7 @@ export default function Home({ session, profile, onNavigate }) {
           text-shadow:
             0 0 10px rgba(255,200,220,0.8),
             0 0 22px rgba(255,150,200,0.5),
-            0 0 40px rgba(200,75,139,0.3);
+            0 0 40px rgba(139,26,44,0.3);
           animation: digitFlip 0.35s cubic-bezier(0.34,1.56,0.64,1) both;
         }
         @keyframes digitFlip {
@@ -755,15 +755,17 @@ export default function Home({ session, profile, onNavigate }) {
 
         /* ── Hero banner ── */
         .home-banner {
-          background: var(--theme-gradient, linear-gradient(160deg, #e8466a 0%, #c84b8b 45%, #9b4dca 100%));
-          border-radius: 0 0 40px 40px;
+          background: var(--gradient-banner, linear-gradient(160deg, #C8334A 0%, #8B1A2C 100%));
+          background-size: 200% 200%;
+          animation: gradientShift 8s ease infinite;
+          border-radius: 0 0 32px 32px;
           padding: 56px 24px 36px;
           display: flex;
           flex-direction: column;
           align-items: center;
           position: relative;
           z-index: 1;
-          box-shadow: 0 12px 60px rgba(0,0,0,0.4), 0 4px 20px rgba(200,75,139,0.25);
+          box-shadow: 0 8px 40px rgba(139,26,44,0.35), 0 4px 16px rgba(200,51,74,0.2);
           overflow: hidden;
         }
         /* shimmer overlay */
@@ -863,16 +865,15 @@ export default function Home({ session, profile, onNavigate }) {
 
         /* ── Cards ── */
         .hc {
-          background: var(--bg-card);
-          border-radius: 22px;
+          background: var(--surface, #FFFFFF);
+          border-radius: var(--radius-lg, 20px);
+          border: var(--border-width, 0.5px) solid var(--border, rgba(200,51,74,0.13));
           padding: 18px 20px;
           box-shadow: var(--shadow);
           animation: slideUp 0.5s ease both;
+          position: relative; overflow: hidden;
         }
-        @keyframes slideUp {
-          from { opacity:0; transform: translateY(22px); }
-          to   { opacity:1; transform: translateY(0); }
-        }
+        .app.dark .hc { background: var(--surface-2, #1E0A10); border-color: rgba(200,51,74,0.18); }
         .hc-title {
           font-family: var(--font-body);
           font-size: 11px;
@@ -885,12 +886,12 @@ export default function Home({ session, profile, onNavigate }) {
 
         /* ── Love message ── */
         .love-card {
-          background: linear-gradient(150deg, #e8466a 0%, #c84b8b 55%, #9b4dca 100%);
+          background: linear-gradient(150deg, #C8334A 0%, #8B1A2C 55%, #8B1A2C 100%);
           border-radius: 22px;
           padding: 20px;
           color: white;
           position: relative;
-          box-shadow: 0 8px 32px rgba(200,75,139,0.32);
+          box-shadow: 0 8px 32px rgba(139,26,44,0.32);
           animation: slideUp 0.5s ease both;
         }
         .love-card::before {
@@ -961,7 +962,7 @@ export default function Home({ session, profile, onNavigate }) {
         }
         .action-btn {
           background: var(--bg-card);
-          border: 1px solid rgba(232,70,106,0.08);
+          border: 1px solid rgba(200,51,74,0.08);
           border-radius: 20px;
           padding: 18px 12px 14px;
           display: flex;
@@ -978,21 +979,21 @@ export default function Home({ session, profile, onNavigate }) {
           content: '';
           position: absolute;
           inset: 0;
-          background: linear-gradient(135deg, rgba(232,70,106,0.04) 0%, transparent 100%);
+          background: linear-gradient(135deg, rgba(200,51,74,0.04) 0%, transparent 100%);
           pointer-events: none;
         }
         .action-btn:active {
           transform: scale(0.94);
-          box-shadow: 0 2px 8px rgba(200,75,139,0.12);
+          box-shadow: 0 2px 8px rgba(139,26,44,0.12);
         }
         .action-btn-icon {
           width: 42px; height: 42px;
           border-radius: 14px;
-          background: linear-gradient(135deg, rgba(232,70,106,0.1) 0%, rgba(200,75,139,0.08) 100%);
+          background: linear-gradient(135deg, rgba(200,51,74,0.1) 0%, rgba(139,26,44,0.08) 100%);
           display: flex;
           align-items: center;
           justify-content: center;
-          color: var(--primary);
+          color: var(--rose, #C8334A);
         }
         .action-btn-label {
           font-family: var(--font-body);
@@ -1002,9 +1003,9 @@ export default function Home({ session, profile, onNavigate }) {
           text-align: center;
           line-height: 1.3;
         }
-        .app.dark .action-btn { background: #2A2540; border-color: rgba(232,70,106,0.12); }
-        .app.dark .action-btn-label { color: #EDE4F0; }
-        .app.dark .action-btn-icon { background: rgba(232,70,106,0.15); }
+        .app.dark .action-btn { background: var(--surface-2, #1E0A10); border-color: rgba(200,51,74,0.12); }
+        .app.dark .action-btn-label { color: var(--ink, #F5E8EA); }
+        .app.dark .action-btn-icon { background: rgba(200,51,74,0.15); }
 
         /* ── Meeting countdown ── */
         .meet-values { display: flex; gap: 10px; justify-content: center; }
@@ -1012,39 +1013,39 @@ export default function Home({ session, profile, onNavigate }) {
           display: flex;
           flex-direction: column;
           align-items: center;
-          background: linear-gradient(135deg, #fff0f4 0%, #ffe4ee 100%);
+          background: linear-gradient(135deg, var(--blush, #FBF0F2) 0%, var(--blush-2, #F2D0D6) 100%);
           border-radius: 16px;
           padding: 12px 14px;
           min-width: 58px;
-          box-shadow: inset 0 1px 0 rgba(255,255,255,0.8), 0 2px 8px rgba(200,75,139,0.08);
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.8), 0 2px 8px rgba(139,26,44,0.08);
         }
-        .app.dark .meet-unit { background: rgba(200,75,139,0.12); box-shadow: none; }
+        .app.dark .meet-unit { background: rgba(139,26,44,0.12); box-shadow: none; }
         .meet-num {
           font-family: var(--font-display);
           font-size: 28px;
           font-weight: 700;
-          color: #c84b8b;
+          color: #8B1A2C;
           line-height: 1;
           text-shadow: 0 1px 0 rgba(255,255,255,0.6);
         }
-        .app.dark .meet-num { color: #f7a8c4; text-shadow: none; }
+        .app.dark .meet-num { color: var(--rose-light, #E8556A); text-shadow: none; }
         .meet-lbl {
           font-family: var(--font-body);
           font-size: 10px;
-          color: #c84b8b;
+          color: #8B1A2C;
           opacity: 0.7;
           text-transform: uppercase;
           letter-spacing: 0.5px;
           margin-top: 3px;
         }
-        .app.dark .meet-lbl { color: #f7a8c4; }
+        .app.dark .meet-lbl { color: var(--rose-light, #E8556A); }
 
         /* ── Next event ── */
         .event-row { display: flex; align-items: center; gap: 14px; }
         .event-emoji-block {
           width: 48px; height: 48px;
           border-radius: 16px;
-          background: linear-gradient(135deg, rgba(232,70,106,0.12) 0%, rgba(200,75,139,0.08) 100%);
+          background: linear-gradient(135deg, rgba(200,51,74,0.12) 0%, rgba(139,26,44,0.08) 100%);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -1061,10 +1062,10 @@ export default function Home({ session, profile, onNavigate }) {
           overflow: hidden;
           text-overflow: ellipsis;
         }
-        .app.dark .event-name { color: #EDE4F0; }
+        .app.dark .event-name { color: var(--ink, #F5E8EA); }
         .event-date { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
         .event-badge {
-          background: linear-gradient(135deg, #e8466a, #c84b8b);
+          background: linear-gradient(135deg, #C8334A, #8B1A2C);
           color: white;
           border-radius: 12px;
           padding: 6px 12px;
@@ -1073,12 +1074,12 @@ export default function Home({ session, profile, onNavigate }) {
           font-family: var(--font-body);
           white-space: nowrap;
           flex-shrink: 0;
-          box-shadow: 0 3px 12px rgba(200,75,139,0.3);
+          box-shadow: 0 3px 12px rgba(139,26,44,0.3);
         }
 
         /* ── Buttons ── */
         .btn-primary {
-          background: linear-gradient(135deg, #e8466a, #c84b8b);
+          background: linear-gradient(135deg, #C8334A, #8B1A2C);
           color: white;
           border: none;
           border-radius: 13px;
@@ -1087,12 +1088,12 @@ export default function Home({ session, profile, onNavigate }) {
           font-weight: 700;
           font-size: 14px;
           cursor: pointer;
-          box-shadow: 0 4px 16px rgba(200,75,139,0.3), inset 0 1px 0 rgba(255,255,255,0.15);
+          box-shadow: 0 4px 16px rgba(139,26,44,0.3), inset 0 1px 0 rgba(255,255,255,0.15);
           transition: transform 0.12s, box-shadow 0.12s;
         }
         .btn-primary:active {
           transform: scale(0.96);
-          box-shadow: 0 2px 8px rgba(200,75,139,0.25);
+          box-shadow: 0 2px 8px rgba(139,26,44,0.25);
         }
         .btn-ghost {
           background: rgba(0,0,0,0.05);
@@ -1108,8 +1109,8 @@ export default function Home({ session, profile, onNavigate }) {
         .app.dark .btn-ghost { background: rgba(255,255,255,0.08); }
         .btn-outline-sm {
           background: transparent;
-          border: 1.5px solid rgba(200,75,139,0.3);
-          color: #c84b8b;
+          border: 1.5px solid rgba(139,26,44,0.3);
+          color: #8B1A2C;
           border-radius: 11px;
           padding: 7px 16px;
           font-family: var(--font-body);
@@ -1119,14 +1120,14 @@ export default function Home({ session, profile, onNavigate }) {
           margin-top: 10px;
           transition: background 0.15s;
         }
-        .btn-outline-sm:active { background: rgba(200,75,139,0.08); }
-        .app.dark .btn-outline-sm { border-color: rgba(247,168,196,0.3); color: #f7a8c4; }
+        .btn-outline-sm:active { background: rgba(139,26,44,0.08); }
+        .app.dark .btn-outline-sm { border-color: rgba(247,168,196,0.3); color: var(--rose-light, #E8556A); }
 
         /* date input override */
         input[type='datetime-local'] {
           width: 100%;
           padding: 10px 12px;
-          border: 2px solid rgba(232,70,106,0.18);
+          border: 2px solid rgba(200,51,74,0.18);
           border-radius: 13px;
           font-family: var(--font-body);
           font-size: 14px;
@@ -1135,8 +1136,8 @@ export default function Home({ session, profile, onNavigate }) {
           margin-bottom: 12px;
           outline: none;
         }
-        input[type='datetime-local']:focus { border-color: var(--primary); }
-        .app.dark input[type='datetime-local'] { background: #3A3050; border-color: #3A3050; color: #EDE4F0; }
+        input[type='datetime-local']:focus { border-color: var(--rose, #C8334A); }
+        .app.dark input[type='datetime-local'] { background: #3A3050; border-color: #3A3050; color: var(--ink, #F5E8EA); }
       `}</style>
 
       <FloatingLayer />

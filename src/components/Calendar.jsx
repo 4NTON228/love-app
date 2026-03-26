@@ -52,7 +52,7 @@ function LoadingHeart() {
       <style>{`@keyframes hbLoad2{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}.hbL2{animation:hbLoad2 1.2s ease-in-out infinite;transform-origin:center}`}</style>
       <g className="hbL2">
         <path d="M30 52C30 52 3 35 3 16C3 8 9.5 2 18 2C22.5 2 26.5 4.5 30 9C33.5 4.5 37.5 2 42 2C50.5 2 57 8 57 16C57 35 30 52 30 52Z"
-          fill="rgba(232,70,106,0.4)" stroke="rgba(232,70,106,0.6)" strokeWidth="2"/>
+          fill="rgba(200,51,74,0.4)" stroke="rgba(200,51,74,0.6)" strokeWidth="2"/>
       </g>
     </svg>
   )
@@ -155,7 +155,9 @@ export default function Calendar({ session, profile }) {
       <style>{`
         .cal-wrap { padding: 0 0 120px; }
         .cal-header {
-          background: var(--theme-gradient, linear-gradient(160deg, #e8466a 0%, #c84b8b 50%, #9b4dca 100%));
+          background: var(--gradient-banner, linear-gradient(160deg, #C8334A 0%, #8B1A2C 100%));
+          background-size: 200% 200%;
+          animation: gradientShift 8s ease infinite;
           padding: 60px 20px 24px;
           border-radius: 0 0 32px 32px;
           margin-bottom: 18px;
@@ -228,7 +230,7 @@ export default function Calendar({ session, profile }) {
           position: absolute;
           top: 10px;
           right: 10px;
-          background: linear-gradient(135deg, #e8466a, #c84b8b);
+          background: linear-gradient(135deg, #C8334A, #8B1A2C);
           color: white;
           border-radius: 12px;
           padding: 5px 10px;
@@ -249,26 +251,26 @@ export default function Calendar({ session, profile }) {
         .cal-date-pill {
           flex-shrink: 0;
           width: 50px;
-          background: linear-gradient(135deg, #ffeef4, #ffe0ea);
+          background: var(--blush, #FBF0F2);
           border-radius: 14px;
           display: flex;
           flex-direction: column;
           align-items: center;
           padding: 8px 4px;
         }
-        .app.dark .cal-date-pill { background: rgba(200,75,139,0.15); }
+        .app.dark .cal-date-pill { background: rgba(139,26,44,0.15); }
         .cal-date-day {
           font-family: var(--font-display);
           font-size: 22px;
           font-weight: 700;
-          color: #c84b8b;
+          color: #8B1A2C;
           line-height: 1;
         }
         .cal-date-month {
           font-family: var(--font-body);
           font-size: 11px;
           font-weight: 700;
-          color: #c84b8b;
+          color: #8B1A2C;
           text-transform: uppercase;
           opacity: 0.75;
         }
@@ -297,7 +299,7 @@ export default function Calendar({ session, profile }) {
           display: inline-flex;
           align-items: center;
           gap: 4px;
-          background: rgba(232,70,106,0.08);
+          background: rgba(200,51,74,0.08);
           color: var(--primary);
           border-radius: 8px;
           padding: 3px 8px;
@@ -306,7 +308,7 @@ export default function Calendar({ session, profile }) {
           font-family: var(--font-body);
         }
         .cal-event-countdown.today {
-          background: linear-gradient(135deg, #e8466a, #c84b8b);
+          background: linear-gradient(135deg, #C8334A, #8B1A2C);
           color: white;
         }
         .cal-event-countdown.past-label {
@@ -325,11 +327,11 @@ export default function Calendar({ session, profile }) {
           flex-shrink: 0;
           align-self: flex-start;
         }
-        .cal-del-btn:active { background: rgba(232,70,106,0.1); color: var(--primary); }
+        .cal-del-btn:active { background: rgba(200,51,74,0.1); color: var(--primary); }
 
         /* dark */
-        .app.dark .cal-event-card { background: #2A2540; }
-        .app.dark .cal-event-title { color: #EDE4F0; }
+        .app.dark .cal-event-card { background: var(--surface-2, #1E0A10); }
+        .app.dark .cal-event-title { color: var(--ink, #F5E8EA); }
 
         /* lightbox */
         .cal-lightbox {

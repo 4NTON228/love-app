@@ -6,8 +6,8 @@ function SvgDefs() {
     <svg width="0" height="0" style={{ position: 'absolute', overflow: 'hidden' }} aria-hidden>
       <defs>
         <linearGradient id="nav-g" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%"   stopColor="var(--primary)" />
-          <stop offset="100%" stopColor="#c84b8b" />
+          <stop offset="0%"   stopColor="#C8334A" />
+          <stop offset="100%" stopColor="#8B1A2C" />
         </linearGradient>
         <filter id="nav-glow" x="-40%" y="-40%" width="180%" height="180%">
           <feGaussianBlur stdDeviation="1.8" result="b" />
@@ -192,16 +192,21 @@ export default function Navigation({ activeTab, setActiveTab }) {
         .nav-new {
           position: fixed;
           bottom: 0; left: 0; right: 0;
-          background: rgba(15,5,25,0.95);
-          backdrop-filter: blur(20px) saturate(180%);
-          -webkit-backdrop-filter: blur(20px) saturate(180%);
-          border-top: 1px solid rgba(232,70,106,0.15);
+          background: rgba(255,245,247,0.92);
+          backdrop-filter: blur(24px) saturate(180%);
+          -webkit-backdrop-filter: blur(24px) saturate(180%);
+          border-top: 0.5px solid var(--border, rgba(200,51,74,0.13));
           display: flex;
           align-items: stretch;
           height: calc(56px + env(safe-area-inset-bottom, 0px));
           padding-bottom: env(safe-area-inset-bottom, 0px);
           z-index: 50;
-          box-shadow: 0 -1px 0 rgba(232,70,106,0.1), 0 -8px 40px rgba(0,0,0,0.5);
+          box-shadow: 0 -1px 0 rgba(200,51,74,0.07), 0 -4px 24px rgba(200,51,74,0.06);
+        }
+        .app.dark .nav-new {
+          background: rgba(19,5,8,0.94);
+          border-top-color: rgba(200,51,74,0.18);
+          box-shadow: 0 -1px 0 rgba(200,51,74,0.12), 0 -4px 24px rgba(0,0,0,0.4);
         }
 
         .nav-tab {
@@ -226,9 +231,8 @@ export default function Navigation({ activeTab, setActiveTab }) {
           justify-content: center;
           width: 30px; height: 30px;
           border-radius: 9px;
-          transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1),
-                      background 0.2s;
-          color: rgba(255,255,255,0.35);
+          transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1), background 0.2s;
+          color: var(--muted, #9A6070);
         }
 
         .nav-tab-icon svg {
@@ -238,8 +242,8 @@ export default function Navigation({ activeTab, setActiveTab }) {
 
         .nav-tab.active .nav-tab-icon {
           transform: translateY(-3px) scale(1.1);
-          background: rgba(var(--theme-accent-rgb,232,70,106),0.12);
-          color: var(--theme-accent, var(--primary));
+          background: rgba(200,51,74,0.1);
+          color: var(--rose, #C8334A);
         }
 
         .nav-tab.pressing .nav-tab-icon {
@@ -260,14 +264,15 @@ export default function Navigation({ activeTab, setActiveTab }) {
         .nav-tab-label {
           font-family: var(--font-body);
           font-size: 11px;
-          font-weight: 600;
+          font-weight: 500;
           letter-spacing: 0.2px;
-          color: rgba(255,255,255,0.35);
+          color: var(--muted, #9A6070);
           transition: color 0.2s;
           white-space: nowrap;
         }
         .nav-tab.active .nav-tab-label {
-          color: var(--theme-accent, var(--primary));
+          color: var(--rose, #C8334A);
+          font-weight: 600;
         }
 
         /* Active dot indicator */
@@ -278,7 +283,7 @@ export default function Navigation({ activeTab, setActiveTab }) {
           transform: translateX(-50%) scaleX(0);
           width: 18px; height: 3px;
           border-radius: 99px;
-          background: var(--theme-gradient, linear-gradient(90deg, var(--primary), #c84b8b));
+          background: var(--gradient-main, linear-gradient(160deg, #C8334A, #8B1A2C));
           transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
         }
         .nav-tab.active .nav-tab-dot {
@@ -290,38 +295,36 @@ export default function Navigation({ activeTab, setActiveTab }) {
           position: fixed;
           inset: 0;
           z-index: 49;
-          background: rgba(0,0,0,0.5);
-          backdrop-filter: blur(4px);
-          animation: fadeInOverlay 0.2s ease;
-        }
-        @keyframes fadeInOverlay {
-          from { opacity: 0; }
-          to   { opacity: 1; }
+          background: rgba(28,10,14,0.5);
+          backdrop-filter: blur(8px);
+          animation: fadeIn 0.2s ease;
         }
 
         .more-drawer {
           position: fixed;
           bottom: calc(56px + env(safe-area-inset-bottom, 0px));
           left: 0; right: 0;
-          background: rgba(20,10,35,0.97);
+          background: var(--surface, #FFFFFF);
           border-radius: 24px 24px 0 0;
-          border-top: 1px solid rgba(232,70,106,0.18);
+          border-top: 0.5px solid var(--border, rgba(200,51,74,0.13));
           padding: 16px 20px 24px;
           z-index: 50;
-          animation: slideUpDrawer 0.28s cubic-bezier(0.34,1.56,0.64,1) both;
-          box-shadow: 0 -8px 40px rgba(0,0,0,0.6);
+          animation: slideUp 0.35s cubic-bezier(0.34,1.56,0.64,1) both;
+          box-shadow: 0 -8px 40px rgba(200,51,74,0.1);
         }
-        @keyframes slideUpDrawer {
-          from { transform: translateY(100%); opacity: 0; }
-          to   { transform: translateY(0);    opacity: 1; }
+        .app.dark .more-drawer {
+          background: #1E0A10;
+          border-top-color: rgba(200,51,74,0.2);
+          box-shadow: 0 -8px 40px rgba(0,0,0,0.5);
         }
 
         .more-handle {
           width: 36px; height: 4px;
           border-radius: 99px;
-          background: rgba(255,255,255,0.2);
+          background: var(--blush-2, #F2D0D6);
           margin: 0 auto 18px;
         }
+        .app.dark .more-handle { background: #3D1520; }
 
         .more-grid {
           display: grid;
@@ -337,33 +340,36 @@ export default function Navigation({ activeTab, setActiveTab }) {
           padding: 14px 8px;
           border-radius: 16px;
           cursor: pointer;
-          background: rgba(255,255,255,0.05);
-          border: 1px solid rgba(255,255,255,0.07);
-          transition: background 0.15s, transform 0.15s;
+          background: var(--blush, #FBF0F2);
+          border: 0.5px solid var(--border, rgba(200,51,74,0.13));
+          transition: background 0.2s, transform 0.2s cubic-bezier(0.34,1.56,0.64,1);
           -webkit-tap-highlight-color: transparent;
         }
+        .app.dark .more-item { background: #3D1520; border-color: rgba(200,51,74,0.18); }
         .more-item:active, .more-item.active-item {
-          background: rgba(var(--theme-accent-rgb,232,70,106),0.15);
+          background: rgba(200,51,74,0.12);
           transform: scale(0.95);
-          border-color: rgba(var(--theme-accent-rgb,232,70,106),0.3);
+          border-color: rgba(200,51,74,0.3);
         }
+        .more-item:not(:active):hover { transform: translateY(-2px); }
 
         .more-item-icon {
           width: 28px; height: 28px;
-          color: rgba(255,255,255,0.7);
+          color: var(--ink-mid, #4A2030);
           display: flex; align-items: center; justify-content: center;
         }
+        .app.dark .more-item-icon { color: var(--ink-mid, #C4909A); }
         .more-item-icon svg { width: 26px; height: 26px; }
-        .more-item.active-item .more-item-icon { color: var(--theme-accent, var(--primary)); }
+        .more-item.active-item .more-item-icon { color: var(--rose, #C8334A); }
 
         .more-item-label {
           font-family: var(--font-body);
           font-size: 11px;
-          font-weight: 600;
-          color: rgba(255,255,255,0.6);
+          font-weight: 500;
+          color: var(--muted, #9A6070);
           text-align: center;
         }
-        .more-item.active-item .more-item-label { color: var(--primary); }
+        .more-item.active-item .more-item-label { color: var(--rose, #C8334A); font-weight: 600; }
       `}</style>
 
       <SvgDefs />

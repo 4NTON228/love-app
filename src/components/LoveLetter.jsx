@@ -9,7 +9,7 @@ function IcoClose() {
     </svg>
   )
 }
-function IcoHeart({ size = 14, color = '#c84b8b' }) {
+function IcoHeart({ size = 14, color = '#8B1A2C' }) {
   return (
     <svg viewBox="0 0 20 18" width={size} height={size * 0.9} fill={color} style={{ display: 'inline-block', verticalAlign: 'middle' }}>
       <path d="M10 16.5C10 16.5 1.5 10.5 1.5 5C1.5 2.5 3.6 0.5 6 0.5C7.5 0.5 8.8 1.3 10 2.8C11.2 1.3 12.5 0.5 14 0.5C16.4 0.5 18.5 2.5 18.5 5C18.5 10.5 10 16.5 10 16.5Z"/>
@@ -118,7 +118,9 @@ export default function LoveLetter({ session, profile }) {
       <style>{`
         .letter-wrap {
           min-height: 100%;
-          background: var(--theme-gradient, linear-gradient(160deg, #2d1457 0%, #6b1a6e 40%, #c84b8b 80%, #e8466a 100%));
+          background: var(--gradient-banner, linear-gradient(160deg, #C8334A 0%, #8B1A2C 100%));
+          background-size: 200% 200%;
+          animation: gradientShift 8s ease infinite;
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -218,7 +220,7 @@ export default function LoveLetter({ session, profile }) {
         .envelope-body {
           width: 240px;
           height: 160px;
-          background: linear-gradient(160deg, #fff5f8 0%, #ffe0ea 100%);
+          background: var(--blush, #FBF0F2);
           border-radius: 8px 8px 16px 16px;
           position: absolute;
           bottom: 0;
@@ -229,14 +231,14 @@ export default function LoveLetter({ session, profile }) {
           position: absolute;
           bottom: 0; left: 0; right: 0;
           height: 70px;
-          background: linear-gradient(160deg, #ffd6e0 0%, #ffb6d0 100%);
+          background: var(--blush-2, #F2D0D6);
           clip-path: polygon(0 100%, 50% 0, 100% 100%);
         }
         .envelope-flap {
           position: absolute;
           top: 0; left: 0; right: 0;
           height: 100px;
-          background: linear-gradient(160deg, #ffeef4 0%, #ffd6e0 100%);
+          background: var(--blush, #FBF0F2);
           clip-path: polygon(0 0, 50% 100%, 100% 0);
           transform-origin: top center;
           transition: transform 0.6s cubic-bezier(0.34,1.56,0.64,1);
@@ -266,7 +268,7 @@ export default function LoveLetter({ session, profile }) {
         }
         .envelope-line {
           width: 80px; height: 2px;
-          background: rgba(200,75,139,0.25);
+          background: rgba(139,26,44,0.25);
           border-radius: 2px;
         }
         /* Fly-away animation */
@@ -308,7 +310,7 @@ export default function LoveLetter({ session, profile }) {
           font-family: var(--font-body);
           font-size: 15px;
           font-weight: 600;
-          color: var(--theme-accent, #E8466A);
+          color: var(--theme-accent, #C8334A);
         }
         .compose-textarea {
           width: 100%;
@@ -327,7 +329,7 @@ export default function LoveLetter({ session, profile }) {
         .compose-send-btn {
           width: 100%;
           padding: 14px;
-          background: var(--theme-gradient, linear-gradient(135deg, #E8466A, #9C27B0));
+          background: var(--gradient-main, linear-gradient(160deg, #C8334A, #8B1A2C));
           color: white;
           border: none;
           border-radius: 14px;
@@ -393,7 +395,7 @@ export default function LoveLetter({ session, profile }) {
         }
         .letter-card:active { transform: scale(0.97); background: rgba(255,255,255,0.1); }
         .letter-card-mine {
-          border-left: 3px solid var(--theme-accent, #E8466A);
+          border-left: 3px solid var(--theme-accent, #C8334A);
         }
         .letter-card-theirs {
           border-left: 3px solid rgba(255,255,255,0.3);
@@ -408,7 +410,7 @@ export default function LoveLetter({ session, profile }) {
           font-family: var(--font-body);
           font-size: 15px;
           font-weight: 700;
-          color: var(--theme-accent, #E8466A);
+          color: var(--theme-accent, #C8334A);
         }
         .letter-card-theirs .letter-card-from {
           color: rgba(255,255,255,0.8);
@@ -474,14 +476,14 @@ export default function LoveLetter({ session, profile }) {
           position: absolute;
           top: 12px; right: 14px;
           background: white;
-          border: 1.5px solid rgba(200,75,139,0.25);
+          border: 1.5px solid rgba(139,26,44,0.25);
           border-radius: 50%;
           width: 36px; height: 36px;
           cursor: pointer;
           display: flex;
           align-items: center;
           justify-content: center;
-          color: #c84b8b;
+          color: #8B1A2C;
           box-shadow: 0 2px 8px rgba(0,0,0,0.12);
         }
         .letter-date {
@@ -574,9 +576,9 @@ export default function LoveLetter({ session, profile }) {
                 <div className={`envelope-flap${envelopeOpen ? ' open' : ''}`}/>
                 <div className={`envelope-seal${envelopeOpen ? ' hidden' : ''}`}>
                   <svg width="28" height="20" viewBox="0 0 28 20" fill="none" aria-hidden>
-                    <rect x="1" y="1" width="26" height="18" rx="2" fill="none" stroke="rgba(200,75,139,0.5)" strokeWidth="1.5"/>
-                    <polyline points="1,1 14,12 27,1" fill="none" stroke="rgba(200,75,139,0.5)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                    <circle cx="14" cy="10" r="3" fill="rgba(200,75,139,0.4)"/>
+                    <rect x="1" y="1" width="26" height="18" rx="2" fill="none" stroke="rgba(139,26,44,0.5)" strokeWidth="1.5"/>
+                    <polyline points="1,1 14,12 27,1" fill="none" stroke="rgba(139,26,44,0.5)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    <circle cx="14" cy="10" r="3" fill="rgba(139,26,44,0.4)"/>
                   </svg>
                 </div>
               </div>
@@ -680,7 +682,7 @@ export default function LoveLetter({ session, profile }) {
               <div className="letter-signature">
                 С любовью,&nbsp;
                 {openLetter.user_id === myId ? myName : partnerName}
-                &nbsp;<IcoHeart size={14} color="#c84b8b"/>
+                &nbsp;<IcoHeart size={14} color="#8B1A2C"/>
               </div>
             </div>
           </div>

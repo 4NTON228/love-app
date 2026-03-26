@@ -553,7 +553,7 @@ export default function Chat({ session, profile, darkMode }) {
     return messages.find(m => m.id === msg.reply_to_id)
   }
 
-  if (loading) return <div className="tg-loading"><svg viewBox="0 0 40 36" width="48" height="48"><path d="M20 34S3 22 3 11a9 9 0 0116-5.66A9 9 0 0137 11c0 11-17 23-17 23z" fill="var(--theme-accent,#E8466A)" opacity="0.9"/></svg></div>
+  if (loading) return <div className="tg-loading"><svg viewBox="0 0 40 36" width="48" height="48"><path d="M20 34S3 22 3 11a9 9 0 0116-5.66A9 9 0 0137 11c0 11-17 23-17 23z" fill="var(--theme-accent,#C8334A)" opacity="0.9"/></svg></div>
 
   return (
     <>
@@ -653,7 +653,7 @@ export default function Chat({ session, profile, darkMode }) {
                 {/* Swipe reply indicator */}
                 {offset > 20 && (
                   <div className="tg-swipe-reply-icon" style={{ opacity: Math.min(offset / 60, 1) }}>
-                    <Reply size={18} color="#E8466A" />
+                    <Reply size={18} color="#C8334A" />
                   </div>
                 )}
 
@@ -853,7 +853,7 @@ export default function Chat({ session, profile, darkMode }) {
           )}
           {recordingType === 'audio' && (
             <div className="tg-rec-audio">
-              <div className="tg-rec-mic-pulse"><Mic size={24} color="#E8466A" /></div>
+              <div className="tg-rec-mic-pulse"><Mic size={24} color="#C8334A" /></div>
               <div>
                 <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--primary)' }}>Запись...</div>
                 <div style={{ fontSize: 24, fontWeight: 700 }}>{formatRecTime(recordingTime)}</div>
@@ -1152,9 +1152,12 @@ function TGStyles() {
         position: fixed;
         top: 0; left: 0; right: 0; bottom: 110px;
         display: flex; flex-direction: column;
-        background: linear-gradient(180deg, #1A1025 0%, #0D0D15 100%);
+        background: linear-gradient(180deg, var(--blush, #FBF0F2) 0%, var(--surface, #FFFFFF) 100%);
         z-index: 5;
         overflow: hidden;
+      }
+      .app.dark .tg-chat {
+        background: linear-gradient(180deg, var(--surface-2, #1E0A10) 0%, var(--bg, #200A10) 100%);
       }
       /* subtle dot pattern overlay on chat */
       .tg-chat::before {
@@ -1168,14 +1171,14 @@ function TGStyles() {
       }
       .tg-loading {
         display: flex; align-items: center; justify-content: center;
-        height: 100vh; background: #0D0D15;
+        height: 100vh; background: var(--bg, #200A10);
       }
       /* HEADER */
       .tg-header {
         position: relative; z-index: 10;
         padding: 10px 16px;
         padding-top: calc(10px + env(safe-area-inset-top, 0px));
-        background: var(--theme-gradient, linear-gradient(135deg, #E8466A, #9C27B0));
+        background: var(--gradient-main, linear-gradient(160deg, #C8334A, #8B1A2C));
         display: flex; align-items: center; gap: 12px;
         flex-shrink: 0;
         box-shadow: 0 2px 20px rgba(0,0,0,0.4);
@@ -1227,9 +1230,9 @@ function TGStyles() {
         border-bottom: 1px solid rgba(255,255,255,0.06);
         cursor: pointer; flex-shrink: 0;
       }
-      .tg-pinned-bar { width: 3px; height: 32px; background: var(--theme-accent, #E8466A); border-radius: 3px; flex-shrink: 0; }
+      .tg-pinned-bar { width: 3px; height: 32px; background: var(--theme-accent, #C8334A); border-radius: 3px; flex-shrink: 0; }
       .tg-pinned-content { flex: 1; min-width: 0; }
-      .tg-pinned-label { font-size: 11px; font-weight: 700; color: var(--theme-accent, #E8466A); margin-bottom: 2px; }
+      .tg-pinned-label { font-size: 11px; font-weight: 700; color: var(--theme-accent, #C8334A); margin-bottom: 2px; }
       .tg-pinned-text { font-size: 13px; color: rgba(255,255,255,0.6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
       .tg-pinned-close { background: none; border: none; cursor: pointer; color: rgba(255,255,255,0.4); padding: 4px; }
       /* MESSAGES AREA */
@@ -1244,10 +1247,10 @@ function TGStyles() {
         background:
           radial-gradient(circle at 50% 0%, rgba(255,255,255,0.015) 1px, transparent 1px),
           linear-gradient(180deg,
-            color-mix(in srgb, var(--theme-accent, #E8466A) 8%, #0D0D15) 0%,
-            #0D0D15 28%,
-            #0D0D15 72%,
-            color-mix(in srgb, var(--theme-accent, #E8466A) 5%, #0D0D15) 100%
+            color-mix(in srgb, var(--theme-accent, #C8334A) 8%, var(--bg, #200A10)) 0%,
+            var(--bg, #200A10) 28%,
+            var(--bg, #200A10) 72%,
+            color-mix(in srgb, var(--theme-accent, #C8334A) 5%, var(--bg, #200A10)) 100%
           );
         background-size: 24px 24px, 100% 100%;
       }
@@ -1288,19 +1291,24 @@ function TGStyles() {
         box-shadow: 0 2px 8px rgba(0,0,0,0.2);
       }
       .tg-bubble.mine {
-        background: var(--theme-gradient, linear-gradient(135deg, #E8466A, #9C27B0));
+        background: var(--gradient-main, linear-gradient(160deg, #C8334A, #8B1A2C));
         color: white;
         border-radius: 20px 20px 4px 20px;
         padding: 8px 12px 6px;
         box-shadow: 0 2px 12px rgba(var(--theme-accent-rgb, 232,70,106), 0.3);
       }
       .tg-bubble.theirs {
-        background: rgba(255,255,255,0.08);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255,255,255,0.06);
-        color: rgba(255,255,255,0.92);
-        border-radius: 20px 20px 20px 4px;
+        background: var(--surface, #FFFFFF);
+        border: 0.5px solid var(--border, rgba(200,51,74,0.13));
+        color: var(--ink, #1C0A0E);
+        border-radius: 4px 16px 16px 16px;
         padding: 8px 12px 6px;
+        box-shadow: 0 1px 4px rgba(200,51,74,0.06);
+      }
+      .app.dark .tg-bubble.theirs {
+        background: rgba(255,255,255,0.08);
+        border-color: rgba(255,255,255,0.06);
+        color: rgba(255,255,255,0.92);
       }
       /* TAILS — only on last in group */
       .tg-bubble.mine.tail {
@@ -1311,7 +1319,7 @@ function TGStyles() {
         position: absolute;
         bottom: 0; right: -7px;
         width: 12px; height: 16px;
-        background: var(--theme-accent, #E8466A);
+        background: #8B1A2C;
         clip-path: polygon(0 0, 0 100%, 100% 100%);
       }
       .tg-bubble.theirs.tail {
@@ -1331,13 +1339,16 @@ function TGStyles() {
         border-radius: 15px; display: block;
       }
       .tg-text { font-size: 15px; line-height: 1.45; white-space: pre-wrap; user-select: text; -webkit-user-select: text; color: white; }
-      .tg-bubble.theirs .tg-text { color: rgba(255,255,255,0.92); }
+      .tg-bubble.theirs .tg-text { color: var(--ink, #1C0A0E); }
+      .app.dark .tg-bubble.theirs .tg-text { color: rgba(255,255,255,0.92); }
       .tg-meta {
         display: flex; align-items: center; justify-content: flex-end;
         gap: 3px; margin-top: 3px;
       }
       .tg-edited { font-size: 10px; opacity: 0.6; color: rgba(255,255,255,0.7); }
       .tg-time { font-size: 11px; opacity: 0.65; color: rgba(255,255,255,0.7); }
+      .tg-bubble.theirs .tg-time { color: var(--muted, #9A6070); opacity: 1; }
+      .app.dark .tg-bubble.theirs .tg-time { color: rgba(255,255,255,0.6); }
       .tg-tick { font-size: 11px; opacity: 0.65; color: rgba(255,255,255,0.7); }
       .tg-tick.read { opacity: 1; color: #4FC3F7; }
       /* VIDEO CIRCLE */
@@ -1349,7 +1360,7 @@ function TGStyles() {
       .tg-circle-video {
         width: 180px; height: 180px; border-radius: 50%;
         object-fit: cover; display: block;
-        box-shadow: 0 0 0 3px var(--theme-accent, #E8466A), 0 4px 20px rgba(0,0,0,0.5);
+        box-shadow: 0 0 0 3px var(--theme-accent, #C8334A), 0 4px 20px rgba(0,0,0,0.5);
         cursor: pointer;
       }
       .tg-circle-time {
@@ -1383,7 +1394,7 @@ function TGStyles() {
         height: 3px; border-radius: 2px; z-index: 2; transition: width 0.1s;
       }
       .tg-voice-fill.mine { background: rgba(255,255,255,0.9); }
-      .tg-voice-fill.theirs { background: var(--theme-accent, #E8466A); }
+      .tg-voice-fill.theirs { background: var(--theme-accent, #C8334A); }
       .tg-voice-wave {
         display: flex; align-items: center; gap: 2px; width: 100%;
       }
@@ -1426,7 +1437,7 @@ function TGStyles() {
       }
       .tg-scroll-badge {
         position: absolute; top: -4px; right: -4px;
-        background: var(--theme-accent, #E8466A); color: white;
+        background: var(--theme-accent, #C8334A); color: white;
         border-radius: 10px; font-size: 10px; font-weight: 700;
         padding: 1px 5px; min-width: 18px; text-align: center;
       }
@@ -1437,7 +1448,7 @@ function TGStyles() {
         display: flex; align-items: center; justify-content: center;
       }
       .tg-ctx-menu {
-        background: rgba(28,20,45,0.97); backdrop-filter: blur(20px);
+        background: var(--surface, #FFFFFF); backdrop-filter: blur(20px);
         border-radius: 18px; overflow: hidden;
         border: 1px solid rgba(255,255,255,0.1);
         box-shadow: 0 16px 48px rgba(0,0,0,0.6);
@@ -1481,11 +1492,11 @@ function TGStyles() {
       .tg-reply-preview.theirs { background: rgba(255,255,255,0.06); }
       .tg-reply-preview-line {
         width: 3px; border-radius: 2px; flex-shrink: 0;
-        background: var(--theme-accent, #E8466A);
+        background: var(--theme-accent, #C8334A);
       }
       .tg-reply-preview.mine .tg-reply-preview-line { background: rgba(255,255,255,0.7); }
       .tg-reply-preview-body { flex: 1; min-width: 0; }
-      .tg-reply-preview-name { font-size: 12px; font-weight: 700; color: var(--theme-accent, #E8466A); margin-bottom: 2px; }
+      .tg-reply-preview-name { font-size: 12px; font-weight: 700; color: var(--theme-accent, #C8334A); margin-bottom: 2px; }
       .tg-reply-preview.mine .tg-reply-preview-name { color: rgba(255,255,255,0.9); }
       .tg-reply-preview-text { font-size: 12px; opacity: 0.7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: rgba(255,255,255,0.7); }
       .tg-reply-photo-thumb { width: 32px; height: 32px; object-fit: cover; border-radius: 6px; float: right; margin-left: 6px; }
@@ -1497,10 +1508,10 @@ function TGStyles() {
         border-top: 1px solid rgba(255,255,255,0.06);
         flex-shrink: 0; position: relative; z-index: 5;
       }
-      .tg-reply-bar-line { width: 3px; height: 32px; background: var(--theme-accent, #E8466A); border-radius: 3px; flex-shrink: 0; }
+      .tg-reply-bar-line { width: 3px; height: 32px; background: var(--theme-accent, #C8334A); border-radius: 3px; flex-shrink: 0; }
       .tg-reply-bar-line.edit { background: #4FC3F7; }
       .tg-reply-bar-content { flex: 1; min-width: 0; }
-      .tg-reply-bar-name { font-size: 12px; font-weight: 700; color: var(--theme-accent, #E8466A); margin-bottom: 2px; }
+      .tg-reply-bar-name { font-size: 12px; font-weight: 700; color: var(--theme-accent, #C8334A); margin-bottom: 2px; }
       .tg-reply-bar-name.edit { color: #4FC3F7; }
       .tg-reply-bar-text { font-size: 13px; color: rgba(255,255,255,0.5); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
       .tg-reply-bar-close { background: none; border: none; cursor: pointer; color: rgba(255,255,255,0.4); padding: 4px; }
@@ -1517,20 +1528,24 @@ function TGStyles() {
       /* RECORDING */
       .tg-recording-panel {
         padding: 16px;
-        background: rgba(15,10,25,0.95); backdrop-filter: blur(20px);
-        border-top: 1px solid rgba(255,255,255,0.06);
+        background: rgba(251,240,242,0.97); backdrop-filter: blur(20px);
+        border-top: 0.5px solid var(--border, rgba(200,51,74,0.13));
+      }
+      .app.dark .tg-input-bar {
+        background: rgba(19,5,8,0.97);
+        border-top-color: rgba(200,51,74,0.18);
         display: flex; flex-direction: column;
         align-items: center; gap: 12px; flex-shrink: 0;
       }
       .tg-rec-preview {
         width: 140px; height: 140px; border-radius: 50%;
         object-fit: cover;
-        box-shadow: 0 0 0 4px var(--theme-accent, #E8466A), 0 0 20px rgba(var(--theme-accent-rgb,232,70,106),0.4);
+        box-shadow: 0 0 0 4px var(--theme-accent, #C8334A), 0 0 20px rgba(var(--theme-accent-rgb,232,70,106),0.4);
         animation: tgPulse 1.5s ease-in-out infinite;
       }
       .tg-rec-timer {
         position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%);
-        background: var(--theme-accent, #E8466A); border-radius: 12px;
+        background: var(--theme-accent, #C8334A); border-radius: 12px;
         padding: 3px 12px; font-size: 13px; color: white; font-weight: 700;
       }
       .tg-rec-audio {
@@ -1543,8 +1558,8 @@ function TGStyles() {
         animation: tgPulse 1.5s ease-in-out infinite;
       }
       @keyframes tgPulse {
-        0%, 100% { box-shadow: 0 0 0 4px rgba(232,70,106,0.2); }
-        50% { box-shadow: 0 0 0 10px rgba(232,70,106,0.1); }
+        0%, 100% { box-shadow: 0 0 0 4px rgba(200,51,74,0.2); }
+        50% { box-shadow: 0 0 0 10px rgba(200,51,74,0.1); }
       }
       .tg-rec-actions { display: flex; gap: 10px; }
       .tg-rec-cancel {
@@ -1563,7 +1578,7 @@ function TGStyles() {
         display: flex; align-items: center; justify-content: center;
       }
       .tg-rec-send {
-        padding: 10px 22px; background: var(--theme-gradient, linear-gradient(135deg, #E8466A, #9C27B0));
+        padding: 10px 22px; background: var(--gradient-main, linear-gradient(160deg, #C8334A, #8B1A2C));
         border: none; border-radius: 22px; font-size: 14px; font-weight: 700;
         font-family: var(--font-body); color: white; cursor: pointer;
         display: flex; align-items: center; gap: 6px;
@@ -1572,8 +1587,12 @@ function TGStyles() {
       .tg-input-bar {
         padding: 8px 10px;
         padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
-        background: rgba(15,10,25,0.95); backdrop-filter: blur(20px);
-        border-top: 1px solid rgba(255,255,255,0.06);
+        background: rgba(251,240,242,0.97); backdrop-filter: blur(20px);
+        border-top: 0.5px solid var(--border, rgba(200,51,74,0.13));
+      }
+      .app.dark .tg-input-bar {
+        background: rgba(19,5,8,0.97);
+        border-top-color: rgba(200,51,74,0.18);
         display: flex; align-items: flex-end; gap: 4px;
         flex-shrink: 0; position: relative; z-index: 5;
       }
@@ -1582,34 +1601,42 @@ function TGStyles() {
         padding: 8px; border-radius: 50%;
         display: flex; flex-shrink: 0;
         -webkit-tap-highlight-color: transparent;
-        color: rgba(255,255,255,0.5);
+        color: var(--muted, #9A6070);
       }
-      .tg-input-icon-btn:active { background: rgba(255,255,255,0.06); }
+      .tg-input-icon-btn:active { background: rgba(200,51,74,0.08); }
       .tg-input-field {
-        flex: 1; background: rgba(255,255,255,0.08); border-radius: 22px;
-        border: 1px solid rgba(255,255,255,0.08);
+        flex: 1; background: var(--surface, #FFFFFF); border-radius: 22px;
+        border: 0.5px solid var(--border, rgba(200,51,74,0.13));
+      }
+      .app.dark .tg-input-field {
+        background: rgba(255,255,255,0.08);
+        border-color: rgba(255,255,255,0.06);
         padding: 0 14px; display: flex; align-items: flex-end;
         min-width: 0;
       }
       .tg-input-field textarea {
         flex: 1; border: none; background: none;
         padding: 10px 0; font-size: 15px;
-        font-family: var(--font-body); color: rgba(255,255,255,0.9);
+        font-family: var(--font-body); color: var(--ink, #1C0A0E);
+      }
+      .app.dark .tg-input-field textarea {
+        color: rgba(255,255,255,0.9);
         resize: none; outline: none; max-height: 120px; line-height: 1.4;
         width: 100%;
       }
-      .tg-input-field textarea::placeholder { color: rgba(255,255,255,0.3); }
+      .tg-input-field textarea::placeholder { color: var(--muted, #9A6070); }
       .tg-send-btn {
         width: 42px; height: 42px;
-        background: var(--theme-gradient, linear-gradient(135deg, #E8466A, #9C27B0));
+        background: var(--gradient-main, linear-gradient(160deg, #C8334A, #8B1A2C));
         border: none; cursor: pointer; border-radius: 50%;
         display: flex; align-items: center; justify-content: center;
-        flex-shrink: 0; box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+        flex-shrink: 0; box-shadow: 0 2px 12px rgba(200,51,74,0.35);
+        animation: glow 3s infinite;
       }
       /* EMOJI PICKER */
       .tg-emoji-picker {
         position: absolute; bottom: calc(100% + 8px); left: 8px;
-        background: rgba(28,20,45,0.97); backdrop-filter: blur(20px);
+        background: var(--surface, #FFFFFF); backdrop-filter: blur(20px);
         border: 1px solid rgba(255,255,255,0.1);
         border-radius: 16px;
         box-shadow: 0 8px 32px rgba(0,0,0,0.5);
@@ -1659,7 +1686,7 @@ function TGStyles() {
       }
       .tg-media-panel {
         width: 100%; height: 100%;
-        background: #1A1025; border-radius: 0;
+        background: var(--surface-2, #1E0A10); border-radius: 0;
         display: flex; flex-direction: column;
         animation: slideUp 0.3s ease;
         overflow: hidden;
@@ -1688,9 +1715,9 @@ function TGStyles() {
         display: flex; align-items: center; gap: 5px;
         transition: color 0.2s;
       }
-      .tg-media-tab.active { color: var(--theme-accent, #E8466A); border-bottom-color: var(--theme-accent, #E8466A); }
+      .tg-media-tab.active { color: var(--theme-accent, #C8334A); border-bottom-color: var(--theme-accent, #C8334A); }
       .tg-media-tab-count {
-        background: var(--theme-accent, #E8466A); color: white;
+        background: var(--theme-accent, #C8334A); color: white;
         font-size: 10px; padding: 1px 6px; border-radius: 10px;
       }
       .tg-media-content { flex: 1; overflow-y: auto; padding: 12px; }
@@ -1731,7 +1758,7 @@ function TGStyles() {
       }
       .tg-media-voice-play {
         width: 38px; height: 38px; border-radius: 50%;
-        background: var(--theme-gradient, linear-gradient(135deg,#E8466A,#9C27B0)); color: white; border: none; cursor: pointer;
+        background: var(--theme-gradient, linear-gradient(135deg,#C8334A,#9C27B0)); color: white; border: none; cursor: pointer;
         display: flex; align-items: center; justify-content: center; flex-shrink: 0;
       }
       .tg-media-voice-info { flex: 1; }

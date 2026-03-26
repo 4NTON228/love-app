@@ -55,7 +55,7 @@ function LoadingHeart() {
       <style>{`@keyframes hbLoad{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}.hbL{animation:hbLoad 1.2s ease-in-out infinite;transform-origin:center}`}</style>
       <g className="hbL">
         <path d="M30 52C30 52 3 35 3 16C3 8 9.5 2 18 2C22.5 2 26.5 4.5 30 9C33.5 4.5 37.5 2 42 2C50.5 2 57 8 57 16C57 35 30 52 30 52Z"
-          fill="rgba(232,70,106,0.4)" stroke="rgba(232,70,106,0.6)" strokeWidth="2"/>
+          fill="rgba(200,51,74,0.4)" stroke="rgba(200,51,74,0.6)" strokeWidth="2"/>
       </g>
     </svg>
   )
@@ -63,7 +63,7 @@ function LoadingHeart() {
 
 /* Mood colors for display (no emoji) */
 const MOODS = [
-  { value: 'love',      label: 'Любовь',      color: '#e8466a' },
+  { value: 'love',      label: 'Любовь',      color: '#C8334A' },
   { value: 'happy',     label: 'Счастье',     color: '#f7c948' },
   { value: 'laugh',     label: 'Смех',        color: '#ff8fab' },
   { value: 'warm',      label: 'Тепло',       color: '#f97316' },
@@ -279,7 +279,7 @@ function StoriesViewer({ stories, startIdx, onClose }) {
         >
           <svg viewBox="0 0 24 22" width="24" height="22" fill="none" className={liked ? 'heart-liked' : ''}>
             <path d="M12 20S2 13.5 2 6C2 3.5 4 1.5 6.5 1.5C8.5 1.5 10 3 12 5.5C14 3 15.5 1.5 17.5 1.5C20 1.5 22 3.5 22 6C22 13.5 12 20 12 20Z"
-              fill={liked ? '#e8466a' : 'rgba(255,255,255,0.25)'} stroke="white" strokeWidth="1.5"/>
+              fill={liked ? '#C8334A' : 'rgba(255,255,255,0.25)'} stroke="white" strokeWidth="1.5"/>
           </svg>
         </button>
         {/* Burst particles */}
@@ -291,7 +291,7 @@ function StoriesViewer({ stories, startIdx, onClose }) {
               '--by': `${Math.sin(rad) * b.dist}px`,
               left: 27 - b.size / 2, top: 27 - b.size / 2,
             }}>
-              <svg viewBox="0 0 12 11" width={b.size} height={b.size * 0.92} fill="#e8466a">
+              <svg viewBox="0 0 12 11" width={b.size} height={b.size * 0.92} fill="#C8334A">
                 <path d="M6 10S1 6.5 1 3C1 1.75 2 1 3.25 1C4.25 1 5 1.75 6 3C7 1.75 7.75 1 8.75 1C10 1 11 1.75 11 3C11 6.5 6 10 6 10Z"/>
               </svg>
             </div>
@@ -373,7 +373,9 @@ export default function Moments({ session }) {
       <style>{`
         .moments-wrap { padding: 0 0 120px; }
         .moments-header {
-          background: var(--theme-gradient, linear-gradient(160deg, #e8466a 0%, #c84b8b 50%, #9b4dca 100%));
+          background: var(--gradient-banner, linear-gradient(160deg, #C8334A 0%, #8B1A2C 100%));
+          background-size: 200% 200%;
+          animation: gradientShift 8s ease infinite;
           padding: 60px 20px 24px;
           border-radius: 0 0 32px 32px;
           margin-bottom: 18px;
@@ -459,9 +461,9 @@ export default function Moments({ session }) {
           display: flex;
           align-items: center;
           justify-content: center;
-          background: linear-gradient(135deg, #ffeef4 0%, #ffe0ea 100%);
+          background: var(--blush, #FBF0F2);
         }
-        .app.dark .moment-no-photo { background: rgba(200,75,139,0.12); }
+        .app.dark .moment-no-photo { background: rgba(139,26,44,0.12); }
         .moment-info { padding: 10px 12px; }
         .moment-title-new {
           font-family: var(--font-body);
@@ -503,7 +505,7 @@ export default function Moments({ session }) {
           align-items: center;
           justify-content: center;
         }
-        .moment-del-btn:active { background: rgba(232,70,106,0.1); color: #e8466a; }
+        .moment-del-btn:active { background: rgba(200,51,74,0.1); color: #C8334A; }
 
         .moments-empty {
           display: flex;
@@ -538,8 +540,8 @@ export default function Moments({ session }) {
         }
         .mood-btn:active { transform: scale(0.95); }
 
-        .app.dark .moment-card-new { background: #2A2540; }
-        .app.dark .moment-title-new { color: #EDE4F0; }
+        .app.dark .moment-card-new { background: var(--surface-2, #1E0A10); }
+        .app.dark .moment-title-new { color: var(--ink, #F5E8EA); }
       `}</style>
 
       <div className="moments-wrap">

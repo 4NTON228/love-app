@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { supabase } from '../lib/supabase'
 import { Send, Image, Video, X, ArrowDown, Mic, Play, Pause, Reply, Edit3, Trash2, Pin, Smile, Check, CheckCheck, Copy, RotateCcw, PinOff, Forward } from 'lucide-react'
-import { sendPushNotification } from '../lib/push'  // ← ИМПОРТ ДОБАВЛЕН!
+import { sendPushNotification } from '../lib/push'
 
 const REACTION_EMOJIS = ['❤️', '🔥', '😂', '👍', '😍', '😢', '🎉', '💋']
 
@@ -118,6 +118,7 @@ export default function Chat({ session, profile, darkMode }) {
     return () => {
       supabase.removeChannel(msgChannel)
       supabase.removeChannel(presenceCh)
+      // Stop any active media streams on unmount
       if (cameraStreamRef.current) { cameraStreamRef.current.getTracks().forEach(t => t.stop()); cameraStreamRef.current = null }
       if (videoPreviewRef.current) videoPreviewRef.current.srcObject = null
       if (mediaRecorderRef.current?.state === 'recording') mediaRecorderRef.current.stop()
@@ -138,6 +139,7 @@ export default function Chat({ session, profile, darkMode }) {
     if (pinned) setPinnedMessage(pinned)
     setTimeout(scrollToBottom, 200)
     setTimeout(updateLastRead, 600)
+    // Fetch partner profile
     const { data: profiles } = await supabase.from('profiles').select('*').neq('id', myId).limit(1)
     if (profiles?.[0]) setPartnerProfile(profiles[0])
   }
@@ -203,27 +205,15 @@ export default function Chat({ session, profile, darkMode }) {
     try {
       let photoUrl = null
       if (photoFile) photoUrl = await uploadFile(photoFile, 'chat')
-      
-      const { data: newMsg } = await supabase.from('messages').insert({
+      await supabase.from('messages').insert({
         user_id: myId,
         text: text || null,
         photo_url: photoUrl,
         reply_to_id: replyTo?.id || null,
         reactions: {}
-      }).select().single()
-      
-      // ID Эльвиры (получатель)
-      const elviraId = 'ab73068c-b71a-4a57-9fa0-867543f1a2b0'
+      })
       const senderName = profile?.name || 'Кто-то'
-      
-      // ОТПРАВКА УВЕДОМЛЕНИЯ ЭЛЬВИРЕ
-      sendPushNotification(
-        senderName, 
-        photoUrl ? '📷 Фото' : text, 
-        elviraId,  // ← ВАЖНО: теперь всегда Эльвира
-        myId
-      )
-      
+      sendPushNotification(senderName, photoUrl ? '📷 Фото' : text, myId)
       setNewText('')
       cancelPhoto()
       setReplyTo(null)
@@ -261,6 +251,7 @@ export default function Chat({ session, profile, darkMode }) {
     }
   }
 
+  // Context menu
   function openContextMenu(e, msg) {
     e.preventDefault()
     e.stopPropagation()
@@ -298,6 +289,7 @@ export default function Chat({ session, profile, darkMode }) {
   }
 
   async function pinMessage(msg) {
+    // Unpin previous
     const prev = messages.find(m => m.is_pinned)
     if (prev) await supabase.from('messages').update({ is_pinned: false }).eq('id', prev.id)
     const newPinned = !msg.is_pinned
@@ -325,6 +317,7 @@ export default function Chat({ session, profile, darkMode }) {
     setContextMenu(null)
   }
 
+  // Swipe to reply
   function handleTouchStart(e, msgId) {
     setSwipeStart(prev => ({ ...prev, [msgId]: e.touches[0].clientX }))
   }
@@ -343,6 +336,7 @@ export default function Chat({ session, profile, darkMode }) {
     setSwipeStart(prev => ({ ...prev, [msg.id]: null }))
   }
 
+  // Long press
   function handleLongPressStart(e, msg) {
     longPressRef.current = setTimeout(() => {
       openContextMenu(e, msg)
@@ -356,6 +350,7 @@ export default function Chat({ session, profile, darkMode }) {
     }
   }
 
+  // Audio player
   function toggleAudio(msgId, url) {
     const cur = audioRefs.current[msgId]
     if (cur) {
@@ -389,6 +384,7 @@ export default function Chat({ session, profile, darkMode }) {
     }
   }
 
+  // Video & voice recording
   function setupMediaRecorder(stream) {
     const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9' : 'video/webm'
     const mediaRecorder = new MediaRecorder(stream, { mimeType })
@@ -407,7 +403,7 @@ export default function Chat({ session, profile, darkMode }) {
       try {
         const videoUrl = await uploadFile(file, 'circles')
         await supabase.from('messages').insert({ user_id: myId, video_url: videoUrl, is_video_circle: true, reactions: {} })
-        sendPushNotification(profile?.name || 'Кто-то', '🔵 Видео-кружочек', elviraId, myId)
+        sendPushNotification(profile?.name || 'Кто-то', '🔵 Видео-кружочек', myId)
       } catch {}
       setSending(false); setRecording(false); setRecordingType(null); setRecordingTime(0)
     }
@@ -472,7 +468,7 @@ export default function Chat({ session, profile, darkMode }) {
             user_id: myId, video_url: audioUrl, is_video_circle: false, is_voice: true,
             reply_to_id: replyTo?.id || null, reactions: {}
           })
-          sendPushNotification(profile?.name || 'Кто-то', '🎤 Голосовое сообщение', elviraId, myId)
+          sendPushNotification(profile?.name || 'Кто-то', '🎤 Голосовое сообщение', myId)
           setReplyTo(null)
         } catch {}
         setSending(false); setRecording(false); setRecordingType(null); setRecordingTime(0)
@@ -497,6 +493,7 @@ export default function Chat({ session, profile, darkMode }) {
       }
       mediaRecorderRef.current.stop()
     } else {
+      // Stop any lingering streams even if recorder isn't active
       if (cameraStreamRef.current) { cameraStreamRef.current.getTracks().forEach(t => t.stop()); cameraStreamRef.current = null }
       if (videoPreviewRef.current) videoPreviewRef.current.srcObject = null
       setCameraStream(null)
@@ -505,6 +502,7 @@ export default function Chat({ session, profile, darkMode }) {
     setRecording(false); setRecordingType(null); setRecordingTime(0)
   }
 
+  // Helpers
   function formatTime(dateStr) {
     return new Date(dateStr).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
   }
@@ -555,12 +553,13 @@ export default function Chat({ session, profile, darkMode }) {
     return messages.find(m => m.id === msg.reply_to_id)
   }
 
-  if (loading) return <div className="tg-loading"><svg viewBox="0 0 40 36" width="48" height="48"><path d="M20 34S3 22 3 11a9 9 0 0116-5.66A9 9 0 0137 11c0 11-17 23-17 23z" fill="var(--theme-accent,#E8466A)" opacity="0.9"/></svg></div>
+  if (loading) return <div className="tg-loading"><svg viewBox="0 0 40 36" width="48" height="48"><path d="M20 34S3 22 3 11a9 9 0 0116-5.66A9 9 0 0137 11c0 11-17 23-17 23z" fill="var(--theme-accent,#C8334A)" opacity="0.9"/></svg></div>
 
   return (
     <>
     <div className="tg-chat" onClick={() => { closeContextMenu(); setShowEmojiPicker(false) }}>
 
+      {/* HEADER — click to open media */}
       <div className="tg-header" style={{ cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); setShowMedia(true) }}>
         <div className="tg-header-avatar">
           {partnerProfile?.avatar_url
@@ -582,6 +581,7 @@ export default function Chat({ session, profile, darkMode }) {
             )}
           </div>
         </div>
+        {/* Decorative video call button */}
         <button className="tg-header-video-btn" onClick={e => e.stopPropagation()} style={{ marginLeft: 'auto' }}>
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <polygon points="23 7 16 12 23 17 23 7"/>
@@ -590,6 +590,7 @@ export default function Chat({ session, profile, darkMode }) {
         </button>
       </div>
 
+      {/* PINNED MESSAGE */}
       {pinnedMessage && (
         <div className="tg-pinned" onClick={() => {
           const el = document.getElementById(`msg-${pinnedMessage.id}`)
@@ -606,6 +607,7 @@ export default function Chat({ session, profile, darkMode }) {
         </div>
       )}
 
+      {/* MESSAGES */}
       <div
         ref={chatContainerRef}
         onScroll={handleScroll}
@@ -648,12 +650,14 @@ export default function Chat({ session, profile, darkMode }) {
                 onMouseLeave={handleLongPressEnd}
                 onContextMenu={(e) => openContextMenu(e, msg)}
               >
+                {/* Swipe reply indicator */}
                 {offset > 20 && (
                   <div className="tg-swipe-reply-icon" style={{ opacity: Math.min(offset / 60, 1) }}>
-                    <Reply size={18} color="#E8466A" />
+                    <Reply size={18} color="#C8334A" />
                   </div>
                 )}
 
+                {/* VIDEO CIRCLE */}
                 {msg.is_video_circle && msg.video_url ? (
                   <div className={`tg-circle-wrap ${mine ? 'mine' : 'theirs'}`}>
                     <video
@@ -670,6 +674,7 @@ export default function Chat({ session, profile, darkMode }) {
                   </div>
 
                 ) : voice ? (
+                  /* VOICE MESSAGE */
                   <div className={`tg-bubble ${mine ? 'mine' : 'theirs'} voice ${lastInGroup ? 'tail' : ''}`}>
                     {replyMsg && <ReplyPreview msg={replyMsg} mine={mine} myId={myId} myName={profile?.name} partnerName={partnerProfile?.name} />}
                     <div className="tg-voice-inner">
@@ -715,6 +720,7 @@ export default function Chat({ session, profile, darkMode }) {
                   </div>
 
                 ) : (
+                  /* TEXT / PHOTO BUBBLE */
                   <div className={`tg-bubble ${mine ? 'mine' : 'theirs'} ${msg.photo_url && !msg.text ? 'photo-only' : ''} ${lastInGroup ? 'tail' : ''}`}>
                     {replyMsg && <ReplyPreview msg={replyMsg} mine={mine} myId={myId} myName={profile?.name} partnerName={partnerProfile?.name} />}
                     {msg.photo_url && (
@@ -741,6 +747,7 @@ export default function Chat({ session, profile, darkMode }) {
           )
         })}
 
+        {/* Typing indicator */}
         {partnerTyping && (
           <div className="tg-msg-row theirs" style={{ marginBottom: 8 }}>
             <div className="tg-bubble theirs tail tg-typing-bubble">
@@ -754,6 +761,7 @@ export default function Chat({ session, profile, darkMode }) {
         <div ref={messagesEndRef} />
       </div>
 
+      {/* SCROLL TO BOTTOM */}
       {showScrollBtn && (
         <button onClick={scrollToBottom} className="tg-scroll-btn">
           <ArrowDown size={18} />
@@ -761,9 +769,11 @@ export default function Chat({ session, profile, darkMode }) {
         </button>
       )}
 
+      {/* CONTEXT MENU */}
       {contextMenu && (
         <div className="tg-ctx-overlay" onClick={closeContextMenu}>
           <div className="tg-ctx-menu" onClick={e => e.stopPropagation()}>
+            {/* Reaction row */}
             <div className="tg-ctx-reactions">
               {REACTION_EMOJIS.map(emoji => (
                 <button key={emoji} className="tg-ctx-reaction-btn" onClick={() => addReaction(contextMenu.msg.id, emoji)}>
@@ -799,6 +809,7 @@ export default function Chat({ session, profile, darkMode }) {
         </div>
       )}
 
+      {/* REPLY PREVIEW BAR */}
       {replyTo && (
         <div className="tg-reply-bar">
           <div className="tg-reply-bar-line" />
@@ -810,6 +821,7 @@ export default function Chat({ session, profile, darkMode }) {
         </div>
       )}
 
+      {/* EDIT PREVIEW BAR */}
       {editingMsg && (
         <div className="tg-reply-bar editing">
           <div className="tg-reply-bar-line edit" />
@@ -821,6 +833,7 @@ export default function Chat({ session, profile, darkMode }) {
         </div>
       )}
 
+      {/* PHOTO PREVIEW */}
       {photoPreview && (
         <div className="tg-photo-preview-bar">
           <img src={photoPreview} alt="" />
@@ -829,6 +842,7 @@ export default function Chat({ session, profile, darkMode }) {
         </div>
       )}
 
+      {/* RECORDING PANEL */}
       {recording && (
         <div className="tg-recording-panel">
           {recordingType === 'video' && (
@@ -839,7 +853,7 @@ export default function Chat({ session, profile, darkMode }) {
           )}
           {recordingType === 'audio' && (
             <div className="tg-rec-audio">
-              <div className="tg-rec-mic-pulse"><Mic size={24} color="#E8466A" /></div>
+              <div className="tg-rec-mic-pulse"><Mic size={24} color="#C8334A" /></div>
               <div>
                 <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--primary)' }}>Запись...</div>
                 <div style={{ fontSize: 24, fontWeight: 700 }}>{formatRecTime(recordingTime)}</div>
@@ -854,8 +868,10 @@ export default function Chat({ session, profile, darkMode }) {
         </div>
       )}
 
+      {/* INPUT BAR */}
       {!recording && (
         <div className="tg-input-bar">
+          {/* EMOJI PICKER — inside input bar so position:absolute works */}
           {showEmojiPicker && (
             <div className="tg-emoji-picker" onClick={e => e.stopPropagation()}>
               {['😍','❤️','🔥','💋','💕','😘','🥰','😂','👍','😊','🎉','✨','💫','🌹','🦋','💌','😭','🤗','💯','🫶','💪','🙈','😏','🥺','🤩','😇','💝','🌸','🍀','🌙'].map(e => (
@@ -903,6 +919,7 @@ export default function Chat({ session, profile, darkMode }) {
       <TGStyles partnerOnline={partnerOnline} />
     </div>
 
+    {/* MEDIA — через портал в body, вне всех stacking context */}
     {showMedia && createPortal(
       <MediaSection
         messages={messages}
@@ -923,6 +940,7 @@ export default function Chat({ session, profile, darkMode }) {
       document.body
     )}
 
+    {/* LIGHTBOX — через портал в body */}
     {lightbox && createPortal(
       <div className="tg-lightbox" onClick={() => setLightbox(null)}>
         {lightbox.type === 'photo'
@@ -1134,10 +1152,14 @@ function TGStyles() {
         position: fixed;
         top: 0; left: 0; right: 0; bottom: 110px;
         display: flex; flex-direction: column;
-        background: linear-gradient(180deg, #1A1025 0%, #0D0D15 100%);
+        background: linear-gradient(180deg, var(--blush, #FBF0F2) 0%, var(--surface, #FFFFFF) 100%);
         z-index: 5;
         overflow: hidden;
       }
+      .app.dark .tg-chat {
+        background: linear-gradient(180deg, var(--surface-2, #1E0A10) 0%, var(--bg, #200A10) 100%);
+      }
+      /* subtle dot pattern overlay on chat */
       .tg-chat::before {
         content: '';
         position: absolute;
@@ -1149,13 +1171,14 @@ function TGStyles() {
       }
       .tg-loading {
         display: flex; align-items: center; justify-content: center;
-        height: 100vh; background: #0D0D15;
+        height: 100vh; background: var(--bg, #200A10);
       }
+      /* HEADER */
       .tg-header {
         position: relative; z-index: 10;
         padding: 10px 16px;
         padding-top: calc(10px + env(safe-area-inset-top, 0px));
-        background: var(--theme-gradient, linear-gradient(135deg, #E8466A, #9C27B0));
+        background: var(--gradient-main, linear-gradient(160deg, #C8334A, #8B1A2C));
         display: flex; align-items: center; gap: 12px;
         flex-shrink: 0;
         box-shadow: 0 2px 20px rgba(0,0,0,0.4);
@@ -1197,6 +1220,7 @@ function TGStyles() {
         0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
         30% { transform: translateY(-4px); opacity: 1; }
       }
+      /* PINNED */
       .tg-pinned {
         position: relative; z-index: 9;
         display: flex; align-items: center; gap: 10px;
@@ -1206,11 +1230,12 @@ function TGStyles() {
         border-bottom: 1px solid rgba(255,255,255,0.06);
         cursor: pointer; flex-shrink: 0;
       }
-      .tg-pinned-bar { width: 3px; height: 32px; background: var(--theme-accent, #E8466A); border-radius: 3px; flex-shrink: 0; }
+      .tg-pinned-bar { width: 3px; height: 32px; background: var(--theme-accent, #C8334A); border-radius: 3px; flex-shrink: 0; }
       .tg-pinned-content { flex: 1; min-width: 0; }
-      .tg-pinned-label { font-size: 11px; font-weight: 700; color: var(--theme-accent, #E8466A); margin-bottom: 2px; }
+      .tg-pinned-label { font-size: 11px; font-weight: 700; color: var(--theme-accent, #C8334A); margin-bottom: 2px; }
       .tg-pinned-text { font-size: 13px; color: rgba(255,255,255,0.6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
       .tg-pinned-close { background: none; border: none; cursor: pointer; color: rgba(255,255,255,0.4); padding: 4px; }
+      /* MESSAGES AREA */
       .tg-messages {
         flex: 1; overflow-y: auto; overflow-x: hidden;
         padding: 8px 10px 12px;
@@ -1218,13 +1243,14 @@ function TGStyles() {
         gap: 0;
         -webkit-overflow-scrolling: touch;
         position: relative; z-index: 1;
+        /* subtle theme-color tint at top and bottom */
         background:
           radial-gradient(circle at 50% 0%, rgba(255,255,255,0.015) 1px, transparent 1px),
           linear-gradient(180deg,
-            color-mix(in srgb, var(--theme-accent, #E8466A) 8%, #0D0D15) 0%,
-            #0D0D15 28%,
-            #0D0D15 72%,
-            color-mix(in srgb, var(--theme-accent, #E8466A) 5%, #0D0D15) 100%
+            color-mix(in srgb, var(--theme-accent, #C8334A) 8%, var(--bg, #200A10)) 0%,
+            var(--bg, #200A10) 28%,
+            var(--bg, #200A10) 72%,
+            color-mix(in srgb, var(--theme-accent, #C8334A) 5%, var(--bg, #200A10)) 100%
           );
         background-size: 24px 24px, 100% 100%;
       }
@@ -1234,6 +1260,7 @@ function TGStyles() {
         color: rgba(255,255,255,0.5); margin: auto;
       }
       .tg-empty p { font-size: 16px; font-family: var(--font-display); margin-top: 8px; color: rgba(255,255,255,0.5); }
+      /* DATE SEPARATOR */
       .tg-date-sep {
         text-align: center; margin: 12px 0 6px; pointer-events: none;
       }
@@ -1243,6 +1270,7 @@ function TGStyles() {
         font-size: 12px; color: rgba(255,255,255,0.7); font-weight: 600;
         border: 1px solid rgba(255,255,255,0.08);
       }
+      /* MESSAGE ROW */
       .tg-msg-row {
         display: flex; align-items: flex-end; margin-bottom: 2px;
         position: relative; user-select: none;
@@ -1250,10 +1278,12 @@ function TGStyles() {
       .tg-msg-row.mine { justify-content: flex-end; padding-right: 6px; }
       .tg-msg-row.theirs { justify-content: flex-start; padding-left: 6px; }
       .tg-msg-row.grouped { margin-bottom: 1px; }
+      /* SWIPE REPLY ICON */
       .tg-swipe-reply-icon {
         position: absolute; left: -30px;
         display: flex; align-items: center; justify-content: center;
       }
+      /* BUBBLES */
       .tg-bubble {
         max-width: 78%;
         word-break: break-word;
@@ -1261,20 +1291,26 @@ function TGStyles() {
         box-shadow: 0 2px 8px rgba(0,0,0,0.2);
       }
       .tg-bubble.mine {
-        background: var(--theme-gradient, linear-gradient(135deg, #E8466A, #9C27B0));
+        background: var(--gradient-main, linear-gradient(160deg, #C8334A, #8B1A2C));
         color: white;
         border-radius: 20px 20px 4px 20px;
         padding: 8px 12px 6px;
         box-shadow: 0 2px 12px rgba(var(--theme-accent-rgb, 232,70,106), 0.3);
       }
       .tg-bubble.theirs {
-        background: rgba(255,255,255,0.08);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255,255,255,0.06);
-        color: rgba(255,255,255,0.92);
-        border-radius: 20px 20px 20px 4px;
+        background: var(--surface, #FFFFFF);
+        border: 0.5px solid var(--border, rgba(200,51,74,0.13));
+        color: var(--ink, #1C0A0E);
+        border-radius: 4px 16px 16px 16px;
         padding: 8px 12px 6px;
+        box-shadow: 0 1px 4px rgba(200,51,74,0.06);
       }
+      .app.dark .tg-bubble.theirs {
+        background: rgba(255,255,255,0.08);
+        border-color: rgba(255,255,255,0.06);
+        color: rgba(255,255,255,0.92);
+      }
+      /* TAILS — only on last in group */
       .tg-bubble.mine.tail {
         border-radius: 20px 20px 4px 20px;
       }
@@ -1283,7 +1319,7 @@ function TGStyles() {
         position: absolute;
         bottom: 0; right: -7px;
         width: 12px; height: 16px;
-        background: var(--theme-accent, #E8466A);
+        background: #8B1A2C;
         clip-path: polygon(0 0, 0 100%, 100% 100%);
       }
       .tg-bubble.theirs.tail {
@@ -1303,15 +1339,19 @@ function TGStyles() {
         border-radius: 15px; display: block;
       }
       .tg-text { font-size: 15px; line-height: 1.45; white-space: pre-wrap; user-select: text; -webkit-user-select: text; color: white; }
-      .tg-bubble.theirs .tg-text { color: rgba(255,255,255,0.92); }
+      .tg-bubble.theirs .tg-text { color: var(--ink, #1C0A0E); }
+      .app.dark .tg-bubble.theirs .tg-text { color: rgba(255,255,255,0.92); }
       .tg-meta {
         display: flex; align-items: center; justify-content: flex-end;
         gap: 3px; margin-top: 3px;
       }
       .tg-edited { font-size: 10px; opacity: 0.6; color: rgba(255,255,255,0.7); }
       .tg-time { font-size: 11px; opacity: 0.65; color: rgba(255,255,255,0.7); }
+      .tg-bubble.theirs .tg-time { color: var(--muted, #9A6070); opacity: 1; }
+      .app.dark .tg-bubble.theirs .tg-time { color: rgba(255,255,255,0.6); }
       .tg-tick { font-size: 11px; opacity: 0.65; color: rgba(255,255,255,0.7); }
       .tg-tick.read { opacity: 1; color: #4FC3F7; }
+      /* VIDEO CIRCLE */
       .tg-circle-wrap {
         position: relative; display: inline-block;
       }
@@ -1320,7 +1360,7 @@ function TGStyles() {
       .tg-circle-video {
         width: 180px; height: 180px; border-radius: 50%;
         object-fit: cover; display: block;
-        box-shadow: 0 0 0 3px var(--theme-accent, #E8466A), 0 4px 20px rgba(0,0,0,0.5);
+        box-shadow: 0 0 0 3px var(--theme-accent, #C8334A), 0 4px 20px rgba(0,0,0,0.5);
         cursor: pointer;
       }
       .tg-circle-time {
@@ -1329,6 +1369,7 @@ function TGStyles() {
         padding: 2px 8px; font-size: 11px; color: white;
         display: flex; gap: 4px; align-items: center;
       }
+      /* VOICE MESSAGE */
       .tg-bubble.voice { min-width: 200px; max-width: 78%; }
       .tg-voice-inner {
         display: flex; align-items: center; gap: 10px;
@@ -1353,7 +1394,7 @@ function TGStyles() {
         height: 3px; border-radius: 2px; z-index: 2; transition: width 0.1s;
       }
       .tg-voice-fill.mine { background: rgba(255,255,255,0.9); }
-      .tg-voice-fill.theirs { background: var(--theme-accent, #E8466A); }
+      .tg-voice-fill.theirs { background: var(--theme-accent, #C8334A); }
       .tg-voice-wave {
         display: flex; align-items: center; gap: 2px; width: 100%;
       }
@@ -1368,6 +1409,7 @@ function TGStyles() {
       }
       .tg-voice-duration { font-size: 11px; opacity: 0.65; color: rgba(255,255,255,0.7); }
       .tg-msg-time { font-size: 11px; opacity: 0.65; color: rgba(255,255,255,0.7); }
+      /* TYPING BUBBLE */
       .tg-typing-bubble { padding: 10px 16px; }
       .tg-typing-indicator {
         display: flex; gap: 4px; align-items: center;
@@ -1383,6 +1425,7 @@ function TGStyles() {
         0%, 60%, 100% { transform: translateY(0); }
         30% { transform: translateY(-6px); }
       }
+      /* SCROLL BUTTON */
       .tg-scroll-btn {
         position: fixed; bottom: 170px; right: 14px;
         width: 42px; height: 42px; border-radius: 50%;
@@ -1394,17 +1437,18 @@ function TGStyles() {
       }
       .tg-scroll-badge {
         position: absolute; top: -4px; right: -4px;
-        background: var(--theme-accent, #E8466A); color: white;
+        background: var(--theme-accent, #C8334A); color: white;
         border-radius: 10px; font-size: 10px; font-weight: 700;
         padding: 1px 5px; min-width: 18px; text-align: center;
       }
+      /* CONTEXT MENU */
       .tg-ctx-overlay {
         position: fixed; inset: 0; z-index: 100;
         background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
         display: flex; align-items: center; justify-content: center;
       }
       .tg-ctx-menu {
-        background: rgba(28,20,45,0.97); backdrop-filter: blur(20px);
+        background: var(--surface, #FFFFFF); backdrop-filter: blur(20px);
         border-radius: 18px; overflow: hidden;
         border: 1px solid rgba(255,255,255,0.1);
         box-shadow: 0 16px 48px rgba(0,0,0,0.6);
@@ -1438,6 +1482,7 @@ function TGStyles() {
       .tg-ctx-item:last-child { border-bottom: none; }
       .tg-ctx-item:active { background: rgba(255,255,255,0.06); }
       .tg-ctx-item.danger { color: #FF6B8A; }
+      /* REPLY PREVIEW inside bubble */
       .tg-reply-preview {
         display: flex; gap: 6px; margin-bottom: 6px;
         padding: 6px 8px; border-radius: 8px;
@@ -1447,14 +1492,15 @@ function TGStyles() {
       .tg-reply-preview.theirs { background: rgba(255,255,255,0.06); }
       .tg-reply-preview-line {
         width: 3px; border-radius: 2px; flex-shrink: 0;
-        background: var(--theme-accent, #E8466A);
+        background: var(--theme-accent, #C8334A);
       }
       .tg-reply-preview.mine .tg-reply-preview-line { background: rgba(255,255,255,0.7); }
       .tg-reply-preview-body { flex: 1; min-width: 0; }
-      .tg-reply-preview-name { font-size: 12px; font-weight: 700; color: var(--theme-accent, #E8466A); margin-bottom: 2px; }
+      .tg-reply-preview-name { font-size: 12px; font-weight: 700; color: var(--theme-accent, #C8334A); margin-bottom: 2px; }
       .tg-reply-preview.mine .tg-reply-preview-name { color: rgba(255,255,255,0.9); }
       .tg-reply-preview-text { font-size: 12px; opacity: 0.7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: rgba(255,255,255,0.7); }
       .tg-reply-photo-thumb { width: 32px; height: 32px; object-fit: cover; border-radius: 6px; float: right; margin-left: 6px; }
+      /* REPLY BAR */
       .tg-reply-bar {
         display: flex; align-items: center; gap: 10px;
         padding: 8px 14px;
@@ -1462,13 +1508,14 @@ function TGStyles() {
         border-top: 1px solid rgba(255,255,255,0.06);
         flex-shrink: 0; position: relative; z-index: 5;
       }
-      .tg-reply-bar-line { width: 3px; height: 32px; background: var(--theme-accent, #E8466A); border-radius: 3px; flex-shrink: 0; }
+      .tg-reply-bar-line { width: 3px; height: 32px; background: var(--theme-accent, #C8334A); border-radius: 3px; flex-shrink: 0; }
       .tg-reply-bar-line.edit { background: #4FC3F7; }
       .tg-reply-bar-content { flex: 1; min-width: 0; }
-      .tg-reply-bar-name { font-size: 12px; font-weight: 700; color: var(--theme-accent, #E8466A); margin-bottom: 2px; }
+      .tg-reply-bar-name { font-size: 12px; font-weight: 700; color: var(--theme-accent, #C8334A); margin-bottom: 2px; }
       .tg-reply-bar-name.edit { color: #4FC3F7; }
       .tg-reply-bar-text { font-size: 13px; color: rgba(255,255,255,0.5); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
       .tg-reply-bar-close { background: none; border: none; cursor: pointer; color: rgba(255,255,255,0.4); padding: 4px; }
+      /* PHOTO PREVIEW BAR */
       .tg-photo-preview-bar {
         padding: 8px 14px;
         background: rgba(15,10,25,0.9); backdrop-filter: blur(12px);
@@ -1478,22 +1525,27 @@ function TGStyles() {
       .tg-photo-preview-bar img { width: 48px; height: 48px; object-fit: cover; border-radius: 8px; }
       .tg-photo-preview-bar span { font-size: 13px; color: rgba(255,255,255,0.6); flex: 1; }
       .tg-photo-preview-bar button { background: none; border: none; cursor: pointer; color: rgba(255,255,255,0.4); }
+      /* RECORDING */
       .tg-recording-panel {
         padding: 16px;
-        background: rgba(15,10,25,0.95); backdrop-filter: blur(20px);
-        border-top: 1px solid rgba(255,255,255,0.06);
+        background: rgba(251,240,242,0.97); backdrop-filter: blur(20px);
+        border-top: 0.5px solid var(--border, rgba(200,51,74,0.13));
+      }
+      .app.dark .tg-input-bar {
+        background: rgba(19,5,8,0.97);
+        border-top-color: rgba(200,51,74,0.18);
         display: flex; flex-direction: column;
         align-items: center; gap: 12px; flex-shrink: 0;
       }
       .tg-rec-preview {
         width: 140px; height: 140px; border-radius: 50%;
         object-fit: cover;
-        box-shadow: 0 0 0 4px var(--theme-accent, #E8466A), 0 0 20px rgba(var(--theme-accent-rgb,232,70,106),0.4);
+        box-shadow: 0 0 0 4px var(--theme-accent, #C8334A), 0 0 20px rgba(var(--theme-accent-rgb,232,70,106),0.4);
         animation: tgPulse 1.5s ease-in-out infinite;
       }
       .tg-rec-timer {
         position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%);
-        background: var(--theme-accent, #E8466A); border-radius: 12px;
+        background: var(--theme-accent, #C8334A); border-radius: 12px;
         padding: 3px 12px; font-size: 13px; color: white; font-weight: 700;
       }
       .tg-rec-audio {
@@ -1506,8 +1558,8 @@ function TGStyles() {
         animation: tgPulse 1.5s ease-in-out infinite;
       }
       @keyframes tgPulse {
-        0%, 100% { box-shadow: 0 0 0 4px rgba(232,70,106,0.2); }
-        50% { box-shadow: 0 0 0 10px rgba(232,70,106,0.1); }
+        0%, 100% { box-shadow: 0 0 0 4px rgba(200,51,74,0.2); }
+        50% { box-shadow: 0 0 0 10px rgba(200,51,74,0.1); }
       }
       .tg-rec-actions { display: flex; gap: 10px; }
       .tg-rec-cancel {
@@ -1526,16 +1578,21 @@ function TGStyles() {
         display: flex; align-items: center; justify-content: center;
       }
       .tg-rec-send {
-        padding: 10px 22px; background: var(--theme-gradient, linear-gradient(135deg, #E8466A, #9C27B0));
+        padding: 10px 22px; background: var(--gradient-main, linear-gradient(160deg, #C8334A, #8B1A2C));
         border: none; border-radius: 22px; font-size: 14px; font-weight: 700;
         font-family: var(--font-body); color: white; cursor: pointer;
         display: flex; align-items: center; gap: 6px;
       }
+      /* INPUT BAR */
       .tg-input-bar {
         padding: 8px 10px;
         padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
-        background: rgba(15,10,25,0.95); backdrop-filter: blur(20px);
-        border-top: 1px solid rgba(255,255,255,0.06);
+        background: rgba(251,240,242,0.97); backdrop-filter: blur(20px);
+        border-top: 0.5px solid var(--border, rgba(200,51,74,0.13));
+      }
+      .app.dark .tg-input-bar {
+        background: rgba(19,5,8,0.97);
+        border-top-color: rgba(200,51,74,0.18);
         display: flex; align-items: flex-end; gap: 4px;
         flex-shrink: 0; position: relative; z-index: 5;
       }
@@ -1544,33 +1601,42 @@ function TGStyles() {
         padding: 8px; border-radius: 50%;
         display: flex; flex-shrink: 0;
         -webkit-tap-highlight-color: transparent;
-        color: rgba(255,255,255,0.5);
+        color: var(--muted, #9A6070);
       }
-      .tg-input-icon-btn:active { background: rgba(255,255,255,0.06); }
+      .tg-input-icon-btn:active { background: rgba(200,51,74,0.08); }
       .tg-input-field {
-        flex: 1; background: rgba(255,255,255,0.08); border-radius: 22px;
-        border: 1px solid rgba(255,255,255,0.08);
+        flex: 1; background: var(--surface, #FFFFFF); border-radius: 22px;
+        border: 0.5px solid var(--border, rgba(200,51,74,0.13));
+      }
+      .app.dark .tg-input-field {
+        background: rgba(255,255,255,0.08);
+        border-color: rgba(255,255,255,0.06);
         padding: 0 14px; display: flex; align-items: flex-end;
         min-width: 0;
       }
       .tg-input-field textarea {
         flex: 1; border: none; background: none;
         padding: 10px 0; font-size: 15px;
-        font-family: var(--font-body); color: rgba(255,255,255,0.9);
+        font-family: var(--font-body); color: var(--ink, #1C0A0E);
+      }
+      .app.dark .tg-input-field textarea {
+        color: rgba(255,255,255,0.9);
         resize: none; outline: none; max-height: 120px; line-height: 1.4;
         width: 100%;
       }
-      .tg-input-field textarea::placeholder { color: rgba(255,255,255,0.3); }
+      .tg-input-field textarea::placeholder { color: var(--muted, #9A6070); }
       .tg-send-btn {
         width: 42px; height: 42px;
-        background: var(--theme-gradient, linear-gradient(135deg, #E8466A, #9C27B0));
+        background: var(--gradient-main, linear-gradient(160deg, #C8334A, #8B1A2C));
         border: none; cursor: pointer; border-radius: 50%;
         display: flex; align-items: center; justify-content: center;
-        flex-shrink: 0; box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+        flex-shrink: 0; box-shadow: 0 2px 12px rgba(200,51,74,0.35);
+        animation: glow 3s infinite;
       }
+      /* EMOJI PICKER */
       .tg-emoji-picker {
         position: absolute; bottom: calc(100% + 8px); left: 8px;
-        background: rgba(28,20,45,0.97); backdrop-filter: blur(20px);
+        background: var(--surface, #FFFFFF); backdrop-filter: blur(20px);
         border: 1px solid rgba(255,255,255,0.1);
         border-radius: 16px;
         box-shadow: 0 8px 32px rgba(0,0,0,0.5);
@@ -1587,6 +1653,7 @@ function TGStyles() {
         display: flex; align-items: center; justify-content: center;
       }
       .tg-emoji-btn:active { background: rgba(255,255,255,0.08); }
+      /* REACTIONS */
       .tg-reactions {
         display: flex; flex-wrap: wrap; gap: 4px;
         margin-top: 4px;
@@ -1602,6 +1669,7 @@ function TGStyles() {
         border-color: rgba(var(--theme-accent-rgb,232,70,106), 0.4);
       }
       .tg-reaction span { font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.7); }
+      /* MEDIA BUTTON */
       .tg-media-btn {
         background: rgba(255,255,255,0.2); border: none; border-radius: 50%;
         width: 36px; height: 36px; cursor: pointer; flex-shrink: 0;
@@ -1609,6 +1677,7 @@ function TGStyles() {
         transition: background 0.2s;
       }
       .tg-media-btn:active { background: rgba(255,255,255,0.35); }
+      /* MEDIA OVERLAY */
       .tg-media-overlay {
         position: fixed; inset: 0; z-index: 300;
         background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
@@ -1617,7 +1686,7 @@ function TGStyles() {
       }
       .tg-media-panel {
         width: 100%; height: 100%;
-        background: #1A1025; border-radius: 0;
+        background: var(--surface-2, #1E0A10); border-radius: 0;
         display: flex; flex-direction: column;
         animation: slideUp 0.3s ease;
         overflow: hidden;
@@ -1646,9 +1715,9 @@ function TGStyles() {
         display: flex; align-items: center; gap: 5px;
         transition: color 0.2s;
       }
-      .tg-media-tab.active { color: var(--theme-accent, #E8466A); border-bottom-color: var(--theme-accent, #E8466A); }
+      .tg-media-tab.active { color: var(--theme-accent, #C8334A); border-bottom-color: var(--theme-accent, #C8334A); }
       .tg-media-tab-count {
-        background: var(--theme-accent, #E8466A); color: white;
+        background: var(--theme-accent, #C8334A); color: white;
         font-size: 10px; padding: 1px 6px; border-radius: 10px;
       }
       .tg-media-content { flex: 1; overflow-y: auto; padding: 12px; }
@@ -1658,6 +1727,7 @@ function TGStyles() {
         color: rgba(255,255,255,0.3); font-size: 40px;
       }
       .tg-media-empty p { font-size: 15px; margin-top: 8px; color: rgba(255,255,255,0.4); }
+      /* PHOTO GRID */
       .tg-media-grid {
         display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px;
       }
@@ -1679,6 +1749,7 @@ function TGStyles() {
         font-size: 10px; color: white; font-weight: 600;
         text-shadow: 0 1px 3px rgba(0,0,0,0.5);
       }
+      /* VOICE LIST */
       .tg-media-list { display: flex; flex-direction: column; gap: 2px; }
       .tg-media-voice-item {
         display: flex; align-items: center; gap: 12px;
@@ -1687,13 +1758,14 @@ function TGStyles() {
       }
       .tg-media-voice-play {
         width: 38px; height: 38px; border-radius: 50%;
-        background: var(--theme-gradient, linear-gradient(135deg,#E8466A,#9C27B0)); color: white; border: none; cursor: pointer;
+        background: var(--theme-gradient, linear-gradient(135deg,#C8334A,#9C27B0)); color: white; border: none; cursor: pointer;
         display: flex; align-items: center; justify-content: center; flex-shrink: 0;
       }
       .tg-media-voice-info { flex: 1; }
       .tg-media-voice-name { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.85); display: block; }
       .tg-media-voice-dur { font-size: 12px; color: rgba(255,255,255,0.4); }
       .tg-media-voice-time { font-size: 11px; color: rgba(255,255,255,0.4); }
+      /* LINKS LIST */
       .tg-media-link-item {
         display: flex; align-items: center; gap: 12px; padding: 10px 12px;
         border-radius: 12px; background: rgba(255,255,255,0.06);
@@ -1707,6 +1779,7 @@ function TGStyles() {
         white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
       }
       .tg-media-link-from { font-size: 11px; color: rgba(255,255,255,0.4); }
+      /* LIGHTBOX */
       .tg-lightbox {
         position: fixed; inset: 0; z-index: 500;
         background: rgba(0,0,0,0.92); backdrop-filter: blur(8px);
@@ -1733,6 +1806,7 @@ function TGStyles() {
         display: flex; align-items: center; justify-content: center;
         z-index: 501;
       }
+      /* PHOTO CELL CURSOR */
       .tg-media-photo-cell { cursor: pointer; }
     `}</style>
   )

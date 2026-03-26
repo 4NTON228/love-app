@@ -1,39 +1,30 @@
 import { useState } from 'react'
 
+/* ── Shared SVG gradient / glow defs (referenced via url(#…) anywhere in doc) ── */
 function SvgDefs() {
   return (
     <svg width="0" height="0" style={{ position: 'absolute', overflow: 'hidden' }} aria-hidden>
       <defs>
         <linearGradient id="nav-g" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%"   stopColor="var(--primary)" />
-          <stop offset="100%" stopColor="#c84b8b" />
+          <stop offset="0%"   stopColor="#C8334A" />
+          <stop offset="100%" stopColor="#8B1A2C" />
         </linearGradient>
         <filter id="nav-glow" x="-40%" y="-40%" width="180%" height="180%">
-          <feGaussianBlur stdDeviation="2.5" result="b" />
-          <feMerge>
-            <feMergeNode in="b" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
-        <filter id="nav-glow-strong" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="4" result="b" />
-          <feMerge>
-            <feMergeNode in="b" />
-            <feMergeNode in="b" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
+          <feGaussianBlur stdDeviation="1.8" result="b" />
+          <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
         </filter>
       </defs>
     </svg>
   )
 }
 
+/* ── Individual hand-drawn SVG icons ── */
 function IconHome({ active }) {
   const s = active ? 'url(#nav-g)' : 'currentColor'
   const f = active ? 'url(#nav-g)' : 'none'
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke={s} strokeWidth="1.8"
-      strokeLinecap="round" strokeLinejoin="round" filter={active ? 'url(#nav-glow-strong)' : 'none'}>
+      strokeLinecap="round" strokeLinejoin="round" filter={active ? 'url(#nav-glow)' : 'none'}>
       <path d="M3 11.5L12 4l9 7.5" />
       <path d="M5 9.8V21h5v-5.5h4V21h5V9.8" />
       {active
@@ -49,7 +40,7 @@ function IconChat({ active }) {
   const s = active ? 'url(#nav-g)' : 'currentColor'
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke={s} strokeWidth="1.8"
-      strokeLinecap="round" strokeLinejoin="round" filter={active ? 'url(#nav-glow-strong)' : 'none'}>
+      strokeLinecap="round" strokeLinejoin="round" filter={active ? 'url(#nav-glow)' : 'none'}>
       <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
       <circle cx="9"  cy="11" r="1" fill={s} stroke="none" />
       <circle cx="12" cy="11" r="1" fill={s} stroke="none" />
@@ -62,7 +53,7 @@ function IconClock({ active }) {
   const s = active ? 'url(#nav-g)' : 'currentColor'
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke={s} strokeWidth="1.8"
-      strokeLinecap="round" filter={active ? 'url(#nav-glow-strong)' : 'none'}>
+      strokeLinecap="round" filter={active ? 'url(#nav-glow)' : 'none'}>
       <circle cx="12" cy="12" r="9" />
       <line x1="12" y1="12" x2="12" y2="7.5" strokeWidth="2" />
       <line x1="12" y1="12" x2="15.5" y2="14" strokeWidth="1.5" />
@@ -75,7 +66,7 @@ function IconLetter({ active }) {
   const s = active ? 'url(#nav-g)' : 'currentColor'
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke={s} strokeWidth="1.8"
-      strokeLinecap="round" strokeLinejoin="round" filter={active ? 'url(#nav-glow-strong)' : 'none'}>
+      strokeLinecap="round" strokeLinejoin="round" filter={active ? 'url(#nav-glow)' : 'none'}>
       <rect x="2" y="5" width="20" height="14" rx="2" />
       <polyline points="2,5 12,13 22,5" />
       {active && <circle cx="12" cy="13" r="2" fill="url(#nav-g)" stroke="none" />}
@@ -87,7 +78,7 @@ function IconMore({ active }) {
   const s = active ? 'url(#nav-g)' : 'currentColor'
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke={s} strokeWidth="1.8"
-      strokeLinecap="round" strokeLinejoin="round" filter={active ? 'url(#nav-glow-strong)' : 'none'}>
+      strokeLinecap="round" strokeLinejoin="round" filter={active ? 'url(#nav-glow)' : 'none'}>
       <rect x="3" y="3" width="7" height="7" rx="1.5" />
       <rect x="14" y="3" width="7" height="7" rx="1.5" />
       <rect x="3" y="14" width="7" height="7" rx="1.5" />
@@ -100,7 +91,7 @@ function IconCamera({ active }) {
   const s = active ? 'url(#nav-g)' : 'currentColor'
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke={s} strokeWidth="1.8"
-      strokeLinecap="round" strokeLinejoin="round" filter={active ? 'url(#nav-glow-strong)' : 'none'}>
+      strokeLinecap="round" strokeLinejoin="round" filter={active ? 'url(#nav-glow)' : 'none'}>
       <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
       <circle cx="12" cy="13" r="4" />
     </svg>
@@ -111,7 +102,7 @@ function IconCalendar({ active }) {
   const s = active ? 'url(#nav-g)' : 'currentColor'
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke={s} strokeWidth="1.8"
-      strokeLinecap="round" strokeLinejoin="round" filter={active ? 'url(#nav-glow-strong)' : 'none'}>
+      strokeLinecap="round" strokeLinejoin="round" filter={active ? 'url(#nav-glow)' : 'none'}>
       <rect x="3" y="4" width="18" height="17" rx="2" />
       <line x1="8"  y1="2" x2="8"  y2="6" />
       <line x1="16" y1="2" x2="16" y2="6" />
@@ -127,7 +118,7 @@ function IconPlans({ active }) {
   const s = active ? 'url(#nav-g)' : 'currentColor'
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke={s} strokeWidth="1.8"
-      strokeLinecap="round" strokeLinejoin="round" filter={active ? 'url(#nav-glow-strong)' : 'none'}>
+      strokeLinecap="round" strokeLinejoin="round" filter={active ? 'url(#nav-glow)' : 'none'}>
       <line x1="10" y1="6"  x2="20" y2="6"  />
       <line x1="10" y1="12" x2="20" y2="12" />
       <line x1="10" y1="18" x2="20" y2="18" />
@@ -142,13 +133,14 @@ function IconPerson({ active }) {
   const s = active ? 'url(#nav-g)' : 'currentColor'
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke={s} strokeWidth="1.8"
-      strokeLinecap="round" strokeLinejoin="round" filter={active ? 'url(#nav-glow-strong)' : 'none'}>
+      strokeLinecap="round" strokeLinejoin="round" filter={active ? 'url(#nav-glow)' : 'none'}>
       <circle cx="12" cy="8" r="4" />
       <path d="M4 20c0-4.4 3.6-8 8-8s8 3.6 8 8" />
     </svg>
   )
 }
 
+// Tabs shown in the main nav bar
 const MAIN_TABS = [
   { id: 'home',   label: 'Главная', Icon: IconHome   },
   { id: 'chat',   label: 'Чат',     Icon: IconChat   },
@@ -157,6 +149,7 @@ const MAIN_TABS = [
   { id: 'more',   label: 'Ещё',     Icon: IconMore   },
 ]
 
+// Items inside the "More" drawer
 const MORE_ITEMS = [
   { id: 'moments',  label: 'Фото',      Icon: IconCamera   },
   { id: 'calendar', label: 'Дни',       Icon: IconCalendar },
@@ -196,29 +189,24 @@ export default function Navigation({ activeTab, setActiveTab }) {
   return (
     <>
       <style>{`
-        .nav-glass {
+        .nav-new {
           position: fixed;
           bottom: 0; left: 0; right: 0;
-          background: rgba(255, 245, 247, 0.85);
+          background: rgba(255,245,247,0.92);
           backdrop-filter: blur(24px) saturate(180%);
           -webkit-backdrop-filter: blur(24px) saturate(180%);
-          border-top: 1px solid rgba(255, 255, 255, 0.6);
+          border-top: 0.5px solid var(--border, rgba(200,51,74,0.13));
           display: flex;
           align-items: stretch;
-          height: calc(64px + env(safe-area-inset-bottom, 0px));
+          height: calc(56px + env(safe-area-inset-bottom, 0px));
           padding-bottom: env(safe-area-inset-bottom, 0px);
           z-index: 50;
-          box-shadow: 
-            0 -4px 24px rgba(232, 70, 106, 0.1),
-            0 -1px 0 rgba(255, 255, 255, 0.8) inset;
+          box-shadow: 0 -1px 0 rgba(200,51,74,0.07), 0 -4px 24px rgba(200,51,74,0.06);
         }
-
-        .app.dark .nav-glass {
-          background: rgba(26, 24, 37, 0.9);
-          border-top: 1px solid rgba(255, 255, 255, 0.08);
-          box-shadow: 
-            0 -4px 24px rgba(0, 0, 0, 0.4),
-            0 -1px 0 rgba(255, 255, 255, 0.05) inset;
+        .app.dark .nav-new {
+          background: rgba(19,5,8,0.94);
+          border-top-color: rgba(200,51,74,0.18);
+          box-shadow: 0 -1px 0 rgba(200,51,74,0.12), 0 -4px 24px rgba(0,0,0,0.4);
         }
 
         .nav-tab {
@@ -227,61 +215,39 @@ export default function Navigation({ activeTab, setActiveTab }) {
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          padding: 10px 4px 8px;
+          padding: 9px 2px 8px;
           cursor: pointer;
           background: none;
           border: none;
-          gap: 6px;
+          gap: 4px;
           position: relative;
           -webkit-tap-highlight-color: transparent;
           outline: none;
-          transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
 
         .nav-tab-icon {
           display: flex;
           align-items: center;
           justify-content: center;
-          width: 44px; height: 44px;
-          border-radius: 16px;
-          transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-          color: var(--text-muted);
-          background: transparent;
-          position: relative;
-        }
-
-        .nav-tab-icon::before {
-          content: '';
-          position: absolute;
-          inset: 0;
-          border-radius: 16px;
-          background: linear-gradient(135deg, rgba(232, 70, 106, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
-          opacity: 0;
-          transition: opacity 0.3s;
+          width: 30px; height: 30px;
+          border-radius: 9px;
+          transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1), background 0.2s;
+          color: var(--muted, #9A6070);
         }
 
         .nav-tab-icon svg {
-          width: 24px; height: 24px;
-          transition: all 0.3s;
-          position: relative;
-          z-index: 1;
-        }
-
-        .nav-tab:hover .nav-tab-icon {
-          transform: translateY(-2px);
+          width: 26px; height: 26px;
+          transition: filter 0.2s;
         }
 
         .nav-tab.active .nav-tab-icon {
-          transform: translateY(-4px) scale(1.1);
-          color: var(--primary);
-        }
-
-        .nav-tab.active .nav-tab-icon::before {
-          opacity: 1;
+          transform: translateY(-3px) scale(1.1);
+          background: rgba(200,51,74,0.1);
+          color: var(--rose, #C8334A);
         }
 
         .nav-tab.pressing .nav-tab-icon {
-          transform: scale(0.9);
+          transform: scale(0.86);
         }
 
         @keyframes navIconBounce {
@@ -298,148 +264,117 @@ export default function Navigation({ activeTab, setActiveTab }) {
         .nav-tab-label {
           font-family: var(--font-body);
           font-size: 11px;
-          font-weight: 600;
-          letter-spacing: 0.3px;
-          color: var(--text-muted);
-          transition: all 0.3s;
+          font-weight: 500;
+          letter-spacing: 0.2px;
+          color: var(--muted, #9A6070);
+          transition: color 0.2s;
           white-space: nowrap;
         }
-
         .nav-tab.active .nav-tab-label {
-          color: var(--primary);
-          font-weight: 700;
+          color: var(--rose, #C8334A);
+          font-weight: 600;
         }
 
+        /* Active dot indicator */
         .nav-tab-dot {
           position: absolute;
-          bottom: calc(env(safe-area-inset-bottom, 0px) + 6px);
+          bottom: calc(env(safe-area-inset-bottom, 0px) + 4px);
           left: 50%;
           transform: translateX(-50%) scaleX(0);
-          width: 20px; height: 4px;
+          width: 18px; height: 3px;
           border-radius: 99px;
-          background: linear-gradient(90deg, var(--primary), #c84b8b);
-          transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-          box-shadow: 0 0 12px rgba(232, 70, 106, 0.5);
+          background: var(--gradient-main, linear-gradient(160deg, #C8334A, #8B1A2C));
+          transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
         }
-
         .nav-tab.active .nav-tab-dot {
           transform: translateX(-50%) scaleX(1);
         }
 
+        /* ── More Drawer overlay ── */
         .more-overlay {
           position: fixed;
           inset: 0;
           z-index: 49;
-          background: rgba(0, 0, 0, 0.4);
+          background: rgba(28,10,14,0.5);
           backdrop-filter: blur(8px);
-          animation: fadeInOverlay 0.25s ease;
-        }
-
-        @keyframes fadeInOverlay {
-          from { opacity: 0; }
-          to   { opacity: 1; }
+          animation: fadeIn 0.2s ease;
         }
 
         .more-drawer {
           position: fixed;
-          bottom: calc(64px + env(safe-area-inset-bottom, 0px));
-          left: 16px; right: 16px;
-          background: rgba(255, 255, 255, 0.9);
-          backdrop-filter: blur(30px) saturate(180%);
-          -webkit-backdrop-filter: blur(30px) saturate(180%);
-          border-radius: 28px;
-          border: 1px solid rgba(255, 255, 255, 0.6);
-          padding: 20px 16px 24px;
+          bottom: calc(56px + env(safe-area-inset-bottom, 0px));
+          left: 0; right: 0;
+          background: var(--surface, #FFFFFF);
+          border-radius: 24px 24px 0 0;
+          border-top: 0.5px solid var(--border, rgba(200,51,74,0.13));
+          padding: 16px 20px 24px;
           z-index: 50;
-          animation: slideUpDrawer 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
-          box-shadow: 
-            0 -8px 40px rgba(0, 0, 0, 0.15),
-            0 0 0 1px rgba(255, 255, 255, 0.5) inset;
+          animation: slideUp 0.35s cubic-bezier(0.34,1.56,0.64,1) both;
+          box-shadow: 0 -8px 40px rgba(200,51,74,0.1);
         }
-
         .app.dark .more-drawer {
-          background: rgba(30, 27, 46, 0.95);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          box-shadow: 
-            0 -8px 40px rgba(0, 0, 0, 0.5),
-            0 0 0 1px rgba(255, 255, 255, 0.05) inset;
-        }
-
-        @keyframes slideUpDrawer {
-          from { transform: translateY(30px) scale(0.95); opacity: 0; }
-          to   { transform: translateY(0) scale(1);    opacity: 1; }
+          background: #1E0A10;
+          border-top-color: rgba(200,51,74,0.2);
+          box-shadow: 0 -8px 40px rgba(0,0,0,0.5);
         }
 
         .more-handle {
-          width: 40px; height: 4px;
+          width: 36px; height: 4px;
           border-radius: 99px;
-          background: linear-gradient(90deg, transparent, rgba(232, 70, 106, 0.3), transparent);
-          margin: 0 auto 20px;
+          background: var(--blush-2, #F2D0D6);
+          margin: 0 auto 18px;
         }
+        .app.dark .more-handle { background: #3D1520; }
 
         .more-grid {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
-          gap: 12px;
+          gap: 8px;
         }
 
         .more-item {
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 10px;
-          padding: 18px 8px;
-          border-radius: 20px;
+          gap: 8px;
+          padding: 14px 8px;
+          border-radius: 16px;
           cursor: pointer;
-          background: rgba(232, 70, 106, 0.05);
-          border: 1px solid rgba(232, 70, 106, 0.08);
-          transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+          background: var(--blush, #FBF0F2);
+          border: 0.5px solid var(--border, rgba(200,51,74,0.13));
+          transition: background 0.2s, transform 0.2s cubic-bezier(0.34,1.56,0.64,1);
           -webkit-tap-highlight-color: transparent;
         }
-
-        .more-item:hover {
-          transform: translateY(-2px);
-          background: rgba(232, 70, 106, 0.1);
-          box-shadow: 0 4px 16px rgba(232, 70, 106, 0.15);
-        }
-
+        .app.dark .more-item { background: #3D1520; border-color: rgba(200,51,74,0.18); }
         .more-item:active, .more-item.active-item {
-          background: linear-gradient(135deg, rgba(232, 70, 106, 0.15) 0%, rgba(139, 92, 246, 0.15) 100%);
+          background: rgba(200,51,74,0.12);
           transform: scale(0.95);
-          border-color: rgba(232, 70, 106, 0.3);
+          border-color: rgba(200,51,74,0.3);
         }
+        .more-item:not(:active):hover { transform: translateY(-2px); }
 
         .more-item-icon {
-          width: 32px; height: 32px;
-          color: var(--text-light);
+          width: 28px; height: 28px;
+          color: var(--ink-mid, #4A2030);
           display: flex; align-items: center; justify-content: center;
-          transition: all 0.3s;
         }
-
-        .more-item-icon svg { width: 28px; height: 28px; }
-
-        .more-item.active-item .more-item-icon {
-          color: var(--primary);
-          filter: drop-shadow(0 0 8px rgba(232, 70, 106, 0.5));
-        }
+        .app.dark .more-item-icon { color: var(--ink-mid, #C4909A); }
+        .more-item-icon svg { width: 26px; height: 26px; }
+        .more-item.active-item .more-item-icon { color: var(--rose, #C8334A); }
 
         .more-item-label {
           font-family: var(--font-body);
-          font-size: 12px;
-          font-weight: 600;
-          color: var(--text-light);
+          font-size: 11px;
+          font-weight: 500;
+          color: var(--muted, #9A6070);
           text-align: center;
-          transition: color 0.3s;
         }
-
-        .more-item.active-item .more-item-label {
-          color: var(--primary);
-          font-weight: 700;
-        }
+        .more-item.active-item .more-item-label { color: var(--rose, #C8334A); font-weight: 600; }
       `}</style>
 
       <SvgDefs />
 
+      {/* More drawer + overlay */}
       {showMore && (
         <>
           <div className="more-overlay" onClick={() => setShowMore(false)} />
@@ -463,7 +398,7 @@ export default function Navigation({ activeTab, setActiveTab }) {
         </>
       )}
 
-      <nav className="nav-glass">
+      <nav className="nav-new">
         {MAIN_TABS.map(({ id, label, Icon }) => {
           const isActive = id === 'more' ? (isMoreActive || showMore) : activeTab === id
           return (

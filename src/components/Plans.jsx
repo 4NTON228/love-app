@@ -43,18 +43,18 @@ function LoadingHeart() {
   return (
     <svg viewBox="0 0 60 56" width="48" height="44" fill="none">
       <path d="M30 52C30 52 3 35 3 16C3 8 9.5 2 18 2C22.5 2 26.5 4.5 30 9C33.5 4.5 37.5 2 42 2C50.5 2 57 8 57 16C57 35 30 52 30 52Z"
-        fill="rgba(232,70,106,0.4)"/>
+        fill="rgba(200,51,74,0.4)"/>
       <style>{`@keyframes hbLoad{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}.hbL{animation:hbLoad 1.2s ease-in-out infinite;transform-origin:center}`}</style>
       <g className="hbL">
         <path d="M30 52C30 52 3 35 3 16C3 8 9.5 2 18 2C22.5 2 26.5 4.5 30 9C33.5 4.5 37.5 2 42 2C50.5 2 57 8 57 16C57 35 30 52 30 52Z"
-          fill="none" stroke="rgba(232,70,106,0.6)" strokeWidth="2"/>
+          fill="none" stroke="rgba(200,51,74,0.6)" strokeWidth="2"/>
       </g>
     </svg>
   )
 }
 
 const CATEGORIES = [
-  { value: 'dream',  label: 'Мечта',        color: '#c84b8b', bg: 'rgba(200,75,139,0.12)' },
+  { value: 'dream',  label: 'Мечта',        color: '#8B1A2C', bg: 'rgba(139,26,44,0.12)' },
   { value: 'travel', label: 'Путешествие',   color: '#4a8fe7', bg: 'rgba(74,143,231,0.12)' },
   { value: 'date',   label: 'Свидание',      color: '#e8a225', bg: 'rgba(232,162,37,0.12)' },
   { value: 'other',  label: 'Другое',        color: '#6b6b6b', bg: 'rgba(107,107,107,0.1)'  },
@@ -66,24 +66,24 @@ function getCat(value) {
 
 // SVG confetti shapes (no emoji)
 const CONFETTI_ITEMS = [
-  { x:8,  shape:'heart',   s:14, c:'#e8466a', dur:1.0, del:0.00 },
+  { x:8,  shape:'heart',   s:14, c:'#C8334A', dur:1.0, del:0.00 },
   { x:18, shape:'star',    s:10, c:'#f7a8c4', dur:0.9, del:0.05 },
-  { x:28, shape:'diamond', s:12, c:'#c84b8b', dur:1.1, del:0.10 },
+  { x:28, shape:'diamond', s:12, c:'#8B1A2C', dur:1.1, del:0.10 },
   { x:38, shape:'heart',   s:10, c:'#ff8fab', dur:0.8, del:0.15 },
   { x:48, shape:'star',    s:14, c:'#ffb6d9', dur:1.2, del:0.00 },
-  { x:58, shape:'diamond', s:9,  c:'#e8466a', dur:0.9, del:0.08 },
-  { x:68, shape:'heart',   s:12, c:'#9b4dca', dur:1.0, del:0.12 },
+  { x:58, shape:'diamond', s:9,  c:'#C8334A', dur:0.9, del:0.08 },
+  { x:68, shape:'heart',   s:12, c:'#8B1A2C', dur:1.0, del:0.12 },
   { x:78, shape:'star',    s:11, c:'#f7a8c4', dur:0.85,del:0.04 },
-  { x:88, shape:'diamond', s:13, c:'#c84b8b', dur:1.1, del:0.18 },
+  { x:88, shape:'diamond', s:13, c:'#8B1A2C', dur:1.1, del:0.18 },
   { x:13, shape:'star',    s:9,  c:'#ff8fab', dur:0.95,del:0.22 },
   { x:23, shape:'heart',   s:11, c:'#ffb6d9', dur:1.05,del:0.07 },
-  { x:33, shape:'diamond', s:8,  c:'#e8466a', dur:0.9, del:0.13 },
-  { x:43, shape:'star',    s:13, c:'#9b4dca', dur:1.2, del:0.03 },
+  { x:33, shape:'diamond', s:8,  c:'#C8334A', dur:0.9, del:0.13 },
+  { x:43, shape:'star',    s:13, c:'#8B1A2C', dur:1.2, del:0.03 },
   { x:53, shape:'heart',   s:10, c:'#f7a8c4', dur:0.85,del:0.20 },
-  { x:63, shape:'diamond', s:12, c:'#c84b8b', dur:1.0, del:0.09 },
+  { x:63, shape:'diamond', s:12, c:'#8B1A2C', dur:1.0, del:0.09 },
   { x:73, shape:'star',    s:10, c:'#ff8fab', dur:0.95,del:0.16 },
   { x:83, shape:'heart',   s:14, c:'#ffb6d9', dur:1.1, del:0.01 },
-  { x:93, shape:'diamond', s:9,  c:'#e8466a', dur:0.9, del:0.24 },
+  { x:93, shape:'diamond', s:9,  c:'#C8334A', dur:0.9, del:0.24 },
 ]
 const STAR_PATH    = 'M10 0L11.8 7.2L19 10L11.8 12.8L10 20L8.2 12.8L1 10L8.2 7.2Z'
 const HEART_PATH_S = 'M10 16.5C10 16.5 1.5 10 1.5 4.5C1.5 2.2 3.4 0.5 5.8 0.5C7.3 0.5 8.6 1.3 10 2.8C11.4 1.3 12.7 0.5 14.2 0.5C16.6 0.5 18.5 2.2 18.5 4.5C18.5 10 10 16.5 10 16.5Z'
@@ -175,7 +175,9 @@ export default function Plans({ session }) {
       <style>{`
         .plans-wrap { padding: 0 0 120px; }
         .plans-header {
-          background: var(--theme-gradient, linear-gradient(160deg, #e8466a 0%, #c84b8b 50%, #9b4dca 100%));
+          background: var(--gradient-banner, linear-gradient(160deg, #C8334A 0%, #8B1A2C 100%));
+          background-size: 200% 200%;
+          animation: gradientShift 8s ease infinite;
           padding: 60px 20px 24px;
           border-radius: 0 0 32px 32px;
           margin-bottom: 18px;
@@ -199,7 +201,7 @@ export default function Plans({ session }) {
         .plans-progress-fill {
           height: 100%;
           border-radius: 99px;
-          background: linear-gradient(90deg, #fff8b0, #ffe0f8, #fff);
+          background: linear-gradient(90deg, var(--blush-2, #F2D0D6), var(--blush, #FBF0F2));
           transition: width 0.8s cubic-bezier(0.34,1.56,0.64,1);
         }
         .plans-progress-label {
@@ -250,12 +252,12 @@ export default function Plans({ session }) {
           white-space: nowrap;
         }
         .plans-filter-btn.active {
-          border-color: var(--primary);
-          color: var(--primary);
-          background: rgba(232,70,106,0.06);
+          border-color: var(--rose, #C8334A);
+          color: var(--rose, #C8334A);
+          background: rgba(200,51,74,0.06);
         }
-        .app.dark .plans-filter-btn { background: #2A2540; }
-        .app.dark .plans-filter-btn.active { background: rgba(232,70,106,0.12); }
+        .app.dark .plans-filter-btn { background: var(--surface-2, #1E0A10); }
+        .app.dark .plans-filter-btn.active { background: rgba(200,51,74,0.12); }
 
         .plan-list { padding: 0 14px; }
         .plan-item-new {
@@ -280,7 +282,7 @@ export default function Plans({ session }) {
           flex-shrink: 0;
           width: 28px; height: 28px;
           border-radius: 50%;
-          border: 2.5px solid var(--primary);
+          border: 2.5px solid var(--rose, #C8334A);
           background: transparent;
           cursor: pointer;
           display: flex;
@@ -290,7 +292,7 @@ export default function Plans({ session }) {
           color: transparent;
         }
         .plan-cb.checked {
-          background: linear-gradient(135deg, #e8466a, #c84b8b);
+          background: linear-gradient(135deg, #C8334A, #8B1A2C);
           border-color: transparent;
           color: white;
           transform: scale(1.1);
@@ -335,10 +337,10 @@ export default function Plans({ session }) {
           align-items: center;
           justify-content: center;
         }
-        .plan-del-btn:active { background: rgba(232,70,106,0.1); color: var(--primary); }
+        .plan-del-btn:active { background: rgba(200,51,74,0.1); color: var(--rose, #C8334A); }
 
-        .app.dark .plan-item-new { background: #2A2540; }
-        .app.dark .plan-title-new { color: #EDE4F0; }
+        .app.dark .plan-item-new { background: var(--surface-2, #1E0A10); }
+        .app.dark .plan-title-new { color: var(--ink, #F5E8EA); }
 
         .plans-empty {
           display: flex;

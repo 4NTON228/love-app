@@ -30,6 +30,7 @@ export default function Chat({ session, profile, darkMode }) {
   const [pinnedMessage, setPinnedMessage] = useState(null)
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const [reactionPickerFor, setReactionPickerFor] = useState(null)
+  const [reactionBurst, setReactionBurst] = useState(null)
   const [swipeStart, setSwipeStart] = useState({})
   const [swipeOffset, setSwipeOffset] = useState({})
   const [unreadCount, setUnreadCount] = useState(0)
@@ -301,10 +302,15 @@ export default function Chat({ session, profile, darkMode }) {
     const msg = messages.find(m => m.id === msgId)
     if (!msg) return
     const reactions = { ...(msg.reactions || {}) }
-    if (reactions[myId] === emoji) {
+    const wasSet = reactions[myId] === emoji
+    if (wasSet) {
       delete reactions[myId]
     } else {
       reactions[myId] = emoji
+      // Trigger cinematic burst
+      const id = Date.now()
+      setReactionBurst({ emoji, id })
+      setTimeout(() => setReactionBurst(b => b?.id === id ? null : b), 1000)
     }
     await supabase.from('messages').update({ reactions }).eq('id', msgId)
     setReactionPickerFor(null)
@@ -945,6 +951,9 @@ export default function Chat({ session, profile, darkMode }) {
       </div>,
       document.body
     )}
+
+    {/* REACTION BURST */}
+    {reactionBurst && <ReactionBurst key={reactionBurst.id} emoji={reactionBurst.emoji} />}
     </>
   )
 }
@@ -1059,6 +1068,52 @@ function MediaSection({ messages, myId, myName, partnerName, onClose, onPlayAudi
         </div>
       </div>
     </div>
+  )
+}
+
+function ReactionBurst({ emoji }) {
+  const particles = Array.from({ length: 14 }, (_, i) => {
+    const angle = (i / 14) * 360 + Math.random() * 15
+    const dist = 90 + Math.random() * 80
+    const size = 20 + Math.random() * 18
+    const rad = (angle * Math.PI) / 180
+    return { angle, dist, size, bx: Math.cos(rad) * dist, by: Math.sin(rad) * dist, delay: Math.random() * 0.12 }
+  })
+  return (
+    <>
+      <style>{`
+        @keyframes rxBurst {
+          0%   { opacity: 1; transform: translate(0, 0) scale(1.3); }
+          80%  { opacity: 0.7; }
+          100% { opacity: 0; transform: translate(var(--rbx), var(--rby)) scale(0.2); }
+        }
+        .rx-burst-overlay {
+          position: fixed; inset: 0; z-index: 400;
+          pointer-events: none;
+          display: flex; align-items: center; justify-content: center;
+        }
+        .rx-particle {
+          position: absolute;
+          animation: rxBurst 0.85s cubic-bezier(0.22,1,0.36,1) forwards;
+          animation-delay: var(--rd, 0s);
+          font-size: var(--rs, 24px);
+          line-height: 1;
+          user-select: none;
+        }
+      `}</style>
+      <div className="rx-burst-overlay">
+        {particles.map((p, i) => (
+          <div key={i} className="rx-particle" style={{
+            '--rbx': `${p.bx}px`,
+            '--rby': `${p.by}px`,
+            '--rs': `${p.size}px`,
+            '--rd': `${p.delay}s`,
+          }}>
+            {emoji}
+          </div>
+        ))}
+      </div>
+    </>
   )
 }
 

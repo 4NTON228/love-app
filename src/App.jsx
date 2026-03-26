@@ -146,11 +146,16 @@ export default function App() {
 
   return (
     <div className={`app${darkMode ? ' dark' : ''}`}>
+      {/* Aurora animated background */}
+      <div className="aurora-bg"><div className="aurora-blob3" /></div>
+
       <div
         className="app-content"
         style={noPadding ? { padding: 0, paddingTop: activeTab === 'chat' ? 'var(--safe-top)' : 0 } : {}}
       >
-        {renderTab()}
+        <div key={activeTab} className="tab-anim">
+          {renderTab()}
+        </div>
       </div>
       <Navigation activeTab={activeTab} setActiveTab={setActiveTab} />
     </div>

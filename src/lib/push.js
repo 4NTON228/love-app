@@ -1,7 +1,5 @@
 import { supabase } from './supabase'
 
-const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY
-
 function urlBase64ToUint8Array(base64String) {
   const padding = '='.repeat((4 - base64String.length % 4) % 4)
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
@@ -12,64 +10,96 @@ function urlBase64ToUint8Array(base64String) {
 }
 
 export async function subscribeToPush(userId) {
-  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return false
-
+  if (!('Notification' in window)) return false;
+  
   try {
-    // 1. Запросить разрешение
-    const permission = await Notification.requestPermission()
-    if (permission !== 'granted') return false
+    console.log('📱 Запрашиваем разрешение...');
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+      console.log('❌ Нет разрешения');
+      return false;
+    }
+    
+    console.log('✅ Разрешение получено');
+    
+    const reg = await navigator.serviceWorker.ready;
 
-    // 2. Зарегистрировать service worker если ещё не зарегистрирован
-    let reg = await navigator.serviceWorker.getRegistration('/')
-    if (!reg) {
-      reg = await navigator.serviceWorker.register('/sw.js')
+    // Всегда пересоздаём подписку, чтобы не было протухших дублей
+    let sub = await reg.pushManager.getSubscription();
+    if (sub) {
+      await sub.unsubscribe();
     }
 
-    // 3. Дождаться активации
-    await navigator.serviceWorker.ready
-
-    // 4. Получить или создать push-подписку
-    let sub = await reg.pushManager.getSubscription()
-    if (!sub) {
-      sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
-      })
+    const vapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+    console.log('VAPID ключ:', vapidKey ? 'найден' : 'не найден');
+    
+    if (!vapidKey) {
+      throw new Error('VAPID ключ не найден в переменных окружения');
     }
-
-    // 5. Сохранить подписку в базу данных
-    const { data: existing } = await supabase
+    
+    sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(vapidKey)
+    });
+    
+    console.log('✅ Подписка создана:', sub);
+    
+    // Сначала удаляем старые записи этого пользователя
+    await supabase
       .from('push_subscriptions')
-      .select('id')
-      .eq('user_id', userId)
-      .maybeSingle()
+      .delete()
+      .eq('user_id', userId);
 
-    if (!existing) {
-      await supabase.from('push_subscriptions').insert({
+    // Вставляем свежую подписку
+    const { error } = await supabase
+      .from('push_subscriptions')
+      .insert({
         user_id: userId,
-        subscription: sub.toJSON()
-      })
-    } else {
-      await supabase.from('push_subscriptions')
-        .update({ subscription: sub.toJSON() })
-        .eq('user_id', userId)
-    }
-
-    return true
+        subscription: sub.toJSON(),
+        updated_at: new Date().toISOString()
+      });
+    
+    if (error) throw error;
+    console.log('✅ Подписка сохранена в Supabase');
+    return true;
+    
   } catch (err) {
-    console.error('Push subscription error:', err)
-    return false
+    console.error('❌ Ошибка подписки:', err);
+    return false;
   }
 }
 
-export async function sendPushNotification(title, body, senderId) {
+export async function sendPushNotification(title, body, recipientId, senderId) {
   try {
-    await fetch('/api/send-push', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title, body, senderId })
-    })
+    console.log('📨 Отправка уведомления:', { title, body, recipientId });
+    
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session) {
+      console.error('❌ Нет активной сессии');
+      return;
+    }
+
+    const response = await fetch(
+      'https://bqyisdgwtgxxomukozko.supabase.co/functions/v1/send-notification',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ title, body, recipientId })
+      }
+    );
+
+    if (response.ok) {
+      const result = await response.json();
+      console.log('✅ Уведомление отправлено:', result);
+    } else {
+      const error = await response.text();
+      console.error('❌ Ошибка от Edge Function:', error);
+    }
   } catch (err) {
-    console.error('Send push error:', err)
+    console.error('❌ Ошибка при вызове Edge Function:', err);
   }
 }

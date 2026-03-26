@@ -12,17 +12,52 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    
     <title>💕 Love App</title>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
     <script>
+      // Простой Service Worker
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js');
+          navigator.serviceWorker.register('/sw.js')
+            .then(reg => console.log('✅ SW зарегистрирован'))
+            .catch(err => console.error('SW ошибка:', err));
         });
       }
+      
+      // Функция для запроса уведомлений
+      window.requestNotifications = async function() {
+        try {
+          const permission = await Notification.requestPermission();
+          console.log('Разрешение:', permission);
+          
+          if (permission === 'granted') {
+            const reg = await navigator.serviceWorker.ready;
+            const sub = await reg.pushManager.subscribe({
+              userVisibleOnly: true
+            });
+            console.log('✅ Подписка создана:', sub);
+            
+            // Отправляем на сервер (через Supabase)
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
+              await fetch('/api/save-subscription', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  userId: session.user.id,
+                  subscription: sub.toJSON()
+                })
+              });
+            }
+          }
+        } catch (err) {
+          console.error('Ошибка:', err);
+        }
+      };
     </script>
   </body>
 </html>

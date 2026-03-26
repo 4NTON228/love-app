@@ -1,18 +1,6 @@
-const webpush = require('web-push')
 const { createClient } = require('@supabase/supabase-js')
 
-const supabase = createClient(
-  process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY || process.env.VITE_SUPABASE_ANON_KEY
-)
-
-webpush.setVapidDetails(
-  process.env.VAPID_SUBJECT || 'mailto:love-app@example.com',
-  process.env.VAPID_PUBLIC_KEY || process.env.VITE_VAPID_PUBLIC_KEY,
-  process.env.VAPID_PRIVATE_KEY
-)
-
-// Netlify Functions format
+// Этот файл теперь просто проксирует запросы в Supabase Edge Function
 exports.handler = async (event) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -20,47 +8,73 @@ exports.handler = async (event) => {
     'Content-Type': 'application/json'
   }
 
+  // CORS preflight
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 204, headers, body: '' }
   }
 
+  // Только POST
   if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) }
-  }
-
-  let title, body, senderId
-  try {
-    const parsed = JSON.parse(event.body)
-    title = parsed.title
-    body = parsed.body
-    senderId = parsed.senderId
-  } catch {
-    return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid JSON' }) }
-  }
-
-  const { data: subs } = await supabase
-    .from('push_subscriptions')
-    .select('*')
-    .neq('user_id', senderId)
-
-  if (!subs || subs.length === 0) {
-    return { statusCode: 200, headers, body: JSON.stringify({ sent: 0 }) }
-  }
-
-  let sent = 0
-  for (const sub of subs) {
-    try {
-      await webpush.sendNotification(
-        sub.subscription,
-        JSON.stringify({ title, body })
-      )
-      sent++
-    } catch (err) {
-      if (err.statusCode === 410) {
-        await supabase.from('push_subscriptions').delete().eq('id', sub.id)
-      }
+    return { 
+      statusCode: 405, 
+      headers, 
+      body: JSON.stringify({ error: 'Method not allowed' }) 
     }
   }
 
-  return { statusCode: 200, headers, body: JSON.stringify({ sent }) }
+  try {
+    // Получаем данные из запроса
+    const { title, body, recipientId, senderId } = JSON.parse(event.body)
+    
+    if (!recipientId) {
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({ error: 'recipientId is required' })
+      }
+    }
+
+    // Создаем клиент Supabase
+    const supabase = createClient(
+      process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_KEY || process.env.VITE_SUPABASE_ANON_KEY
+    )
+
+    // Получаем сессию из заголовка Authorization
+    const authHeader = event.headers.authorization || event.headers.Authorization
+    const token = authHeader?.replace('Bearer ', '')
+
+    // Вызываем Edge Function в Supabase
+    const response = await fetch(
+      'https://bqyisdgwtgxxomukozko.supabase.co/functions/v1/send-notification',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          title,
+          body,
+          recipientId
+        })
+      }
+    )
+
+    const data = await response.text()
+    
+    return {
+      statusCode: response.status,
+      headers,
+      body: data
+    }
+
+  } catch (error) {
+    console.error('Proxy error:', error)
+    return {
+      statusCode: 500,
+      headers,
+      body: JSON.stringify({ error: error.message })
+    }
+  }
 }

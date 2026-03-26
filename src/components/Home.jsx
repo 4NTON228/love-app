@@ -272,6 +272,113 @@ function HeartProgress({ progress, daysUntil }) {
 }
 
 /* ─────────────────────────────────────────
+   Floating particle field
+───────────────────────────────────────── */
+const PARTICLES = [
+  { left: '8%',  top: '12%', s: 1.0, d: 0,   dur: 7  },
+  { left: '88%', top: '8%',  s: 0.7, d: 1.2, dur: 9  },
+  { left: '20%', top: '75%', s: 0.8, d: 0.6, dur: 8  },
+  { left: '78%', top: '70%', s: 0.6, d: 2.1, dur: 11 },
+  { left: '50%', top: '5%',  s: 0.5, d: 0.3, dur: 6  },
+  { left: '35%', top: '85%', s: 0.9, d: 1.8, dur: 10 },
+  { left: '92%', top: '40%', s: 0.6, d: 0.9, dur: 8  },
+  { left: '5%',  top: '55%', s: 0.7, d: 1.5, dur: 9  },
+  { left: '65%', top: '20%', s: 0.5, d: 2.5, dur: 12 },
+  { left: '15%', top: '38%', s: 0.8, d: 0.4, dur: 7  },
+]
+function ParticleField() {
+  return (
+    <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: 0 }}>
+      <style>{`
+        @keyframes particleFloat {
+          0%, 100% { transform: translateY(0) scale(var(--ps, 1)); opacity: 0.4; }
+          50%       { transform: translateY(-18px) scale(calc(var(--ps,1)*1.15)); opacity: 0.8; }
+        }
+        .particle-heart { position: absolute; animation: particleFloat var(--pd,8s) ease-in-out var(--pdelay,0s) infinite; }
+      `}</style>
+      {PARTICLES.map((p, i) => (
+        <div key={i} className="particle-heart"
+          style={{ left: p.left, top: p.top, '--ps': p.s, '--pd': p.dur+'s', '--pdelay': p.d+'s' }}>
+          <svg viewBox="0 0 16 14" width={Math.round(10*p.s)} height={Math.round(9*p.s)} fill="none">
+            <path d="M8 12.5S1 8.5 1 4C1 2 2.5.5 4.5.5c1 0 2 .6 3.5 2C9.5 1.1 10.5.5 11.5.5 13.5.5 15 2 15 4 15 8.5 8 12.5 8 12.5Z"
+              fill="rgba(255,255,255,0.55)" />
+          </svg>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/* ─────────────────────────────────────────
+   Binary star connection between avatars
+───────────────────────────────────────── */
+function BinaryConnection() {
+  return (
+    <div style={{ position: 'relative', width: 80, height: 84, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <style>{`
+        @keyframes orbTrack {
+          0%, 100% { left:4px;  top:50%; transform:translateY(-50%) scale(0.85); opacity:0.6; }
+          25%      { left:28%; top:28%; transform:translateY(0)      scale(1.1);  opacity:1; }
+          50%      { left:50%; top:50%; transform:translateY(-50%)    scale(1.2);  opacity:1; }
+          75%      { left:72%; top:28%; transform:translateY(0)      scale(1.1);  opacity:1; }
+        }
+        @keyframes connPulse {
+          0%,100% { opacity:0.15; } 50% { opacity:0.4; }
+        }
+        .orb-dot {
+          position:absolute;
+          width:8px; height:8px; border-radius:50%;
+          background:white;
+          box-shadow:0 0 10px 3px rgba(255,255,255,0.7),0 0 20px 6px rgba(232,70,106,0.3);
+          animation:orbTrack 3s ease-in-out infinite;
+          pointer-events:none;
+        }
+      `}</style>
+      <svg viewBox="0 0 80 84" width="80" height="84" style={{ position:'absolute', inset:0 }}>
+        <path d="M 0 42 Q 40 16 80 42" stroke="rgba(255,255,255,0.25)" strokeWidth="1.5" fill="none"
+          strokeDasharray="4 3" style={{ animation:'connPulse 2s ease-in-out infinite' }} />
+        <path d="M 0 42 Q 40 68 80 42" stroke="rgba(255,255,255,0.1)" strokeWidth="1" fill="none"
+          strokeDasharray="3 4" style={{ animation:'connPulse 2.5s ease-in-out 0.5s infinite' }} />
+      </svg>
+      <div className="orb-dot" />
+      <div style={{ position:'relative', zIndex:2 }}><CentreHeart /></div>
+    </div>
+  )
+}
+
+/* ─────────────────────────────────────────
+   Orbital progress ring around day counter
+───────────────────────────────────────── */
+function OrbitalRing({ progress, children }) {
+  const r = 118
+  const circ = 2 * Math.PI * r
+  const filled = circ * (progress / 100)
+  const angle = -Math.PI / 2 + (progress / 100) * 2 * Math.PI
+  return (
+    <div style={{ position:'relative', display:'inline-flex', alignItems:'center', justifyContent:'center' }}>
+      <svg viewBox="0 0 260 260" width="260" height="260"
+        style={{ position:'absolute', top:'50%', left:'50%', transform:'translate(-50%,-50%)', pointerEvents:'none' }}>
+        <defs>
+          <linearGradient id="orbGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%"   stopColor="rgba(255,255,255,0.05)" />
+            <stop offset="50%"  stopColor="rgba(255,255,255,0.55)" />
+            <stop offset="100%" stopColor="rgba(255,200,220,0.2)" />
+          </linearGradient>
+        </defs>
+        <circle cx="130" cy="130" r={r} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="1.5"/>
+        <circle cx="130" cy="130" r={r} fill="none" stroke="url(#orbGrad)" strokeWidth="2"
+          strokeDasharray={`${filled} ${circ}`} strokeLinecap="round" transform="rotate(-90 130 130)"
+          style={{ transition:'stroke-dasharray 2s ease', filter:'drop-shadow(0 0 5px rgba(255,200,220,0.5))' }}/>
+        <circle cx={130 + r * Math.cos(angle)} cy={130 + r * Math.sin(angle)}
+          r="5" fill="white"
+          style={{ filter:'drop-shadow(0 0 8px rgba(255,255,255,0.95))' }}/>
+      </svg>
+      {children}
+    </div>
+  )
+}
+
+/* ─────────────────────────────────────────
    Glow digit — premium counter display
 ───────────────────────────────────────── */
 function GlowDigit({ value, prevValue }) {
@@ -656,19 +763,20 @@ export default function Home({ session, profile, onNavigate }) {
           align-items: center;
           position: relative;
           z-index: 1;
-          box-shadow: 0 12px 60px rgba(200,75,139,0.4);
+          box-shadow: 0 12px 60px rgba(0,0,0,0.4), 0 4px 20px rgba(200,75,139,0.25);
+          overflow: hidden;
         }
-        /* subtle shimmer overlay */
+        /* shimmer overlay */
         .home-banner::after {
           content: '';
           position: absolute;
           inset: 0;
           border-radius: inherit;
           background: linear-gradient(135deg,
-            rgba(255,255,255,0.08) 0%,
-            transparent 40%,
-            transparent 60%,
-            rgba(255,255,255,0.04) 100%);
+            rgba(255,255,255,0.1) 0%,
+            transparent 35%,
+            transparent 65%,
+            rgba(255,255,255,0.05) 100%);
           pointer-events: none;
         }
 
@@ -1037,6 +1145,9 @@ export default function Home({ session, profile, onNavigate }) {
         {/* ════════ HERO BANNER ════════ */}
         <div className="home-banner">
           {/* Avatars + Heart */}
+          {/* Floating particle hearts */}
+          <ParticleField />
+
           <div className="av-row">
             <AvatarRing
               src={profile?.avatar_url}
@@ -1044,7 +1155,7 @@ export default function Home({ session, profile, onNavigate }) {
               birthday={profile?.birthday}
               onClick={() => onNavigate?.('settings')}
             />
-            <CentreHeart />
+            <BinaryConnection />
             <AvatarRing
               src={partnerProfile?.avatar_url}
               name={pName}
@@ -1057,7 +1168,8 @@ export default function Home({ session, profile, onNavigate }) {
             <PartnerCard profile={partnerProfile} onClose={() => setShowPartnerCard(false)} />
           )}
 
-          {/* Day counter */}
+          {/* Day counter wrapped in orbital ring */}
+          <OrbitalRing progress={anniv.progress}>
           <div className="day-counter">
             <div className="day-number">
               {String(time.totalDays).split('').map((d, i) => (
@@ -1095,6 +1207,9 @@ export default function Home({ session, profile, onNavigate }) {
               <GlowDigit value={pad(time.seconds)} />
             </div>
           </div>
+
+          </div>
+          </OrbitalRing>
 
           {/* Heart progress bar */}
           <HeartProgress progress={anniv.progress} daysUntil={anniv.daysUntil} />

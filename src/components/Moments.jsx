@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 
 /* ── SVG icons ── */
@@ -81,14 +81,234 @@ function formatDate(dateStr) {
   return new Date(dateStr).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
+/* ── Stories Viewer ── */
+const STORY_DURATION = 5000
+
+function StoriesViewer({ stories, startIdx, onClose }) {
+  const [idx, setIdx] = useState(startIdx)
+  const [progress, setProgress] = useState(0)
+  const [bursts, setBursts] = useState([])
+  const [liked, setLiked] = useState(false)
+  const rafRef = useRef(null)
+  const startRef = useRef(null)
+
+  const story = stories[idx]
+  const moodData = getMood(story?.mood)
+
+  // Reset and start progress animation when idx changes
+  useEffect(() => {
+    setProgress(0)
+    setLiked(false)
+    startRef.current = null
+
+    function tick(ts) {
+      if (!startRef.current) startRef.current = ts
+      const elapsed = ts - startRef.current
+      const p = Math.min((elapsed / STORY_DURATION) * 100, 100)
+      setProgress(p)
+      if (p < 100) {
+        rafRef.current = requestAnimationFrame(tick)
+      } else {
+        if (idx < stories.length - 1) {
+          setIdx(i => i + 1)
+        } else {
+          onClose()
+        }
+      }
+    }
+    rafRef.current = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(rafRef.current)
+  }, [idx, stories.length])
+
+  function goNext() {
+    cancelAnimationFrame(rafRef.current)
+    if (idx < stories.length - 1) setIdx(i => i + 1)
+    else onClose()
+  }
+
+  function goPrev() {
+    cancelAnimationFrame(rafRef.current)
+    if (idx > 0) setIdx(i => i - 1)
+  }
+
+  function triggerHeart(e) {
+    e.stopPropagation()
+    setLiked(true)
+    const newBursts = Array.from({ length: 10 }, (_, i) => ({
+      id: Date.now() + i,
+      angle: (i / 10) * 360 + Math.random() * 20,
+      dist: 55 + Math.random() * 35,
+      size: 10 + Math.random() * 8,
+    }))
+    setBursts(b => [...b, ...newBursts])
+    setTimeout(() => setBursts([]), 900)
+  }
+
+  if (!story) return null
+
+  return (
+    <div className="stories-overlay" style={{ position:'fixed', inset:0, zIndex:300, background:'#000', display:'flex', flexDirection:'column', userSelect:'none', touchAction:'none' }}>
+      <style>{`
+        .stories-prog-track {
+          flex: 1; height: 2.5px;
+          background: rgba(255,255,255,0.3);
+          border-radius: 2px; overflow: hidden;
+        }
+        .stories-prog-fill {
+          height: 100%; background: white; border-radius: 2px;
+        }
+        .stories-close-btn {
+          position: absolute;
+          top: calc(var(--safe-top,0px) + 22px); right: 16px;
+          z-index: 20;
+          background: rgba(0,0,0,0.35); border: none; border-radius: 50%;
+          width: 38px; height: 38px; color: white; cursor: pointer;
+          display: flex; align-items: center; justify-content: center;
+        }
+        @keyframes storyImgIn {
+          from { opacity:0; transform: scale(1.04); }
+          to   { opacity:1; transform: scale(1); }
+        }
+        .story-bg-img {
+          width:100%; height:100%; object-fit:cover;
+          animation: storyImgIn 0.35s ease both;
+        }
+        @keyframes heartBurstOut {
+          0%   { opacity:1; transform: translate(0,0) scale(1.2); }
+          100% { opacity:0; transform: translate(var(--bx),var(--by)) scale(0.2); }
+        }
+        .burst-particle {
+          position:absolute; pointer-events:none;
+          animation: heartBurstOut 0.85s cubic-bezier(0.22,1,0.36,1) forwards;
+        }
+        @keyframes likedPop {
+          0%   { transform: scale(1); }
+          40%  { transform: scale(1.4); }
+          100% { transform: scale(1); }
+        }
+        .heart-liked { animation: likedPop 0.35s ease both; }
+        .stories-tap-l {
+          position:absolute; left:0; top:0; width:35%; height:100%;
+          z-index:5; background:transparent;
+        }
+        .stories-tap-r {
+          position:absolute; right:0; top:0; width:65%; height:100%;
+          z-index:5; background:transparent;
+        }
+      `}</style>
+
+      {/* Progress bars */}
+      <div style={{
+        position:'absolute', top:0, left:0, right:0, zIndex:10,
+        padding:`calc(var(--safe-top,0px) + 10px) 10px 0`,
+        display:'flex', gap:4,
+      }}>
+        {stories.map((_, i) => (
+          <div key={i} className="stories-prog-track">
+            <div className="stories-prog-fill" style={{
+              width: i < idx ? '100%' : i === idx ? `${progress}%` : '0%',
+              transition: i === idx ? 'none' : undefined,
+            }} />
+          </div>
+        ))}
+      </div>
+
+      {/* Close button */}
+      <button className="stories-close-btn" onClick={onClose}><IcoClose /></button>
+
+      {/* Background */}
+      <div style={{ position:'absolute', inset:0 }}>
+        {story.photo_url ? (
+          <img key={story.id} className="story-bg-img" src={story.photo_url} alt={story.title} />
+        ) : (
+          <div style={{
+            width:'100%', height:'100%',
+            background: `linear-gradient(160deg, ${moodData.color}44 0%, #0A0A14 100%)`,
+            display:'flex', alignItems:'center', justifyContent:'center',
+          }}>
+            <svg viewBox="0 0 60 56" width="130" height="120" fill="none">
+              <path d="M30 52C30 52 3 35 3 16C3 8 9.5 2 18 2C22.5 2 26.5 4.5 30 9C33.5 4.5 37.5 2 42 2C50.5 2 57 8 57 16C57 35 30 52 30 52Z"
+                fill={moodData.color} opacity="0.45"/>
+            </svg>
+          </div>
+        )}
+      </div>
+
+      {/* Tap zones */}
+      <div className="stories-tap-l" onClick={goPrev} />
+      <div className="stories-tap-r" onClick={goNext} />
+
+      {/* Caption overlay */}
+      <div style={{
+        position:'absolute', bottom:0, left:0, right:0, zIndex:10,
+        padding:`80px 20px calc(var(--safe-bottom,0px) + 110px)`,
+        background:'linear-gradient(to top, rgba(0,0,0,0.72) 0%, transparent 100%)',
+        pointerEvents:'none',
+      }}>
+        <div style={{
+          fontFamily:'var(--font-display)', fontSize:22, color:'white',
+          marginBottom:5, textShadow:'0 2px 10px rgba(0,0,0,0.6)',
+        }}>{story.title}</div>
+        {story.description && (
+          <div style={{
+            fontFamily:'var(--font-body)', fontSize:14, color:'rgba(255,255,255,0.82)',
+            lineHeight:1.55, textShadow:'0 1px 5px rgba(0,0,0,0.5)',
+          }}>{story.description}</div>
+        )}
+        <div style={{
+          fontFamily:'var(--font-body)', fontSize:12, color:'rgba(255,255,255,0.48)',
+          marginTop:7,
+        }}>{formatDate(story.created_at)}</div>
+      </div>
+
+      {/* Heart button + burst */}
+      <div style={{
+        position:'absolute',
+        bottom:`calc(var(--safe-bottom,0px) + 112px)`,
+        right:22, zIndex:15,
+      }}>
+        <button
+          onClick={triggerHeart}
+          style={{
+            background:'rgba(255,255,255,0.13)',
+            border:'1.5px solid rgba(255,255,255,0.28)',
+            borderRadius:'50%', width:54, height:54,
+            color:'white', cursor:'pointer',
+            display:'flex', alignItems:'center', justifyContent:'center',
+          }}
+        >
+          <svg viewBox="0 0 24 22" width="24" height="22" fill="none" className={liked ? 'heart-liked' : ''}>
+            <path d="M12 20S2 13.5 2 6C2 3.5 4 1.5 6.5 1.5C8.5 1.5 10 3 12 5.5C14 3 15.5 1.5 17.5 1.5C20 1.5 22 3.5 22 6C22 13.5 12 20 12 20Z"
+              fill={liked ? '#e8466a' : 'rgba(255,255,255,0.25)'} stroke="white" strokeWidth="1.5"/>
+          </svg>
+        </button>
+        {/* Burst particles */}
+        {bursts.map(b => {
+          const rad = (b.angle * Math.PI) / 180
+          return (
+            <div key={b.id} className="burst-particle" style={{
+              '--bx': `${Math.cos(rad) * b.dist}px`,
+              '--by': `${Math.sin(rad) * b.dist}px`,
+              left: 27 - b.size / 2, top: 27 - b.size / 2,
+            }}>
+              <svg viewBox="0 0 12 11" width={b.size} height={b.size * 0.92} fill="#e8466a">
+                <path d="M6 10S1 6.5 1 3C1 1.75 2 1 3.25 1C4.25 1 5 1.75 6 3C7 1.75 7.75 1 8.75 1C10 1 11 1.75 11 3C11 6.5 6 10 6 10Z"/>
+              </svg>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 export default function Moments({ session }) {
   const [moments, setMoments] = useState([])
   const [showModal, setShowModal] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [lightbox, setLightbox] = useState(null)
-  const [slideIdx, setSlideIdx] = useState(0)
-  const [showSlide, setShowSlide] = useState(false)
+  const [storiesIdx, setStoriesIdx] = useState(0)
+  const [showStories, setShowStories] = useState(false)
 
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -96,19 +316,7 @@ export default function Moments({ session }) {
   const [photo, setPhoto] = useState(null)
   const [photoPreview, setPhotoPreview] = useState(null)
 
-  const slideTimer = useRef(null)
-
   useEffect(() => { loadMoments() }, [])
-
-  useEffect(() => {
-    if (!showSlide) return
-    const photos = moments.filter(m => m.photo_url)
-    if (!photos.length) return
-    slideTimer.current = setInterval(() => {
-      setSlideIdx(i => (i + 1) % photos.length)
-    }, 3500)
-    return () => clearInterval(slideTimer.current)
-  }, [showSlide, moments])
 
   async function loadMoments() {
     const { data } = await supabase.from('moments').select('*').order('created_at', { ascending: false })
@@ -155,7 +363,10 @@ export default function Moments({ session }) {
     setTitle(''); setDescription(''); setMood('love'); setPhoto(null); setPhotoPreview(null)
   }
 
-  const withPhotos = moments.filter(m => m.photo_url)
+  function openStories(i) {
+    setStoriesIdx(i)
+    setShowStories(true)
+  }
 
   return (
     <>
@@ -212,75 +423,6 @@ export default function Moments({ session }) {
           display: flex;
           align-items: center;
           justify-content: center;
-        }
-
-        /* Slideshow */
-        .slideshow-overlay {
-          position: fixed;
-          inset: 0;
-          background: #000;
-          z-index: 200;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-        }
-        .slideshow-img {
-          max-width: 100%;
-          max-height: 75vh;
-          object-fit: contain;
-          animation: slideFade 0.6s ease;
-        }
-        @keyframes slideFade {
-          from { opacity:0; transform: scale(0.95); }
-          to   { opacity:1; transform: scale(1); }
-        }
-        .slideshow-close {
-          position: absolute;
-          top: calc(20px + var(--safe-top, 0px));
-          right: 20px;
-          background: rgba(255,255,255,0.15);
-          border: none;
-          border-radius: 50%;
-          width: 40px; height: 40px;
-          color: white;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        .slideshow-info {
-          position: absolute;
-          bottom: calc(30px + var(--safe-bottom, 0px));
-          text-align: center;
-          color: white;
-        }
-        .slideshow-title {
-          font-family: var(--font-display);
-          font-size: 20px;
-          margin-bottom: 4px;
-        }
-        .slideshow-date {
-          font-size: 13px;
-          opacity: 0.6;
-          font-family: var(--font-body);
-        }
-        .slideshow-dots {
-          display: flex;
-          gap: 6px;
-          justify-content: center;
-          margin-top: 12px;
-        }
-        .slideshow-dot {
-          width: 6px; height: 6px;
-          border-radius: 50%;
-          background: rgba(255,255,255,0.35);
-          cursor: pointer;
-          transition: background 0.2s, transform 0.2s;
-        }
-        .slideshow-dot.active {
-          background: white;
-          transform: scale(1.4);
         }
 
         /* Masonry grid */
@@ -363,40 +505,6 @@ export default function Moments({ session }) {
         }
         .moment-del-btn:active { background: rgba(232,70,106,0.1); color: #e8466a; }
 
-        /* Lightbox */
-        .lightbox-overlay {
-          position: fixed;
-          inset: 0;
-          background: rgba(0,0,0,0.9);
-          z-index: 210;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          animation: fadeIn 0.2s ease;
-        }
-        .lightbox-img {
-          max-width: 95%;
-          max-height: 90vh;
-          object-fit: contain;
-          border-radius: 8px;
-          animation: zoomIn 0.25s ease;
-        }
-        @keyframes zoomIn { from{transform:scale(0.85);opacity:0} to{transform:scale(1);opacity:1} }
-        .lightbox-close {
-          position: absolute;
-          top: calc(16px + var(--safe-top,0px));
-          right: 16px;
-          background: rgba(255,255,255,0.15);
-          border: none;
-          border-radius: 50%;
-          width: 40px; height: 40px;
-          color: white;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
         .moments-empty {
           display: flex;
           flex-direction: column;
@@ -442,8 +550,8 @@ export default function Moments({ session }) {
             <button className="moments-add-btn" onClick={() => setShowModal(true)}>
               <IcoPlus /> Добавить момент
             </button>
-            {withPhotos.length > 1 && (
-              <button className="moments-slide-btn" onClick={() => { setShowSlide(true); setSlideIdx(0) }} title="Слайд-шоу">
+            {moments.length > 0 && (
+              <button className="moments-slide-btn" onClick={() => openStories(0)} title="Истории">
                 <IcoPlay />
               </button>
             )}
@@ -466,7 +574,7 @@ export default function Moments({ session }) {
                   key={moment.id}
                   className="moment-card-new"
                   style={{ animationDelay: `${i * 0.05}s` }}
-                  onClick={() => moment.photo_url && setLightbox(moment)}
+                  onClick={() => openStories(i)}
                 >
                   {moment.photo_url ? (
                     <img
@@ -477,7 +585,6 @@ export default function Moments({ session }) {
                     />
                   ) : (
                     <div className="moment-no-photo">
-                      {/* Heart SVG for no-photo placeholder */}
                       <svg viewBox="0 0 60 56" width="44" height="40" fill="none">
                         <path d="M30 52C30 52 3 35 3 16C3 8 9.5 2 18 2C22.5 2 26.5 4.5 30 9C33.5 4.5 37.5 2 42 2C50.5 2 57 8 57 16C57 35 30 52 30 52Z"
                           fill={moodData.color} opacity="0.4"/>
@@ -507,29 +614,13 @@ export default function Moments({ session }) {
         )}
       </div>
 
-      {/* Slideshow */}
-      {showSlide && withPhotos.length > 0 && (
-        <div className="slideshow-overlay">
-          <button className="slideshow-close" onClick={() => setShowSlide(false)}><IcoClose /></button>
-          <img key={slideIdx} className="slideshow-img" src={withPhotos[slideIdx].photo_url} alt="" />
-          <div className="slideshow-info">
-            <div className="slideshow-title">{withPhotos[slideIdx].title}</div>
-            <div className="slideshow-date">{formatDate(withPhotos[slideIdx].created_at)}</div>
-            <div className="slideshow-dots">
-              {withPhotos.map((_, i) => (
-                <div key={i} className={`slideshow-dot${i === slideIdx ? ' active' : ''}`} onClick={() => setSlideIdx(i)} />
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Lightbox */}
-      {lightbox && (
-        <div className="lightbox-overlay" onClick={() => setLightbox(null)}>
-          <button className="lightbox-close" onClick={() => setLightbox(null)}><IcoClose /></button>
-          <img className="lightbox-img" src={lightbox.photo_url} alt={lightbox.title} onClick={e => e.stopPropagation()} />
-        </div>
+      {/* Stories Viewer */}
+      {showStories && moments.length > 0 && (
+        <StoriesViewer
+          stories={moments}
+          startIdx={storiesIdx}
+          onClose={() => setShowStories(false)}
+        />
       )}
 
       {/* Modal */}

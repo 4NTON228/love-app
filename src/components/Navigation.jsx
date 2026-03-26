@@ -168,6 +168,7 @@ const MORE_IDS = MORE_ITEMS.map(m => m.id)
 
 export default function Navigation({ activeTab, setActiveTab }) {
   const [pressing, setPressing]   = useState(null)
+  const [bouncing, setBouncing]   = useState(null)
   const [showMore, setShowMore]   = useState(false)
 
   const isMoreActive = MORE_IDS.includes(activeTab)
@@ -175,10 +176,14 @@ export default function Navigation({ activeTab, setActiveTab }) {
   function handlePress(id) {
     if (id === 'more') {
       setShowMore(v => !v)
+      setBouncing('more')
+      setTimeout(() => setBouncing(null), 480)
       return
     }
     setPressing(id)
+    setBouncing(id)
     setTimeout(() => setPressing(null), 200)
+    setTimeout(() => setBouncing(null), 480)
     setActiveTab(id)
     setShowMore(false)
   }
@@ -277,6 +282,17 @@ export default function Navigation({ activeTab, setActiveTab }) {
 
         .nav-tab.pressing .nav-tab-icon {
           transform: scale(0.9);
+        }
+
+        @keyframes navIconBounce {
+          0%   { transform: scale(1) translateY(0); }
+          18%  { transform: scale(0.80) translateY(3px); }
+          52%  { transform: scale(1.28) translateY(-7px); }
+          72%  { transform: scale(0.96) translateY(-2px); }
+          100% { transform: scale(1.1) translateY(-3px); }
+        }
+        .nav-tab.bouncing .nav-tab-icon {
+          animation: navIconBounce 0.46s cubic-bezier(0.22,1,0.36,1) both;
         }
 
         .nav-tab-label {
@@ -453,7 +469,7 @@ export default function Navigation({ activeTab, setActiveTab }) {
           return (
             <button
               key={id}
-              className={`nav-tab${isActive ? ' active' : ''}${pressing === id ? ' pressing' : ''}`}
+              className={`nav-tab${isActive ? ' active' : ''}${pressing === id ? ' pressing' : ''}${bouncing === id ? ' bouncing' : ''}`}
               onClick={() => handlePress(id)}
             >
               <div className="nav-tab-dot" />

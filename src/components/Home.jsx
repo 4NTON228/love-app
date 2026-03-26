@@ -1356,7 +1356,17 @@ export default function Home({ session, profile, onNavigate }) {
             <div className="hc" style={{ animationDelay: '0.1s' }} onMouseMove={mouseGlow} onClick={addRipple}>
               <div className="hc-title">Ближайшее событие</div>
               <div className="event-row">
-                <div className="event-emoji-block">{nextEvent.emoji || '📅'}</div>
+                <div className="event-emoji-block">
+                  {nextEvent.emoji
+                    ? <span style={{ fontSize: 24 }}>{nextEvent.emoji}</span>
+                    : <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="var(--rose)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="4" width="18" height="17" rx="2"/>
+                        <line x1="8" y1="2" x2="8" y2="6"/>
+                        <line x1="16" y1="2" x2="16" y2="6"/>
+                        <line x1="3" y1="10" x2="21" y2="10"/>
+                      </svg>
+                  }
+                </div>
                 <div className="event-info">
                   <div className="event-name">{nextEvent.title}</div>
                   <div className="event-date">

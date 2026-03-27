@@ -1,1018 +1,925 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
+import { Send, Image, Video, X, ArrowDown, Mic, Play, Pause, Edit2, Trash2, Pin, Copy, MoreHorizontal } from 'lucide-react'
 
-const REACTIONS = ['❤️','🔥','😍','😂','👍','💔']
-const VALID_REACTIONS = new Set(REACTIONS)
+const REACTIONS = ['❤️', '🔥', '😍', '😂', '👍', '💔']
 
-/* ─── utils ─── */
-function pad(n) { return String(n).padStart(2,'0') }
-function fmtTime(d) {
-  const dt = new Date(d)
-  return `${pad(dt.getHours())}:${pad(dt.getMinutes())}`
-}
-function fmtDateSep(d) {
-  const dt = new Date(d), now = new Date()
-  const y = new Date(now); y.setDate(y.getDate()-1)
-  if (dt.toDateString()===now.toDateString()) return 'Сегодня'
-  if (dt.toDateString()===y.toDateString()) return 'Вчера'
-  return dt.toLocaleDateString('ru-RU',{day:'numeric',month:'long',year:'numeric'})
-}
-function diffDate(a,b) {
-  return new Date(a).toDateString()!==new Date(b).toDateString()
-}
+export default function Chat({ session, profile }) {
+  const [messages, setMessages] = useState([])
+  const [newText, setNewText] = useState('')
+  const [sending, setSending] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [photoPreview, setPhotoPreview] = useState(null)
+  const [photoFile, setPhotoFile] = useState(null)
+  const [recording, setRecording] = useState(false)
+  const [recordingType, setRecordingType] = useState(null)
+  const [recordingTime, setRecordingTime] = useState(0)
+  const [showScrollBtn, setShowScrollBtn] = useState(false)
+  const [playingAudio, setPlayingAudio] = useState(null)
+  const [cameraStream, setCameraStream] = useState(null)
+  const [contextMenu, setContextMenu] = useState(null)
+  const [editingId, setEditingId] = useState(null)
+  const [reactionFor, setReactionFor] = useState(null)
 
-/* ─── ContextMenu (исправленное позиционирование - по центру) ─── */
-const ContextMenu = memo(({ menu, onClose, onEdit, onDelete, onPin, onCopy, onReact }) => {
-  if (!menu) return null
-  
-  // Центрируем меню по вертикали
-  const getPosition = () => {
-    const viewportHeight = window.innerHeight
-    const menuHeight = 320
-    let top = (viewportHeight - menuHeight) / 2
-    if (top < 20) top = 20
-    const left = (window.innerWidth - 240) / 2
-    return { top, left, right: 'auto' }
-  }
-  
-  const position = getPosition()
-  
-  const S = {
-    overlay:{ position:'fixed', inset:0, zIndex:300, background:'rgba(0,0,0,0.4)', backdropFilter:'blur(6px)' },
-    box:{ 
-      position:'fixed', zIndex:301, background:'#fff', borderRadius:18, 
-      overflow:'hidden', minWidth:220,
-      boxShadow:'0 8px 40px rgba(0,0,0,0.22)', border:'.5px solid rgba(200,51,74,0.12)',
-      top: position.top, left: position.left,
-    },
-    reactions:{ display:'flex', gap:2, padding:'10px 12px', borderBottom:'.5px solid rgba(200,51,74,0.08)', justifyContent:'center' },
-    remoji:{ fontSize:26, cursor:'pointer', padding:'2px 5px', borderRadius:8, transition:'transform .15s', WebkitUserSelect:'none' },
-    btn:{ width:'100%', padding:'12px 16px', display:'flex', alignItems:'center', gap:11, background:'none', border:'none',
-      cursor:'pointer', fontSize:15, color:'#1C0A0E', textAlign:'left', fontFamily:'inherit',
-      borderBottom:'.5px solid rgba(200,51,74,0.07)' },
-    del:{ color:'#E24B4A', borderBottom:'none' }
-  }
-  
-  const Ico = ({d,s=2,c='#C8334A'}) => (
-    <svg viewBox="0 0 24 24" width={17} height={17} fill="none" stroke={c} strokeWidth={s} strokeLinecap="round" strokeLinejoin="round">
-      {d.map((p,i)=><path key={i} d={p}/>)}
-    </svg>
-  )
-  
-  return (
-    <>
-      <div style={S.overlay} onClick={onClose}/>
-      <div style={S.box}>
-        <div style={S.reactions}>
-          {REACTIONS.map(r=>(
-            <span key={r} style={S.remoji}
-              onMouseEnter={e=>e.currentTarget.style.transform='scale(1.35)'}
-              onMouseLeave={e=>e.currentTarget.style.transform='scale(1)'}
-              onClick={()=>{onReact(menu.msgId,r);onClose()}}>{r}</span>
-          ))}
-        </div>
-        {menu.isMe && (
-          <button style={S.btn} onClick={()=>{onEdit(menu.msgId,menu.text);onClose()}}>
-            <Ico d={['M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7','M18.5 2.5a2.1 2.1 0 013 3L12 15l-4 1 1-4z']}/>
-            Редактировать
-          </button>
-        )}
-        <button style={S.btn} onClick={()=>{onCopy(menu.text);onClose()}}>
-          <Ico d={['M8 4H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-2','M16 2H8a2 2 0 00-2 2v0a2 2 0 002 2h8a2 2 0 002-2v0a2 2 0 00-2-2z']}/>
-          Копировать
-        </button>
-        <button style={S.btn} onClick={()=>{onPin(menu.msgId);onClose()}}>
-          <Ico d={['M12 17v5','M5 17h14v-1.76a2 2 0 00-1.11-1.79l-1.78-.9A2 2 0 0115 10.76V6h1a2 2 0 000-4H8a2 2 0 000 4h1v4.76a2 2 0 01-1.11 1.79l-1.78.9A2 2 0 005 15.24V17z']}/>
-          Закрепить
-        </button>
-        {menu.isMe && (
-          <button style={{...S.btn, ...S.del}} onClick={()=>{onDelete(menu.msgId);onClose()}}>
-            <Ico d={['M3 6h18','M19 6l-1 14H6L5 6','M10 11v6','M14 11v6','M9 6V4h6v2']} c="#E24B4A"/>
-            Удалить
-          </button>
-        )}
-      </div>
-    </>
-  )
-})
-
-/* ─── Bubble ─── */
-const Bubble = memo(({ msg, isMine, dark, uid, onLongPress, onDoubleClick, onReact, partnerAvatar, showAvatar }) => {
-  const SURF = dark ? '#1E0A10' : '#fff'
-  const INK  = dark ? '#F5E8EA' : '#1C0A0E'
-  const BDR  = 'rgba(200,51,74,0.15)'
-  const validReacts = msg.reactions
-    ? Object.entries(msg.reactions).filter(([e,u])=>VALID_REACTIONS.has(e)&&Array.isArray(u)&&u.length>0)
-    : []
-
+  const messagesEndRef = useRef(null)
+  const chatContainerRef = useRef(null)
+  const fileInputRef = useRef(null)
+  const mediaRecorderRef = useRef(null)
+  const chunksRef = useRef([])
   const timerRef = useRef(null)
-  const movedRef = useRef(false)
+  const videoPreviewRef = useRef(null)
+  const audioRefs = useRef({})
+  const longPressRef = useRef(null)
 
-  function onTouchStart(e) {
-    movedRef.current = false
-    const t = e.touches[0]
-    timerRef.current = setTimeout(()=>{
-      if (!movedRef.current) onLongPress(msg, t.clientX, t.clientY)
-    }, 500)
-  }
-  function onTouchMove() { movedRef.current = true; clearTimeout(timerRef.current) }
-  function onTouchEnd() { clearTimeout(timerRef.current) }
-  function onMouseDown(e) {
-    timerRef.current = setTimeout(()=> onLongPress(msg, e.clientX, e.clientY), 500)
-  }
-  function onMouseUp() { clearTimeout(timerRef.current) }
-
-  return (
-    <div style={{ 
-      display:'flex', 
-      justifyContent:isMine?'flex-end':'flex-start',
-      marginBottom:2, 
-      paddingLeft:isMine?0:8, 
-      paddingRight:isMine?8:0, 
-      alignItems:'flex-end', 
-      gap:6 
-    }}>
-
-      {!isMine && (
-        <div style={{ 
-          width:28, height:28, borderRadius:'50%', flexShrink:0,
-          background:showAvatar?'linear-gradient(135deg,#C8334A,#8B1A2C)':'transparent',
-          overflow:'hidden', display:'flex', alignItems:'center', 
-          justifyContent:'center', marginBottom:2 
-        }}>
-          {showAvatar && (partnerAvatar
-            ? <img src={partnerAvatar} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
-            : <svg viewBox="0 0 40 40" width="28" height="28" fill="none">
-                <circle cx="20" cy="15" r="7" fill="rgba(255,255,255,0.8)"/>
-                <path d="M5 37c0-8.3 6.7-15 15-15s15 6.7 15 15" fill="rgba(255,255,255,0.6)"/>
-              </svg>
-          )}
-        </div>
-      )}
-
-      <div 
-        style={{ maxWidth:'76%', WebkitUserSelect:'none', userSelect:'none', position:'relative' }}
-        onTouchStart={onTouchStart} 
-        onTouchMove={onTouchMove} 
-        onTouchEnd={onTouchEnd}
-        onMouseDown={onMouseDown} 
-        onMouseUp={onMouseUp} 
-        onMouseLeave={onMouseUp}
-        onDoubleClick={()=>onDoubleClick(msg.id)}
-      >
-
-        {msg.is_video_circle && msg.video_url ? (
-          <div style={{ 
-            width:180, height:180, borderRadius:'50%', overflow:'hidden',
-            border:`2.5px solid ${isMine?'#C8334A':BDR}`, position:'relative' 
-          }}>
-            <video 
-              src={msg.video_url} 
-              playsInline 
-              controls 
-              preload="metadata"
-              style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }}
-            />
-          </div>
-        ) : (
-          <div style={{
-            display:'inline-block',
-            padding: msg.photo_url&&!msg.text ? 3 : '8px 12px 6px',
-            background: isMine ? 'linear-gradient(135deg,#C8334A,#8B1A2C)' : SURF,
-            color: isMine ? '#fff' : INK,
-            borderRadius: isMine ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
-            border: isMine ? 'none' : `.5px solid ${BDR}`,
-            fontSize:15, 
-            lineHeight:1.45,
-            wordBreak:'break-word', 
-            whiteSpace:'pre-wrap',
-            animation:'msgIn .25s ease both',
-            WebkitTransform:'translateZ(0)', 
-            transform:'translateZ(0)',
-          }}>
-            {msg.photo_url && (
-              <img 
-                src={msg.photo_url} 
-                alt="" 
-                loading="lazy"
-                style={{ 
-                  maxWidth:'100%', 
-                  maxHeight:280, 
-                  borderRadius:msg.text?10:14,
-                  display:'block', 
-                  marginBottom:msg.text?6:0 
-                }}
-              />
-            )}
-            {msg.text && (
-              <span>
-                {msg.text}
-                {msg.edited_at && <span style={{fontSize:10,opacity:.5,marginLeft:4}}>ред.</span>}
-              </span>
-            )}
-            <div style={{ 
-              fontSize:10, 
-              opacity:.55, 
-              textAlign:'right', 
-              marginTop:2,
-              display:'flex', 
-              alignItems:'center', 
-              justifyContent:'flex-end', 
-              gap:2 
-            }}>
-              {fmtTime(msg.created_at)}
-              {isMine && <span style={{fontSize:11}}>✓</span>}
-            </div>
-          </div>
-        )}
-
-        {validReacts.length > 0 && (
-          <div style={{ 
-            display:'flex', 
-            flexWrap:'wrap', 
-            gap:3, 
-            marginTop:3,
-            justifyContent:isMine?'flex-end':'flex-start' 
-          }}>
-            {validReacts.map(([emoji,users])=>(
-              <button 
-                key={emoji} 
-                onClick={()=>onReact(msg.id,emoji)} 
-                style={{
-                  background: users.includes(uid) 
-                    ? 'rgba(200,51,74,0.15)' 
-                    : (dark?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.05)'),
-                  border: users.includes(uid) 
-                    ? '1px solid rgba(200,51,74,0.35)' 
-                    : '1px solid transparent',
-                  borderRadius:999, 
-                  padding:'2px 8px', 
-                  fontSize:13, 
-                  cursor:'pointer',
-                  display:'flex', 
-                  alignItems:'center', 
-                  gap:3, 
-                  transition:'transform .15s',
-                  WebkitTapHighlightColor:'transparent',
-                }}
-              >
-                {emoji}
-                <span style={{fontSize:11,color:dark?'#C4909A':'#9A6070'}}>
-                  {users.length}
-                </span>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  )
-})
-
-/* ─── Main Chat ─── */
-export default function Chat({ session, profile, darkMode }) {
-  const [messages,   setMessages]   = useState([])
-  const [newText,    setNewText]    = useState('')
-  const [sending,    setSending]    = useState(false)
-  const [loading,    setLoading]    = useState(true)
-  const [photoFile,  setPhotoFile]  = useState(null)
-  const [photoPreview,setPhotoPreview]=useState(null)
-  const [recording,  setRecording]  = useState(false)
-  const [editingId,  setEditingId]  = useState(null)
-  const [ctxMenu,    setCtxMenu]    = useState(null)
-  const [showDown,   setShowDown]   = useState(false)
-  const [partner,    setPartner]    = useState(null)
-  const [recordTime, setRecordTime] = useState(0)
-
-  const endRef     = useRef(null)
-  const listRef    = useRef(null)
-  const fileRef    = useRef(null)
-  const videoRef   = useRef(null)
-  const recRef     = useRef(null)
-  const chunksRef  = useRef([])
-  const streamRef  = useRef(null)
-  const previewRef = useRef(null)
-  const timerRef   = useRef(null)
-
-  const dark = darkMode
-  const BG   = dark ? '#200A10' : '#FBF0F2'
-  const SURF = dark ? '#1E0A10' : '#fff'
-  const INK  = dark ? '#F5E8EA' : '#1C0A0E'
-  const BDR  = 'rgba(200,51,74,0.13)'
-  const uid  = session?.user?.id
-
-  useEffect(()=>{
-    loadMessages()
-    loadPartner()
-    const ch = supabase.channel('chat')
-      .on('postgres_changes',{event:'INSERT',schema:'public',table:'messages'},p=>{
-        setMessages(prev=> prev.find(m=>m.id===p.new.id) ? prev : [...prev,p.new])
-        setTimeout(scrollDown,60)
-      })
-      .on('postgres_changes',{event:'DELETE',schema:'public',table:'messages'},p=>{
-        setMessages(prev=>prev.filter(m=>m.id!==p.old.id))
-      })
-      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'messages'},p=>{
-        setMessages(prev=>prev.map(m=>m.id===p.new.id?p.new:m))
-      })
-      .subscribe()
-    return ()=>supabase.removeChannel(ch)
-  },[])
-
-  // Таймер записи
   useEffect(() => {
-    if (recording) {
-      setRecordTime(0)
-      timerRef.current = setInterval(() => {
-        setRecordTime(t => t + 1)
-      }, 1000)
-    } else {
-      if (timerRef.current) clearInterval(timerRef.current)
-    }
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current)
-    }
-  }, [recording])
+    loadMessages()
+    const channel = supabase
+      .channel('messages-channel')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' },
+        (payload) => {
+          setMessages(prev => {
+            if (prev.find(m => m.id === payload.new.id)) return prev
+            return [...prev, payload.new]
+          })
+          setTimeout(scrollToBottom, 100)
+        }
+      )
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'messages' },
+        (payload) => {
+          setMessages(prev => prev.filter(m => m.id !== payload.old.id))
+        }
+      )
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' },
+        (payload) => {
+          setMessages(prev => prev.map(m => m.id === payload.new.id ? payload.new : m))
+        }
+      )
+      .subscribe()
+    return () => supabase.removeChannel(channel)
+  }, [])
 
-  async function loadMessages(){
-    const {data}=await supabase.from('messages').select('*')
-      .order('created_at',{ascending:true}).limit(200)
-    setMessages(data||[])
+  async function loadMessages() {
+    const { data } = await supabase
+      .from('messages')
+      .select('*')
+      .order('created_at', { ascending: true })
+      .limit(200)
+    setMessages(data || [])
     setLoading(false)
-    setTimeout(scrollDown,120)
+    setTimeout(scrollToBottom, 200)
   }
 
-  async function loadPartner(){
-    if (!profile?.partner_id) return
-    const {data}=await supabase.from('profiles').select('*').eq('id',profile.partner_id).single()
-    setPartner(data)
+  function scrollToBottom() {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
 
-  function scrollDown(){ endRef.current?.scrollIntoView({behavior:'smooth'}) }
-
-  function onScroll(){
-    const el=listRef.current; if(!el) return
-    setShowDown(el.scrollHeight-el.scrollTop-el.clientHeight>180)
+  function handleScroll() {
+    const el = chatContainerRef.current
+    if (!el) return
+    setShowScrollBtn(el.scrollHeight - el.scrollTop - el.clientHeight > 200)
   }
 
-  async function upload(file,folder){
-    const ext=file.name?.split('.').pop()||'webm'
-    const name=`${Date.now()}-${Math.random().toString(36).slice(6)}.${ext}`
-    const {error}=await supabase.storage.from('photos').upload(`${folder}/${name}`,file)
-    if(error) throw error
-    return supabase.storage.from('photos').getPublicUrl(`${folder}/${name}`).data.publicUrl
+  async function uploadFile(file, folder) {
+    const fileExt = file.name?.split('.').pop() || 'webm'
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+    const filePath = `${folder}/${fileName}`
+    const { error } = await supabase.storage.from('photos').upload(filePath, file)
+    if (error) throw error
+    const { data } = supabase.storage.from('photos').getPublicUrl(filePath)
+    return data.publicUrl
   }
 
-  async function handleSend(){
-    if(!newText.trim()&&!photoFile) return
+  function handlePhotoSelect(e) {
+    const file = e.target.files[0]
+    if (!file) return
+    setPhotoFile(file)
+    setPhotoPreview(URL.createObjectURL(file))
+  }
+
+  function cancelPhoto() {
+    setPhotoFile(null)
+    setPhotoPreview(null)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  async function handleSend() {
+    if (!newText.trim() && !photoFile) return
     setSending(true)
-    try{
-      let photoUrl=null
-      if(photoFile) photoUrl=await upload(photoFile,'chat')
-      if(editingId){
-        await supabase.from('messages').update({text:newText.trim(),edited_at:new Date().toISOString()}).eq('id',editingId)
+    try {
+      let photoUrl = null
+      if (photoFile) photoUrl = await uploadFile(photoFile, 'chat')
+      
+      if (editingId) {
+        await supabase.from('messages').update({ 
+          text: newText.trim(), 
+          edited_at: new Date().toISOString() 
+        }).eq('id', editingId)
         setEditingId(null)
       } else {
-        await supabase.from('messages').insert({user_id:uid,text:newText.trim()||null,photo_url:photoUrl})
+        await supabase.from('messages').insert({
+          user_id: session.user.id,
+          text: newText.trim() || null,
+          photo_url: photoUrl
+        })
       }
-      setNewText(''); cancelPhoto(); scrollDown()
-    } catch(e){ console.error(e) }
+      setNewText('')
+      cancelPhoto()
+    } catch (err) {
+      console.error('Send error:', err)
+    }
     setSending(false)
   }
 
-  function handleKey(e){
-    if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); handleSend() }
-    if(e.key==='Escape'&&editingId){ setEditingId(null); setNewText('') }
+  function handleKeyDown(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSend()
+    }
+    if (e.key === 'Escape' && editingId) {
+      setEditingId(null)
+      setNewText('')
+    }
   }
 
-  function onPhotoChange(e){
-    const f=e.target.files?.[0]; if(!f) return
-    setPhotoFile(f); setPhotoPreview(URL.createObjectURL(f))
-  }
-  function cancelPhoto(){
-    setPhotoFile(null); setPhotoPreview(null)
-    if(fileRef.current) fileRef.current.value=''
-  }
-
-  // Запись видео - большой круг внизу
-  async function startRecord(){
-    try{
-      const stream=await navigator.mediaDevices.getUserMedia({
+  async function startVideoCircle() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'user', width: 300, height: 300 },
         audio: true
       })
-      streamRef.current=stream
-      
-      if(previewRef.current){ 
-        previewRef.current.srcObject = stream
-        previewRef.current.muted = true
-        previewRef.current.play()
-      }
-      
-      const mime=MediaRecorder.isTypeSupported('video/webm;codecs=vp9')?'video/webm;codecs=vp9':'video/webm'
-      const rec=new MediaRecorder(stream,{mimeType:mime})
-      recRef.current=rec
-      chunksRef.current=[]
-      
-      rec.ondataavailable=e=>{ if(e.data.size>0) chunksRef.current.push(e.data) }
-      rec.onstop=async()=>{
-        stream.getTracks().forEach(t=>t.stop())
-        if(previewRef.current) previewRef.current.srcObject=null
-        streamRef.current=null
-        
-        const blob=new Blob(chunksRef.current,{type:'video/webm'})
-        if(blob.size < 1000) {
-          setRecording(false)
-          return
+      setCameraStream(stream)
+      setTimeout(() => {
+        if (videoPreviewRef.current) {
+          videoPreviewRef.current.srcObject = stream
+          videoPreviewRef.current.play()
         }
-        const file=new File([blob],`circle-${Date.now()}.webm`,{type:'video/webm'})
-        setSending(true)
-        try{
-          const url=await upload(file,'circles')
-          await supabase.from('messages').insert({
-            user_id:uid,
-            video_url:url,
-            is_video_circle:true
-          })
-          scrollDown()
-        }catch(e){ console.error(e) }
-        setSending(false)
-        setRecording(false)
+      }, 100)
+
+      const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+        ? 'video/webm;codecs=vp9' : 'video/webm'
+      const mediaRecorder = new MediaRecorder(stream, { mimeType })
+      mediaRecorderRef.current = mediaRecorder
+      chunksRef.current = []
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data)
       }
-      rec.start()
-      setRecording(true)
-      
-      setTimeout(()=>{ 
-        if(recRef.current?.state==='recording') recRef.current.stop()
+      mediaRecorder.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop())
+        setCameraStream(null)
+        clearInterval(timerRef.current)
+        const blob = new Blob(chunksRef.current, { type: 'video/webm' })
+        if (blob.size < 1000) {
+          setRecording(false); setRecordingType(null); setRecordingTime(0); return
+        }
+        const file = new File([blob], `circle-${Date.now()}.webm`, { type: 'video/webm' })
+        setSending(true)
+        try {
+          const videoUrl = await uploadFile(file, 'circles')
+          await supabase.from('messages').insert({
+            user_id: session.user.id, 
+            video_url: videoUrl, 
+            is_video_circle: true
+          })
+          scrollToBottom()
+        } catch (err) { console.error('Video upload error:', err) }
+        setSending(false); setRecording(false); setRecordingType(null); setRecordingTime(0)
+      }
+      mediaRecorder.start()
+      setRecording(true); setRecordingType('video'); setRecordingTime(0)
+      timerRef.current = setInterval(() => setRecordingTime(t => t + 1), 1000)
+      setTimeout(() => {
+        if (mediaRecorderRef.current?.state === 'recording') mediaRecorderRef.current.stop()
       }, 60000)
-    }catch(e){ 
-      console.error(e)
+    } catch (err) {
+      console.error('Camera error:', err)
       alert('Нет доступа к камере')
     }
   }
 
-  function stopRecord(){ 
-    if(recRef.current?.state==='recording') recRef.current.stop()
-  }
+  async function startVoiceMessage() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus' : 'audio/webm'
+      const mediaRecorder = new MediaRecorder(stream, { mimeType })
+      mediaRecorderRef.current = mediaRecorder
+      chunksRef.current = []
 
-  function cancelRecord(){
-    if(recRef.current?.state==='recording') recRef.current.stop()
-    if(streamRef.current) {
-      streamRef.current.getTracks().forEach(t=>t.stop())
-      streamRef.current=null
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data)
+      }
+      mediaRecorder.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop())
+        clearInterval(timerRef.current)
+        const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
+        if (blob.size < 1000) {
+          setRecording(false); setRecordingType(null); setRecordingTime(0); return
+        }
+        const file = new File([blob], `voice-${Date.now()}.webm`, { type: 'audio/webm' })
+        setSending(true)
+        try {
+          const audioUrl = await uploadFile(file, 'voice')
+          await supabase.from('messages').insert({
+            user_id: session.user.id, 
+            video_url: audioUrl,
+            is_video_circle: false, 
+            text: '🎤 Голосовое сообщение'
+          })
+          scrollToBottom()
+        } catch (err) { console.error('Voice upload error:', err) }
+        setSending(false); setRecording(false); setRecordingType(null); setRecordingTime(0)
+      }
+      mediaRecorder.start()
+      setRecording(true); setRecordingType('audio'); setRecordingTime(0)
+      timerRef.current = setInterval(() => setRecordingTime(t => t + 1), 1000)
+    } catch (err) {
+      console.error('Mic error:', err)
+      alert('Нет доступа к микрофону')
     }
-    if(previewRef.current) previewRef.current.srcObject=null
-    chunksRef.current=[]
-    setRecording(false)
   }
 
-  async function deleteMsg(id){ await supabase.from('messages').delete().eq('id',id) }
-
-  async function pinMsg(id){
-    const m=messages.find(x=>x.id===id); if(!m) return
-    await supabase.from('messages').update({is_pinned:!m.is_pinned}).eq('id',id)
+  function stopRecording() {
+    if (mediaRecorderRef.current?.state === 'recording') mediaRecorderRef.current.stop()
   }
 
-  async function addReact(msgId,emoji){
-    if(!VALID_REACTIONS.has(emoji)) return
-    const m=messages.find(x=>x.id===msgId); if(!m) return
-    const r={...(m.reactions||{})}
-    if(r[emoji]?.includes(uid)){
-      r[emoji]=r[emoji].filter(x=>x!==uid)
-      if(!r[emoji].length) delete r[emoji]
+  function cancelRecording() {
+    if (mediaRecorderRef.current?.state === 'recording') {
+      mediaRecorderRef.current.stop()
+    }
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(t => t.stop())
+      setCameraStream(null)
+    }
+    clearInterval(timerRef.current)
+    setRecording(false); setRecordingType(null); setRecordingTime(0)
+  }
+
+  async function deleteMessage(id) {
+    await supabase.from('messages').delete().eq('id', id)
+  }
+
+  async function pinMessage(id) {
+    const msg = messages.find(m => m.id === id)
+    if (!msg) return
+    await supabase.from('messages').update({ is_pinned: !msg.is_pinned }).eq('id', id)
+  }
+
+  async function addReaction(msgId, emoji) {
+    const msg = messages.find(m => m.id === msgId)
+    if (!msg) return
+    const reactions = { ...(msg.reactions || {}) }
+    const uid = session.user.id
+    if (reactions[emoji]?.includes(uid)) {
+      reactions[emoji] = reactions[emoji].filter(id => id !== uid)
+      if (!reactions[emoji].length) delete reactions[emoji]
     } else {
-      r[emoji]=[...(r[emoji]||[]),uid]
+      reactions[emoji] = [...(reactions[emoji] || []), uid]
     }
-    await supabase.from('messages').update({reactions:r}).eq('id',msgId)
+    await supabase.from('messages').update({ reactions }).eq('id', msgId)
   }
 
-  function onLongPress(msg,x,y){
-    setCtxMenu({msgId:msg.id,text:msg.text||'',x,y,isMe:msg.user_id===uid})
+  function copyText(text) {
+    navigator.clipboard?.writeText(text)
   }
 
-  function onDoubleTap(id){ addReact(id,'❤️') }
-
-  function copyText(t){ navigator.clipboard?.writeText(t) }
-
-  const pinned = messages.find(m=>m.is_pinned)
-  const pName = partner?.name || (profile?.name==='Антон'?'Эльвира':'Антон')
-  const pAvatar = partner?.avatar_url
-
-  const formatRecordTime = (s) => {
-    const mins = Math.floor(s / 60)
-    const secs = s % 60
-    return `${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}`
+  function handleLongPress(msg, x, y) {
+    setContextMenu({
+      msgId: msg.id,
+      text: msg.text || '',
+      x, y,
+      isMe: msg.user_id === session.user.id
+    })
   }
 
-  const iconBtn = { 
-    width:36,height:36,borderRadius:'50%',
-    background:'rgba(200,51,74,0.09)',
-    border:'none',
-    display:'flex',
-    alignItems:'center',
-    justifyContent:'center',
-    cursor:'pointer',
-    flexShrink:0,
-    WebkitTapHighlightColor:'transparent',
-    transition:'transform .15s'
+  function toggleAudio(msgId, url) {
+    const cur = audioRefs.current[msgId]
+    if (cur) {
+      if (playingAudio === msgId) { cur.pause(); setPlayingAudio(null) }
+      else { cur.play(); setPlayingAudio(msgId) }
+    } else {
+      Object.values(audioRefs.current).forEach(a => a?.pause())
+      const audio = new Audio(url)
+      audioRefs.current[msgId] = audio
+      audio.onended = () => setPlayingAudio(null)
+      audio.play()
+      setPlayingAudio(msgId)
+    }
   }
 
-  if(loading) return (
-    <div style={{display:'flex',alignItems:'center',justifyContent:'center',
-      height:'100%',background:BG,flexDirection:'column',gap:14}}>
-      <div style={{animation:'heartbeat 1.4s ease-in-out infinite'}}>
-        <svg viewBox="0 0 60 56" width="64" height="60" fill="none">
-          <path d="M30 52C30 52 3 35 3 16C3 8 9.5 2 18 2C22.5 2 26.5 4.5 30 9C33.5 4.5 37.5 2 42 2C50.5 2 57 8 57 16C57 35 30 52 30 52Z" fill="url(#hg)"/>
-          <defs><linearGradient id="hg" x1="0" y1="0" x2="60" y2="56" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stopColor="#E8556A"/><stop offset="100%" stopColor="#C8334A"/>
-          </linearGradient></defs>
-        </svg>
-      </div>
-    </div>
-  )
+  function formatTime(dateStr) {
+    return new Date(dateStr).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+  }
+  
+  function formatRecordingTime(s) {
+    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+  }
+  
+  function formatDateSeparator(dateStr) {
+    const d = new Date(dateStr), today = new Date()
+    const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1)
+    if (d.toDateString() === today.toDateString()) return 'Сегодня'
+    if (d.toDateString() === yesterday.toDateString()) return 'Вчера'
+    return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
+  }
+  
+  function shouldShowDate(msg, i) {
+    if (i === 0) return true
+    return new Date(messages[i - 1].created_at).toDateString() !== new Date(msg.created_at).toDateString()
+  }
+
+  const isMyMessage = (msg) => msg.user_id === session.user.id
+  const isVoiceMessage = (msg) => msg.video_url && !msg.is_video_circle && msg.text === '🎤 Голосовое сообщение'
+  const pinnedMessage = messages.find(m => m.is_pinned)
+
+  if (loading) return <div className="empty-state"><div className="loading-heart">💕</div></div>
 
   return (
-    <div style={{
-      display:'flex',
-      flexDirection:'column',
-      height:'100%',
-      background:BG,
-      position:'relative',
-      overflow:'hidden',
-      WebkitOverflowScrolling:'touch'
-    }}>
-
+    <div className="chat-container">
       {/* ШАПКА */}
-      <div style={{
-        flexShrink:0,
-        background:SURF,
-        borderBottom:`.5px solid ${BDR}`,
-        paddingTop:'max(10px, env(safe-area-inset-top, 0px))',
-        paddingBottom:10,
-        paddingLeft:14,
-        paddingRight:14,
-        display:'flex',
-        alignItems:'center',
-        gap:11,
-        zIndex:20,
-        WebkitTransform:'translateZ(0)',
-        transform:'translateZ(0)'
-      }}>
-        <div style={{position:'relative',flexShrink:0}}>
-          <div style={{
-            width:42,height:42,borderRadius:'50%',overflow:'hidden',
-            background:'linear-gradient(135deg,#C8334A,#8B1A2C)',
-            display:'flex',alignItems:'center',justifyContent:'center'
-          }}>
-            {pAvatar
-              ? <img src={pAvatar} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
-              : <svg viewBox="0 0 40 40" width="40" height="40" fill="none">
-                  <circle cx="20" cy="15" r="7" fill="rgba(255,255,255,.85)"/>
-                  <path d="M5 37c0-8.3 6.7-15 15-15s15 6.7 15 15" fill="rgba(255,255,255,.65)"/>
-                </svg>
-            }
-          </div>
-          <div style={{
-            width:10,height:10,background:'#4CAF50',borderRadius:'50%',
-            border:`2px solid ${SURF}`,position:'absolute',bottom:1,right:1,
-            animation:'pulse 2s ease-in-out infinite'
-          }}/>
+      <div className="chat-header">
+        <div className="chat-header-avatar">💕</div>
+        <div>
+          <div className="chat-header-title">Наш чат</div>
+          <div className="chat-header-subtitle">Только для нас двоих 💕</div>
         </div>
-        <div style={{flex:1,minWidth:0}}>
-          <div style={{
-            fontFamily:"'Cormorant Garamond',serif",
-            fontSize:16,
-            fontWeight:600,
-            color:INK,
-            overflow:'hidden',
-            textOverflow:'ellipsis',
-            whiteSpace:'nowrap'
-          }}>
-            {pName}
-          </div>
-          <div style={{fontSize:11,color:'#4CAF50'}}>только для нас двоих</div>
-        </div>
-        <button style={iconBtn}>
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#C8334A" strokeWidth="2" strokeLinecap="round">
-            <polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/>
-          </svg>
-        </button>
       </div>
 
-      {/* Закреплённое сообщение */}
-      {pinned && (
-        <div style={{
-          flexShrink:0,
-          background:dark?'rgba(200,51,74,0.08)':'rgba(200,51,74,0.05)',
-          borderBottom:`.5px solid rgba(200,51,74,0.12)`,
-          padding:'6px 14px',
-          display:'flex',
-          alignItems:'center',
-          gap:8
-        }}>
-          <div style={{width:3,height:32,background:'#C8334A',borderRadius:3,flexShrink:0}}/>
-          <div style={{flex:1,minWidth:0}}>
-            <div style={{fontSize:11,color:'#C8334A',fontWeight:500,marginBottom:1}}>Закреплено</div>
-            <div style={{
-              fontSize:13,
-              color:INK,
-              overflow:'hidden',
-              textOverflow:'ellipsis',
-              whiteSpace:'nowrap'
-            }}>
-              {pinned.text||'Фото'}
-            </div>
+      {/* Закрепленное сообщение */}
+      {pinnedMessage && (
+        <div className="chat-pinned-message">
+          <div className="chat-pinned-icon">📌</div>
+          <div className="chat-pinned-text">
+            <div className="chat-pinned-label">Закреплено</div>
+            <div className="chat-pinned-content">{pinnedMessage.text || 'Фото'}</div>
           </div>
-          <button onClick={()=>pinMsg(pinned.id)} style={{...iconBtn,background:'none',width:28,height:28}}>
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#9A6070" strokeWidth="2" strokeLinecap="round">
-              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
-          </button>
+          <button onClick={() => pinMessage(pinnedMessage.id)} className="chat-pinned-close">✕</button>
         </div>
       )}
 
       {/* СООБЩЕНИЯ */}
-      <div ref={listRef} onScroll={onScroll} style={{
-        flex:1,
-        overflowY:'auto',
-        padding:'10px 8px',
-        display:'flex',
-        flexDirection:'column',
-        gap:1,
-        WebkitOverflowScrolling:'touch',
-        scrollbarWidth:'thin',
-        minHeight:0
-      }}>
-        {messages.length===0 && (
-          <div style={{
-            display:'flex',
-            flexDirection:'column',
-            alignItems:'center',
-            justifyContent:'center',
-            flex:1,
-            gap:12,
-            opacity:.45
-          }}>
-            <svg viewBox="0 0 60 56" width="52" height="48" fill="none">
-              <path d="M30 52C30 52 3 35 3 16C3 8 9.5 2 18 2C22.5 2 26.5 4.5 30 9C33.5 4.5 37.5 2 42 2C50.5 2 57 8 57 16C57 35 30 52 30 52Z"
-                fill="rgba(200,51,74,0.35)"/>
-            </svg>
-            <p style={{fontSize:14,color:'#9A6070',fontFamily:"'DM Sans',sans-serif"}}>Напишите первое сообщение</p>
+      <div ref={chatContainerRef} onScroll={handleScroll} className="chat-messages">
+        {messages.length === 0 ? (
+          <div className="chat-empty">
+            <div style={{ fontSize: '56px', marginBottom: '16px' }}>💌</div>
+            <p style={{ fontFamily: 'var(--font-display)', fontSize: '18px', fontWeight: 600 }}>Напишите первое сообщение!</p>
           </div>
-        )}
+        ) : messages.map((msg, index) => (
+          <div key={msg.id}>
+            {shouldShowDate(msg, index) && (
+              <div className="chat-date-separator">
+                <span>{formatDateSeparator(msg.created_at)}</span>
+              </div>
+            )}
+            <div className={`chat-msg-row ${isMyMessage(msg) ? 'mine' : 'theirs'}`}>
+              <div
+                onTouchStart={(e) => {
+                  const t = e.touches[0]
+                  longPressRef.current = setTimeout(() => handleLongPress(msg, t.clientX, t.clientY), 500)
+                }}
+                onTouchEnd={() => { if (longPressRef.current) clearTimeout(longPressRef.current) }}
+                onTouchMove={() => { if (longPressRef.current) clearTimeout(longPressRef.current) }}
+                onMouseDown={(e) => {
+                  longPressRef.current = setTimeout(() => handleLongPress(msg, e.clientX, e.clientY), 500)
+                }}
+                onMouseUp={() => { if (longPressRef.current) clearTimeout(longPressRef.current) }}
+                onMouseLeave={() => { if (longPressRef.current) clearTimeout(longPressRef.current) }}
+                onDoubleClick={() => addReaction(msg.id, '❤️')}
+                className="chat-msg-wrapper"
+              >
+                {/* ВИДЕО-КРУЖОЧЕК */}
+                {msg.is_video_circle && msg.video_url ? (
+                  <div className="chat-video-circle-wrapper">
+                    <video
+                      src={msg.video_url}
+                      className={`chat-video-circle ${isMyMessage(msg) ? 'mine' : 'theirs'}`}
+                      playsInline
+                      controls
+                      preload="metadata"
+                    />
+                    <div className="chat-video-circle-time">{formatTime(msg.created_at)}</div>
+                  </div>
 
-        {messages.map((msg,i)=>{
-          const isMine = msg.user_id===uid
-          const showDate = i===0||diffDate(messages[i-1].created_at,msg.created_at)
-          const nextMsg = messages[i+1]
-          const showAvatar = !isMine && (!nextMsg || nextMsg.user_id===uid || diffDate(msg.created_at,nextMsg.created_at))
-          return (
-            <div key={msg.id}>
-              {showDate && (
-                <div style={{textAlign:'center',margin:'10px 0'}}>
-                  <span style={{
-                    background:'rgba(200,51,74,0.09)',
-                    padding:'3px 14px',
-                    borderRadius:20,
-                    fontSize:11,
-                    color:'#9A6070',
-                    fontFamily:"'DM Sans',sans-serif"
-                  }}>
-                    {fmtDateSep(msg.created_at)}
-                  </span>
-                </div>
-              )}
-              <Bubble
-                msg={msg}
-                isMine={isMine}
-                dark={dark}
-                uid={uid}
-                onLongPress={onLongPress}
-                onDoubleClick={onDoubleTap}
-                onReact={addReact}
-                partnerAvatar={pAvatar}
-                showAvatar={showAvatar}
-              />
+                /* ГОЛОСОВОЕ */
+                ) : isVoiceMessage(msg) ? (
+                  <div className={`chat-bubble ${isMyMessage(msg) ? 'mine' : 'theirs'}`} style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: '160px', padding: '10px 14px' }}>
+                    <button onClick={() => toggleAudio(msg.id, msg.video_url)} className={`chat-voice-btn ${isMyMessage(msg) ? 'mine' : 'theirs'}`}>
+                      {playingAudio === msg.id ? <Pause size={16} /> : <Play size={16} />}
+                    </button>
+                    <div style={{ flex: 1 }}>
+                      <div className="chat-voice-wave">
+                        {Array.from({ length: 18 }, (_, i) => (
+                          <div key={i} className={`chat-voice-bar ${isMyMessage(msg) ? 'mine' : 'theirs'}`}
+                            style={{ height: `${6 + Math.sin(i * 0.8) * 8}px` }} />
+                        ))}
+                      </div>
+                    </div>
+                    <div className="chat-msg-time">{formatTime(msg.created_at)}</div>
+                  </div>
+
+                /* ТЕКСТ / ФОТО */
+                ) : (
+                  <div className={`chat-bubble ${isMyMessage(msg) ? 'mine' : 'theirs'} ${msg.photo_url && !msg.text ? 'photo-only' : ''}`}>
+                    {msg.photo_url && (
+                      <img src={msg.photo_url} alt="" className="chat-photo" loading="lazy" />
+                    )}
+                    {msg.text && (
+                      <div className="chat-text">
+                        {msg.text}
+                        {msg.edited_at && <span className="chat-edited">ред.</span>}
+                      </div>
+                    )}
+                    <div className="chat-msg-time">{formatTime(msg.created_at)}</div>
+                  </div>
+                )}
+
+                {/* Реакции */}
+                {msg.reactions && Object.keys(msg.reactions).length > 0 && (
+                  <div className="chat-reactions">
+                    {Object.entries(msg.reactions).map(([emoji, users]) => users.length > 0 && (
+                      <button
+                        key={emoji}
+                        onClick={() => addReaction(msg.id, emoji)}
+                        className={`chat-reaction-btn ${users.includes(session.user.id) ? 'active' : ''}`}
+                      >
+                        {emoji} <span className="chat-reaction-count">{users.length}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-          )
-        })}
-        <div ref={endRef}/>
+          </div>
+        ))}
+        <div ref={messagesEndRef} />
       </div>
 
       {/* Кнопка вниз */}
-      {showDown && (
-        <button onClick={scrollDown} style={{
-          position:'absolute',
-          bottom:80,
-          right:14,
-          width:38,
-          height:38,
-          borderRadius:'50%',
-          background:dark?'#1E0A10':'#fff',
-          border:`.5px solid ${BDR}`,
-          boxShadow:'0 2px 12px rgba(0,0,0,0.15)',
-          display:'flex',
-          alignItems:'center',
-          justifyContent:'center',
-          cursor:'pointer',
-          zIndex:15,
-          WebkitTapHighlightColor:'transparent'
-        }}>
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#C8334A" strokeWidth="2" strokeLinecap="round">
-            <polyline points="6 9 12 15 18 9"/>
-          </svg>
+      {showScrollBtn && (
+        <button onClick={scrollToBottom} className="chat-scroll-btn">
+          <ArrowDown size={18} color="#E8466A" />
         </button>
       )}
 
-      {/* Контекстное меню - исправлено: по центру */}
-      <ContextMenu 
-        menu={ctxMenu} 
-        onClose={()=>setCtxMenu(null)}
-        onEdit={(id,t)=>{setEditingId(id);setNewText(t)}}
-        onDelete={deleteMsg}
-        onPin={pinMsg}
-        onCopy={copyText}
-        onReact={addReact}
-      />
+      {/* Контекстное меню */}
+      {contextMenu && (
+        <>
+          <div className="chat-context-overlay" onClick={() => setContextMenu(null)} />
+          <div className={`chat-context-menu ${contextMenu.isMe ? 'my' : ''}`}>
+            <div className="chat-context-reactions">
+              {REACTIONS.map(r => (
+                <button key={r} onClick={() => { addReaction(contextMenu.msgId, r); setContextMenu(null) }}>
+                  {r}
+                </button>
+              ))}
+            </div>
+            {contextMenu.isMe && (
+              <button onClick={() => { setEditingId(contextMenu.msgId); setNewText(contextMenu.text); setContextMenu(null) }}>
+                <Edit2 size={16} /> Редактировать
+              </button>
+            )}
+            <button onClick={() => { copyText(contextMenu.text); setContextMenu(null) }}>
+              <Copy size={16} /> Копировать
+            </button>
+            <button onClick={() => { pinMessage(contextMenu.msgId); setContextMenu(null) }}>
+              <Pin size={16} /> Закрепить
+            </button>
+            {contextMenu.isMe && (
+              <button onClick={() => { deleteMessage(contextMenu.msgId); setContextMenu(null) }} className="danger">
+                <Trash2 size={16} /> Удалить
+              </button>
+            )}
+          </div>
+        </>
+      )}
 
       {/* Превью фото */}
       {photoPreview && (
-        <div style={{
-          flexShrink:0,
-          padding:'8px 14px',
-          background:SURF,
-          borderTop:`.5px solid ${BDR}`,
-          display:'flex',
-          alignItems:'center',
-          gap:10
-        }}>
-          <img src={photoPreview} style={{width:54,height:54,objectFit:'cover',borderRadius:10}}/>
-          <span style={{flex:1,fontSize:13,color:'#9A6070'}}>Фото прикреплено</span>
-          <button onClick={cancelPhoto} style={{...iconBtn,background:'none',width:30,height:30}}>
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#9A6070" strokeWidth="2.5" strokeLinecap="round">
-              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
-          </button>
+        <div className="chat-photo-preview">
+          <img src={photoPreview} alt="" />
+          <span>Фото прикреплено</span>
+          <button onClick={cancelPhoto}><X size={20} color="#999" /></button>
         </div>
       )}
 
       {/* Режим редактирования */}
       {editingId && (
-        <div style={{
-          flexShrink:0,
-          padding:'5px 14px',
-          background:'rgba(200,51,74,0.07)',
-          borderTop:'0.5px solid rgba(200,51,74,0.15)',
-          display:'flex',
-          alignItems:'center',
-          gap:8
-        }}>
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#C8334A" strokeWidth="2" strokeLinecap="round">
-            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
-            <path d="M18.5 2.5a2.1 2.1 0 013 3L12 15l-4 1 1-4z"/>
-          </svg>
-          <span style={{flex:1,fontSize:12,color:'#C8334A',fontFamily:"'DM Sans',sans-serif"}}>
-            Редактирование
-          </span>
-          <button onClick={()=>{setEditingId(null);setNewText('')}}
-            style={{...iconBtn,background:'none',width:28,height:28}}>
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#9A6070" strokeWidth="2.5" strokeLinecap="round">
-              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
-          </button>
+        <div className="chat-editing-panel">
+          <Edit2 size={14} color="#E8466A" />
+          <span>Редактирование сообщения</span>
+          <button onClick={() => { setEditingId(null); setNewText('') }}><X size={14} /></button>
         </div>
       )}
 
-      {/* ЗАПИСЬ КРУЖОЧКА - БОЛЬШОЙ КРУГ ВНИЗУ */}
+      {/* Панель записи */}
       {recording && (
-        <div style={{
-          position: 'fixed',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          zIndex: 100,
-          background: 'rgba(0,0,0,0.9)',
-          backdropFilter: 'blur(20px)',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '30px 20px',
-          paddingBottom: 'calc(100px + env(safe-area-inset-bottom, 0px))',
-          animation: 'slideUp 0.3s ease',
-        }}>
-          {/* Большой круг с видео */}
-          <div style={{
-            width: 260,
-            height: 260,
-            borderRadius: '50%',
-            overflow: 'hidden',
-            border: '4px solid #C8334A',
-            boxShadow: '0 0 0 4px rgba(200,51,74,0.3), 0 8px 32px rgba(0,0,0,0.5)',
-            background: '#000',
-            position: 'relative',
-            marginBottom: 30,
-          }}>
-            <video 
-              ref={previewRef} 
-              autoPlay 
-              playsInline 
-              muted
-              style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover',
-                transform: 'scaleX(-1)',
-              }}
-            />
-            
-            {/* Индикатор записи */}
-            <div style={{
-              position: 'absolute',
-              top: 16,
-              right: 16,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              background: 'rgba(0,0,0,0.6)',
-              padding: '6px 12px',
-              borderRadius: 20,
-            }}>
-              <div style={{
-                width: 10,
-                height: 10,
-                borderRadius: '50%',
-                background: '#C8334A',
-                animation: 'pulse 1s ease-in-out infinite',
-              }}/>
-              <span style={{ fontSize: 12, color: 'white', fontWeight: 500 }}>ЗАПИСЬ</span>
+        <div className="chat-recording-panel">
+          {recordingType === 'video' && (
+            <div className="chat-recording-video">
+              <video ref={videoPreviewRef} muted playsInline className="chat-recording-preview" />
+              <div className="chat-recording-timer">{formatRecordingTime(recordingTime)}</div>
+              <div className="chat-recording-indicator">
+                <div className="chat-recording-dot" />
+                <span>ЗАПИСЬ</span>
+              </div>
             </div>
-            
-            {/* Таймер */}
-            <div style={{
-              position: 'absolute',
-              bottom: 16,
-              left: 16,
-              background: 'rgba(0,0,0,0.6)',
-              padding: '4px 12px',
-              borderRadius: 20,
-              fontSize: 14,
-              color: 'white',
-              fontFamily: 'monospace',
-              fontWeight: 'bold',
-            }}>
-              {formatRecordTime(recordTime)}
+          )}
+          {recordingType === 'audio' && (
+            <div className="chat-recording-audio">
+              <div className="chat-recording-mic-icon"><Mic size={28} color="#E8466A" /></div>
+              <div className="chat-recording-audio-info">
+                <div className="chat-recording-label">Голосовое сообщение</div>
+                <div className="chat-recording-timer-large">{formatRecordingTime(recordingTime)}</div>
+              </div>
             </div>
-          </div>
-          
-          {/* Кнопки управления */}
-          <div style={{
-            display: 'flex',
-            justifyContent: 'center',
-            gap: 40,
-          }}>
-            <button 
-              onClick={cancelRecord} 
-              style={{
-                width: 60,
-                height: 60,
-                borderRadius: '50%',
-                background: 'rgba(255,255,255,0.15)',
-                border: '2px solid rgba(255,255,255,0.3)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-              }}
-            >
-              <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round">
-                <line x1="18" y1="6" x2="6" y2="18"/>
-                <line x1="6" y1="6" x2="18" y2="18"/>
-              </svg>
+          )}
+          <div className="chat-recording-buttons">
+            <button onClick={cancelRecording} className="chat-rec-cancel-btn">
+              <X size={18} /> Отмена
             </button>
-            
-            <button 
-              onClick={stopRecord} 
-              style={{
-                width: 70,
-                height: 70,
-                borderRadius: '50%',
-                background: 'linear-gradient(135deg,#C8334A,#8B1A2C)',
-                border: 'none',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                boxShadow: '0 4px 20px rgba(200,51,74,0.5)',
-              }}
-            >
-              <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="white" strokeWidth="2">
-                <rect x="6" y="6" width="12" height="12" fill="white" stroke="none"/>
-              </svg>
+            <button onClick={stopRecording} className="chat-rec-send-btn">
+              <Send size={16} /> Отправить
             </button>
-          </div>
-          
-          {/* Подсказка */}
-          <div style={{
-            marginTop: 24,
-            fontSize: 12,
-            color: 'rgba(255,255,255,0.5)',
-            textAlign: 'center',
-          }}>
-            Нажмите «Отправить», чтобы отправить кружочек<br/>
-            или «✕», чтобы отменить
           </div>
         </div>
       )}
 
-      {/* ПОЛЕ ВВОДА */}
-      <div style={{
-        flexShrink:0,
-        background:SURF,
-        borderTop:`.5px solid ${BDR}`,
-        padding:'8px 10px',
-        paddingBottom:'calc(8px + env(safe-area-inset-bottom, 0px))',
-        display:'flex',
-        alignItems:'flex-end',
-        gap:7,
-        WebkitTransform:'translateZ(0)',
-        transform:'translateZ(0)',
-        zIndex: recording ? 10 : 20,
-      }}>
-
-        <button onClick={()=>fileRef.current?.click()} style={iconBtn}>
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#C8334A" strokeWidth="2" strokeLinecap="round">
-            <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
-            <circle cx="12" cy="13" r="4"/>
-          </svg>
-        </button>
-        <input ref={fileRef} type="file" accept="image/*" onChange={onPhotoChange} style={{display:'none'}}/>
-
-        <button onClick={recording?stopRecord:startRecord} style={{
-          ...iconBtn,
-          background:recording?'linear-gradient(135deg,#C8334A,#8B1A2C)':'rgba(200,51,74,0.09)',
-          animation:recording?'glow 1.5s ease-in-out infinite':'none'
-        }}>
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none"
-            stroke={recording?'white':'#C8334A'} strokeWidth="2" strokeLinecap="round">
-            <polygon points="23 7 16 12 23 17 23 7"/>
-            <rect x="1" y="5" width="15" height="14" rx="2"/>
-          </svg>
-        </button>
-        <input ref={videoRef} type="file" accept="video/*" onChange={onVideoFile} style={{display:'none'}}/>
-
-        <div style={{
-          flex:1,
-          background:dark?'#3D1520':'#FBF0F2',
-          borderRadius:22,
-          border:`.5px solid ${BDR}`,
-          padding:'0 14px',
-          display:'flex',
-          alignItems:'flex-end',
-          minWidth:0
-        }}>
-          <textarea
-            value={newText}
-            onChange={e=>setNewText(e.target.value)}
-            onKeyDown={handleKey}
-            placeholder="Сообщение..."
-            rows={1}
-            style={{
-              flex:1,
-              border:'none',
-              background:'none',
-              padding:'10px 0',
-              fontSize:16,
-              fontFamily:"'DM Sans',sans-serif",
-              color:INK,
-              resize:'none',
-              outline:'none',
-              maxHeight:100,
-              lineHeight:1.4,
-              WebkitAppearance:'none',
-              width:'100%'
-            }}
-            onInput={e=>{
-              e.target.style.height='auto'
-              e.target.style.height=Math.min(e.target.scrollHeight,100)+'px'
-            }}
-          />
+      {/* Поле ввода */}
+      {!recording && (
+        <div className="chat-input-bar">
+          <button onClick={() => fileInputRef.current?.click()} className="chat-input-icon-btn">
+            <Image size={22} color="#E8466A" />
+          </button>
+          <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePhotoSelect} style={{ display: 'none' }} />
+          <div className="chat-input-field">
+            <textarea
+              value={newText}
+              onChange={(e) => setNewText(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={editingId ? "Редактировать сообщение..." : "Сообщение..."}
+              rows={1}
+              onInput={(e) => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 100) + 'px' }}
+            />
+          </div>
+          {(newText.trim() || photoFile) ? (
+            <button onClick={handleSend} disabled={sending} className="chat-send-btn active">
+              <Send size={20} color="white" />
+            </button>
+          ) : (
+            <>
+              <button onClick={startVoiceMessage} className="chat-input-icon-btn">
+                <Mic size={22} color="#E8466A" />
+              </button>
+              <button onClick={startVideoCircle} className="chat-input-icon-btn">
+                <Video size={22} color="#E8466A" />
+              </button>
+            </>
+          )}
         </div>
+      )}
 
-        <button onClick={handleSend} disabled={sending||(!newText.trim()&&!photoFile)} style={{
-          ...iconBtn,
-          background:(newText.trim()||photoFile)?'linear-gradient(135deg,#C8334A,#8B1A2C)':'rgba(200,51,74,0.15)',
-          animation:(newText.trim()||photoFile)?'glow 3s ease-in-out infinite':'none',
-          transition:'all .2s',
-          opacity:sending?0.6:1
-        }}>
-          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round">
-            <line x1="22" y1="2" x2="11" y2="13"/>
-            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
-          </svg>
-        </button>
-      </div>
-
+      <style>{`
+        .chat-container {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 110px;
+          display: flex;
+          flex-direction: column;
+          z-index: 5;
+          background: #FFF5F7;
+        }
+        .chat-header {
+          padding: 12px 16px;
+          padding-top: calc(12px + env(safe-area-inset-top, 0px));
+          background: linear-gradient(135deg, #E8466A, #F06292);
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          flex-shrink: 0;
+          box-shadow: 0 2px 12px rgba(232,70,106,0.3);
+        }
+        .chat-header-avatar {
+          width: 40px; height: 40px; border-radius: 50%;
+          background: rgba(255,255,255,0.25);
+          display: flex; align-items: center; justify-content: center;
+          font-size: 20px; flex-shrink: 0;
+        }
+        .chat-header-title {
+          font-family: var(--font-display); font-weight: 700;
+          font-size: 17px; color: white;
+        }
+        .chat-header-subtitle {
+          font-size: 12px; color: rgba(255,255,255,0.8);
+        }
+        .chat-pinned-message {
+          background: rgba(232,70,106,0.05);
+          border-bottom: 1px solid rgba(232,70,106,0.1);
+          padding: 8px 16px;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          flex-shrink: 0;
+        }
+        .chat-pinned-icon { font-size: 14px; }
+        .chat-pinned-text { flex: 1; min-width: 0; }
+        .chat-pinned-label {
+          font-size: 11px;
+          color: #E8466A;
+          font-weight: 600;
+          text-transform: uppercase;
+        }
+        .chat-pinned-content {
+          font-size: 13px;
+          color: var(--text);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .chat-pinned-close {
+          background: none;
+          border: none;
+          cursor: pointer;
+          color: #999;
+          padding: 4px;
+        }
+        .chat-messages {
+          flex: 1; overflow-y: auto; overflow-x: hidden;
+          padding: 12px 10px;
+          display: flex; flex-direction: column; gap: 3px;
+          -webkit-overflow-scrolling: touch;
+          background: linear-gradient(180deg, #FFF5F7 0%, #F8EEF0 100%);
+        }
+        .chat-empty {
+          text-align: center; padding: 60px 20px; color: var(--text-muted);
+        }
+        .chat-date-separator {
+          text-align: center; margin: 14px 0 8px;
+        }
+        .chat-date-separator span {
+          background: rgba(232,70,106,0.08); padding: 5px 16px;
+          border-radius: 20px; font-size: 12px; color: #E8466A; font-weight: 600;
+        }
+        .chat-msg-row {
+          display: flex; margin-bottom: 2px;
+        }
+        .chat-msg-row.mine { justify-content: flex-end; }
+        .chat-msg-row.theirs { justify-content: flex-start; }
+        .chat-msg-wrapper {
+          max-width: 75%; overflow: hidden;
+        }
+        .chat-bubble {
+          overflow: hidden; word-break: break-word;
+          box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+        }
+        .chat-bubble.mine {
+          border-radius: 18px 18px 4px 18px;
+          padding: 8px 12px 6px;
+          background: linear-gradient(135deg, #E8466A, #F06292);
+          color: white;
+        }
+        .chat-bubble.theirs {
+          border-radius: 18px 18px 18px 4px;
+          padding: 8px 12px 6px;
+          background: white;
+          color: var(--text);
+        }
+        .chat-bubble.photo-only {
+          padding: 4px;
+        }
+        .chat-photo {
+          max-width: 100%; max-height: 280px;
+          border-radius: 14px; display: block;
+        }
+        .chat-text {
+          font-size: 15px; line-height: 1.4; white-space: pre-wrap;
+        }
+        .chat-edited {
+          font-size: 10px; opacity: 0.6; margin-left: 4px;
+        }
+        .chat-msg-time {
+          font-size: 11px; opacity: 0.55; text-align: right; margin-top: 2px;
+        }
+        .chat-video-circle-wrapper { position: relative; }
+        .chat-video-circle {
+          width: 180px; height: 180px; border-radius: 50%;
+          object-fit: cover; display: block; border: 3px solid;
+          cursor: pointer;
+        }
+        .chat-video-circle.mine { border-color: #E8466A; }
+        .chat-video-circle.theirs { border-color: #F7A8B8; }
+        .chat-video-circle-time {
+          position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%);
+          background: rgba(0,0,0,0.5); border-radius: 10px;
+          padding: 2px 8px; font-size: 11px; color: white;
+        }
+        .chat-voice-btn {
+          width: 34px; height: 34px; border-radius: 50%;
+          border: none; cursor: pointer;
+          display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .chat-voice-btn.mine { background: rgba(255,255,255,0.25); color: white; }
+        .chat-voice-btn.theirs { background: rgba(232,70,106,0.1); color: #E8466A; }
+        .chat-voice-wave {
+          display: flex; align-items: center; gap: 2px; height: 20px;
+        }
+        .chat-voice-bar {
+          width: 3px; border-radius: 2px;
+        }
+        .chat-voice-bar.mine { background: rgba(255,255,255,0.6); }
+        .chat-voice-bar.theirs { background: rgba(232,70,106,0.3); }
+        .chat-reactions {
+          display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px;
+        }
+        .chat-reaction-btn {
+          background: rgba(0,0,0,0.05);
+          border: none;
+          border-radius: 20px;
+          padding: 2px 8px;
+          font-size: 13px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+        }
+        .chat-reaction-btn.active {
+          background: rgba(232,70,106,0.15);
+          border: 1px solid rgba(232,70,106,0.3);
+        }
+        .chat-reaction-count {
+          font-size: 11px;
+          color: #9A6070;
+        }
+        .chat-scroll-btn {
+          position: fixed; bottom: 130px; right: 14px;
+          width: 38px; height: 38px; border-radius: 50%;
+          background: white; border: none;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+          display: flex; align-items: center; justify-content: center;
+          cursor: pointer; z-index: 10;
+        }
+        .chat-context-overlay {
+          position: fixed; inset: 0; z-index: 200;
+          background: rgba(0,0,0,0.4); backdrop-filter: blur(4px);
+        }
+        .chat-context-menu {
+          position: fixed; z-index: 201;
+          background: white; border-radius: 18px;
+          overflow: hidden; min-width: 220px;
+          box-shadow: 0 8px 40px rgba(0,0,0,0.2);
+          top: 50%; left: 50%;
+          transform: translate(-50%, -50%);
+        }
+        .chat-context-reactions {
+          display: flex; gap: 4px;
+          padding: 12px; border-bottom: 1px solid rgba(0,0,0,0.05);
+          justify-content: center;
+        }
+        .chat-context-reactions button {
+          background: none; border: none;
+          font-size: 26px; cursor: pointer;
+          padding: 4px 8px; border-radius: 8px;
+        }
+        .chat-context-menu button {
+          width: 100%; padding: 12px 16px;
+          display: flex; align-items: center; gap: 12px;
+          background: none; border: none;
+          cursor: pointer; font-size: 15px;
+          border-bottom: 1px solid rgba(0,0,0,0.05);
+          font-family: inherit;
+        }
+        .chat-context-menu button.danger {
+          color: #E24B4A;
+          border-bottom: none;
+        }
+        .chat-photo-preview {
+          padding: 8px 14px; background: white;
+          border-top: 1px solid #eee;
+          display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+        }
+        .chat-photo-preview img {
+          width: 50px; height: 50px; object-fit: cover; border-radius: 8px;
+        }
+        .chat-photo-preview span {
+          font-size: 13px; color: var(--text-light); flex: 1;
+        }
+        .chat-photo-preview button {
+          background: none; border: none; cursor: pointer; padding: 4px;
+        }
+        .chat-editing-panel {
+          padding: 8px 14px; background: rgba(232,70,106,0.05);
+          border-top: 1px solid rgba(232,70,106,0.1);
+          display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+        }
+        .chat-editing-panel span {
+          flex: 1; font-size: 12px; color: #E8466A;
+        }
+        .chat-editing-panel button {
+          background: none; border: none; cursor: pointer; padding: 4px;
+        }
+        .chat-recording-panel {
+          position: fixed; bottom: 0; left: 0; right: 0;
+          background: white; border-top: 1px solid rgba(232,70,106,0.1);
+          padding: 20px; z-index: 100;
+          animation: slideUp 0.3s ease;
+        }
+        .chat-recording-video {
+          display: flex; justify-content: center; margin-bottom: 20px;
+          position: relative;
+        }
+        .chat-recording-preview {
+          width: 200px; height: 200px; border-radius: 50%;
+          object-fit: cover; border: 4px solid #E8466A;
+        }
+        .chat-recording-timer {
+          position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%);
+          background: #E8466A; border-radius: 20px;
+          padding: 4px 12px; font-size: 13px; color: white; font-weight: 700;
+        }
+        .chat-recording-indicator {
+          position: absolute; top: 10px; right: 10px;
+          background: rgba(0,0,0,0.6); padding: 4px 8px;
+          border-radius: 20px; display: flex; align-items: center; gap: 6px;
+        }
+        .chat-recording-dot {
+          width: 8px; height: 8px; border-radius: 50%;
+          background: #E8466A; animation: pulse 1s ease-in-out infinite;
+        }
+        .chat-recording-indicator span {
+          font-size: 10px; color: white; font-weight: 600;
+        }
+        .chat-recording-audio {
+          display: flex; align-items: center; justify-content: center;
+          gap: 20px; margin-bottom: 20px;
+        }
+        .chat-recording-mic-icon {
+          width: 56px; height: 56px; border-radius: 50%;
+          background: rgba(232,70,106,0.1);
+          display: flex; align-items: center; justify-content: center;
+          animation: pulse 1.5s ease-in-out infinite;
+        }
+        .chat-recording-audio-info {
+          text-align: center;
+        }
+        .chat-recording-label {
+          font-size: 12px; color: #E8466A; font-weight: 600;
+        }
+        .chat-recording-timer-large {
+          font-size: 28px; font-weight: 700; font-family: monospace;
+          color: var(--text);
+        }
+        .chat-recording-buttons {
+          display: flex; justify-content: center; gap: 20px;
+        }
+        .chat-rec-cancel-btn {
+          padding: 10px 24px; background: #F5F0F3; border: none;
+          border-radius: 24px; font-size: 14px; font-weight: 600;
+          cursor: pointer; display: flex; align-items: center; gap: 6px;
+        }
+        .chat-rec-send-btn {
+          padding: 10px 24px; background: linear-gradient(135deg, #E8466A, #F06292);
+          border: none; border-radius: 24px; font-size: 14px; font-weight: 700;
+          color: white; cursor: pointer; display: flex; align-items: center; gap: 6px;
+        }
+        .chat-input-bar {
+          padding: 8px 10px;
+          background: white;
+          border-top: 1px solid rgba(232,70,106,0.06);
+          display: flex; align-items: flex-end; gap: 4px; flex-shrink: 0;
+        }
+        .chat-input-icon-btn {
+          background: none; border: none; cursor: pointer;
+          padding: 8px; border-radius: 50%; display: flex; flex-shrink: 0;
+        }
+        .chat-input-field {
+          flex: 1; background: #F5F0F3; border-radius: 22px;
+          padding: 0 14px; display: flex; align-items: flex-end;
+          min-width: 0;
+        }
+        .chat-input-field textarea {
+          flex: 1; border: none; background: none;
+          padding: 10px 0; font-size: 15px;
+          font-family: var(--font-body); color: var(--text);
+          resize: none; outline: none; max-height: 100px; line-height: 1.4;
+          width: 100%;
+        }
+        .chat-send-btn {
+          border: none; cursor: pointer; padding: 10px;
+          border-radius: 50%; display: flex; flex-shrink: 0;
+        }
+        .chat-send-btn.active {
+          background: linear-gradient(135deg, #E8466A, #F06292);
+        }
+        @keyframes slideUp {
+          from { transform: translateY(100%); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes pulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.6; transform: scale(1.1); }
+        }
+      `}</style>
     </div>
   )
 }

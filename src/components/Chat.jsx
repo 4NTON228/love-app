@@ -21,64 +21,58 @@ function diffDate(a,b) {
   return new Date(a).toDateString()!==new Date(b).toDateString()
 }
 
-/* ─── ContextMenu (исправленное позиционирование) ─── */
+/* ─── ContextMenu (исправленное позиционирование - всегда над навигацией) ─── */
 const ContextMenu = memo(({ menu, onClose, onEdit, onDelete, onPin, onCopy, onReact }) => {
   if (!menu) return null
   
-  // Исправляем позиционирование - меню всегда над кнопками
+  // Исправляем позиционирование - меню всегда в центре или над навигацией
   const getPosition = () => {
     const viewportHeight = window.innerHeight
-    const menuHeight = 280 // примерная высота меню
-    let top = menu.y - 20
+    const menuHeight = 320 // примерная высота меню
+    const navHeight = 56 + (parseInt(getComputedStyle(document.documentElement).getPropertyValue('--safe-bottom')) || 0)
     
-    // Если меню выходит за верхний край
-    if (top < 10) {
-      top = 10
-    }
-    // Если меню выходит за нижний край
-    if (top + menuHeight > viewportHeight - 60) {
-      top = viewportHeight - menuHeight - 60
-    }
+    // Центрируем меню
+    let top = (viewportHeight - menuHeight) / 2
     
-    let left = 'auto'
-    let right = 'auto'
-    
-    if (menu.isMe) {
-      right = Math.min(16, window.innerWidth - 220)
-    } else {
-      left = Math.min(menu.x, window.innerWidth - 220)
+    // Если меню выходит за границы, корректируем
+    if (top < 20) top = 20
+    if (top + menuHeight > viewportHeight - navHeight - 10) {
+      top = viewportHeight - menuHeight - navHeight - 10
     }
     
-    return { top, left, right }
+    // Горизонтальное центрирование
+    const left = (window.innerWidth - 240) / 2
+    
+    return { top, left, right: 'auto' }
   }
   
   const position = getPosition()
   
   const S = {
-    overlay:{ position:'fixed', inset:0, zIndex:300, background:'rgba(0,0,0,0.4)', backdropFilter:'blur(6px)' },
+    overlay:{ position:'fixed', inset:0, zIndex:300, background:'rgba(0,0,0,0.5)', backdropFilter:'blur(8px)' },
     box:{ 
       position:'fixed', 
       zIndex:301, 
       background:'#fff', 
-      borderRadius:18, 
+      borderRadius:20, 
       overflow:'hidden', 
-      minWidth:220,
-      boxShadow:'0 8px 40px rgba(0,0,0,0.22)',
-      border:'.5px solid rgba(200,51,74,0.12)',
+      width:260,
+      boxShadow:'0 12px 48px rgba(0,0,0,0.25)',
+      border:'.5px solid rgba(200,51,74,0.15)',
       top: position.top,
       left: position.left,
       right: position.right,
     },
-    reactions:{ display:'flex', gap:2, padding:'10px 12px', borderBottom:'.5px solid rgba(200,51,74,0.08)', justifyContent:'center' },
-    remoji:{ fontSize:26, cursor:'pointer', padding:'2px 5px', borderRadius:8, transition:'transform .15s', WebkitUserSelect:'none' },
-    btn:{ width:'100%', padding:'12px 16px', display:'flex', alignItems:'center', gap:11, background:'none', border:'none',
-      cursor:'pointer', fontSize:15, color:'#1C0A0E', textAlign:'left', fontFamily:'inherit',
+    reactions:{ display:'flex', gap:6, padding:'14px 16px', borderBottom:'.5px solid rgba(200,51,74,0.08)', justifyContent:'center' },
+    remoji:{ fontSize:28, cursor:'pointer', padding:'4px 8px', borderRadius:12, transition:'transform .15s', WebkitUserSelect:'none' },
+    btn:{ width:'100%', padding:'14px 18px', display:'flex', alignItems:'center', gap:12, background:'none', border:'none',
+      cursor:'pointer', fontSize:16, color:'#1C0A0E', textAlign:'left', fontFamily:'inherit',
       borderBottom:'.5px solid rgba(200,51,74,0.07)' },
     del:{ color:'#E24B4A', borderBottom:'none' }
   }
   
   const Ico = ({d,s=2,c='#C8334A'}) => (
-    <svg viewBox="0 0 24 24" width={17} height={17} fill="none" stroke={c} strokeWidth={s} strokeLinecap="round" strokeLinejoin="round">
+    <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke={c} strokeWidth={s} strokeLinecap="round" strokeLinejoin="round">
       {d.map((p,i)=><path key={i} d={p}/>)}
     </svg>
   )
@@ -90,7 +84,7 @@ const ContextMenu = memo(({ menu, onClose, onEdit, onDelete, onPin, onCopy, onRe
         <div style={S.reactions}>
           {REACTIONS.map(r=>(
             <span key={r} style={S.remoji}
-              onMouseEnter={e=>e.currentTarget.style.transform='scale(1.35)'}
+              onMouseEnter={e=>e.currentTarget.style.transform='scale(1.3)'}
               onMouseLeave={e=>e.currentTarget.style.transform='scale(1)'}
               onClick={()=>{onReact(menu.msgId,r);onClose()}}>{r}</span>
           ))}
@@ -401,7 +395,7 @@ export default function Chat({ session, profile, darkMode }) {
     if(fileRef.current) fileRef.current.value=''
   }
 
-  // Исправленная запись видео с предпросмотром себя
+  // Исправленная запись видео - большой кружочек внизу
   async function startRecord(){
     try{
       const stream=await navigator.mediaDevices.getUserMedia({
@@ -414,7 +408,7 @@ export default function Chat({ session, profile, darkMode }) {
       })
       streamRef.current=stream
       
-      // Показываем предпросмотр себя
+      // Показываем предпросмотр себя в большом кружочке
       if(previewRef.current){ 
         previewRef.current.srcObject = stream
         previewRef.current.muted = true
@@ -652,68 +646,6 @@ export default function Chat({ session, profile, darkMode }) {
         </div>
       )}
 
-      {/* ЗАПИСЬ КРУЖОЧКА С ПРЕДПРОСМОТРОМ СЕБЯ */}
-      {recording && (
-        <div style={{
-          flexShrink:0,
-          background:SURF,
-          borderBottom:`.5px solid ${BDR}`,
-          padding:'10px 14px',
-          display:'flex',
-          alignItems:'center',
-          gap:12
-        }}>
-          <div style={{
-            width:62,height:62,borderRadius:'50%',overflow:'hidden',
-            border:'2px solid #C8334A',flexShrink:0,
-            background:'#000'
-          }}>
-            <video 
-              ref={previewRef} 
-              autoPlay 
-              playsInline 
-              muted
-              style={{
-                width:'100%',
-                height:'100%',
-                objectFit:'cover',
-                transform: 'scaleX(-1)', // Зеркальное отображение для селфи
-              }}
-            />
-          </div>
-          <div style={{flex:1}}>
-            <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:3}}>
-              <div style={{
-                width:8,height:8,borderRadius:'50%',background:'#C8334A',
-                animation:'pulse 1s ease-in-out infinite'
-              }}/>
-              <span style={{fontSize:13,color:'#C8334A',fontWeight:500}}>Запись...</span>
-            </div>
-            <div style={{fontSize:11,color:'#9A6070'}}>Нажми «Отправить» когда закончишь</div>
-          </div>
-          <div style={{display:'flex',gap:8,flexShrink:0}}>
-            <button onClick={cancelRecord} style={iconBtn}>
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#9A6070" strokeWidth="2.5" strokeLinecap="round">
-                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-              </svg>
-            </button>
-            <button onClick={stopRecord} style={{
-              padding:'8px 16px',
-              borderRadius:20,
-              background:'linear-gradient(135deg,#C8334A,#8B1A2C)',
-              color:'white',
-              border:'none',
-              fontSize:13,
-              fontWeight:600,
-              cursor:'pointer',
-              WebkitTapHighlightColor:'transparent'
-            }}>
-              Отправить
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* СООБЩЕНИЯ */}
       <div ref={listRef} onScroll={onScroll} style={{
         flex:1,
@@ -807,7 +739,7 @@ export default function Chat({ session, profile, darkMode }) {
         </button>
       )}
 
-      {/* Контекстное меню */}
+      {/* Контекстное меню - теперь в центре */}
       <ContextMenu 
         menu={ctxMenu} 
         onClose={()=>setCtxMenu(null)}
@@ -866,6 +798,110 @@ export default function Chat({ session, profile, darkMode }) {
         </div>
       )}
 
+      {/* ЗАПИСЬ КРУЖОЧКА - БОЛЬШОЙ КРУГ ВНИЗУ */}
+      {recording && (
+        <div style={{
+          position: 'absolute',
+          bottom: 'calc(70px + env(safe-area-inset-bottom, 0px))',
+          left: 0,
+          right: 0,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 50,
+          animation: 'slideUp 0.3s ease',
+        }}>
+          <div style={{
+            width: 200,
+            height: 200,
+            borderRadius: '50%',
+            overflow: 'hidden',
+            border: '4px solid #C8334A',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+            background: '#000',
+            position: 'relative',
+          }}>
+            <video 
+              ref={previewRef} 
+              autoPlay 
+              playsInline 
+              muted
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                transform: 'scaleX(-1)',
+              }}
+            />
+            {/* Анимация записи */}
+            <div style={{
+              position: 'absolute',
+              bottom: 12,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              background: 'rgba(0,0,0,0.6)',
+              padding: '6px 14px',
+              borderRadius: 20,
+              backdropFilter: 'blur(8px)',
+            }}>
+              <div style={{
+                width: 10,
+                height: 10,
+                borderRadius: '50%',
+                background: '#C8334A',
+                animation: 'pulse 1s ease-in-out infinite',
+              }}/>
+              <span style={{ fontSize: 12, color: 'white' }}>Запись...</span>
+            </div>
+          </div>
+          
+          {/* Кнопки управления */}
+          <div style={{
+            position: 'absolute',
+            bottom: -60,
+            left: 0,
+            right: 0,
+            display: 'flex',
+            justifyContent: 'center',
+            gap: 24,
+            padding: '12px 20px',
+            background: SURF,
+            borderTop: `.5px solid ${BDR}`,
+          }}>
+            <button onClick={cancelRecord} style={{
+              ...iconBtn,
+              width: 48,
+              height: 48,
+              background: 'rgba(200,51,74,0.1)',
+              borderRadius: '50%',
+            }}>
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#9A6070" strokeWidth="2" strokeLinecap="round">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+            <button onClick={stopRecord} style={{
+              width: 56,
+              height: 56,
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg,#C8334A,#8B1A2C)',
+              border: 'none',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              boxShadow: '0 4px 16px rgba(200,51,74,0.4)',
+            }}>
+              <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="white" strokeWidth="2">
+                <rect x="6" y="6" width="12" height="12" fill="white" stroke="none"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ПОЛЕ ВВОДА */}
       <div style={{
         flexShrink:0,
@@ -877,7 +913,8 @@ export default function Chat({ session, profile, darkMode }) {
         alignItems:'flex-end',
         gap:7,
         WebkitTransform:'translateZ(0)',
-        transform:'translateZ(0)'
+        transform:'translateZ(0)',
+        zIndex: recording ? 10 : 20,
       }}>
 
         <button 

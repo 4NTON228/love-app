@@ -21,27 +21,68 @@ function diffDate(a,b) {
   return new Date(a).toDateString()!==new Date(b).toDateString()
 }
 
-/* ─── ContextMenu ─── */
+/* ─── ContextMenu (исправленное позиционирование) ─── */
 const ContextMenu = memo(({ menu, onClose, onEdit, onDelete, onPin, onCopy, onReact }) => {
   if (!menu) return null
-  const S = {
-    overlay:{ position:'fixed',inset:0,zIndex:300,background:'rgba(0,0,0,0.4)',backdropFilter:'blur(6px)' },
-    box:{ position:'fixed',zIndex:301,background:'#fff',borderRadius:18,overflow:'hidden',minWidth:210,
-      boxShadow:'0 8px 40px rgba(0,0,0,0.22)',border:'.5px solid rgba(200,51,74,0.12)',
-      top:Math.min(menu.y, window.innerHeight-260), left:menu.isMe?'auto':Math.min(menu.x,window.innerWidth-220),
-      right:menu.isMe?14:'auto' },
-    reactions:{ display:'flex',gap:2,padding:'10px 12px',borderBottom:'.5px solid rgba(200,51,74,0.08)',justifyContent:'center' },
-    remoji:{ fontSize:26,cursor:'pointer',padding:'2px 5px',borderRadius:8,transition:'transform .15s',WebkitUserSelect:'none' },
-    btn:{ width:'100%',padding:'12px 16px',display:'flex',alignItems:'center',gap:11,background:'none',border:'none',
-      cursor:'pointer',fontSize:15,color:'#1C0A0E',textAlign:'left',fontFamily:'inherit',
-      borderBottom:'.5px solid rgba(200,51,74,0.07)' },
-    del:{ color:'#E24B4A' }
+  
+  // Исправляем позиционирование - меню всегда над кнопками
+  const getPosition = () => {
+    const viewportHeight = window.innerHeight
+    const menuHeight = 280 // примерная высота меню
+    let top = menu.y - 20
+    
+    // Если меню выходит за верхний край
+    if (top < 10) {
+      top = 10
+    }
+    // Если меню выходит за нижний край
+    if (top + menuHeight > viewportHeight - 60) {
+      top = viewportHeight - menuHeight - 60
+    }
+    
+    let left = 'auto'
+    let right = 'auto'
+    
+    if (menu.isMe) {
+      right = Math.min(16, window.innerWidth - 220)
+    } else {
+      left = Math.min(menu.x, window.innerWidth - 220)
+    }
+    
+    return { top, left, right }
   }
+  
+  const position = getPosition()
+  
+  const S = {
+    overlay:{ position:'fixed', inset:0, zIndex:300, background:'rgba(0,0,0,0.4)', backdropFilter:'blur(6px)' },
+    box:{ 
+      position:'fixed', 
+      zIndex:301, 
+      background:'#fff', 
+      borderRadius:18, 
+      overflow:'hidden', 
+      minWidth:220,
+      boxShadow:'0 8px 40px rgba(0,0,0,0.22)',
+      border:'.5px solid rgba(200,51,74,0.12)',
+      top: position.top,
+      left: position.left,
+      right: position.right,
+    },
+    reactions:{ display:'flex', gap:2, padding:'10px 12px', borderBottom:'.5px solid rgba(200,51,74,0.08)', justifyContent:'center' },
+    remoji:{ fontSize:26, cursor:'pointer', padding:'2px 5px', borderRadius:8, transition:'transform .15s', WebkitUserSelect:'none' },
+    btn:{ width:'100%', padding:'12px 16px', display:'flex', alignItems:'center', gap:11, background:'none', border:'none',
+      cursor:'pointer', fontSize:15, color:'#1C0A0E', textAlign:'left', fontFamily:'inherit',
+      borderBottom:'.5px solid rgba(200,51,74,0.07)' },
+    del:{ color:'#E24B4A', borderBottom:'none' }
+  }
+  
   const Ico = ({d,s=2,c='#C8334A'}) => (
     <svg viewBox="0 0 24 24" width={17} height={17} fill="none" stroke={c} strokeWidth={s} strokeLinecap="round" strokeLinejoin="round">
       {d.map((p,i)=><path key={i} d={p}/>)}
     </svg>
   )
+  
   return (
     <>
       <div style={S.overlay} onClick={onClose}/>
@@ -69,7 +110,7 @@ const ContextMenu = memo(({ menu, onClose, onEdit, onDelete, onPin, onCopy, onRe
           Закрепить
         </button>
         {menu.isMe && (
-          <button style={{...S.btn,...S.del,borderBottom:'none'}} onClick={()=>{onDelete(menu.msgId);onClose()}}>
+          <button style={{...S.btn, ...S.del}} onClick={()=>{onDelete(menu.msgId);onClose()}}>
             <Ico d={['M3 6h18','M19 6l-1 14H6L5 6','M10 11v6','M14 11v6','M9 6V4h6v2']} c="#E24B4A"/>
             Удалить
           </button>
@@ -116,7 +157,6 @@ const Bubble = memo(({ msg, isMine, dark, uid, onLongPress, onDoubleClick, onRea
       gap:6 
     }}>
 
-      {/* Аватар партнёра */}
       {!isMine && (
         <div style={{ 
           width:28, height:28, borderRadius:'50%', flexShrink:0,
@@ -145,7 +185,6 @@ const Bubble = memo(({ msg, isMine, dark, uid, onLongPress, onDoubleClick, onRea
         onDoubleClick={()=>onDoubleClick(msg.id)}
       >
 
-        {/* Видео-кружочек */}
         {msg.is_video_circle && msg.video_url ? (
           <div style={{ 
             width:180, height:180, borderRadius:'50%', overflow:'hidden',
@@ -160,7 +199,6 @@ const Bubble = memo(({ msg, isMine, dark, uid, onLongPress, onDoubleClick, onRea
             />
           </div>
         ) : (
-          /* Пузырь сообщения */
           <div style={{
             display:'inline-block',
             padding: msg.photo_url&&!msg.text ? 3 : '8px 12px 6px',
@@ -212,7 +250,6 @@ const Bubble = memo(({ msg, isMine, dark, uid, onLongPress, onDoubleClick, onRea
           </div>
         )}
 
-        {/* Реакции */}
         {validReacts.length > 0 && (
           <div style={{ 
             display:'flex', 
@@ -286,7 +323,6 @@ export default function Chat({ session, profile, darkMode }) {
   const BDR  = 'rgba(200,51,74,0.13)'
   const uid  = session?.user?.id
 
-  /* ── load ── */
   useEffect(()=>{
     loadMessages()
     loadPartner()
@@ -326,7 +362,6 @@ export default function Chat({ session, profile, darkMode }) {
     setShowDown(el.scrollHeight-el.scrollTop-el.clientHeight>180)
   }
 
-  /* ── upload ── */
   async function upload(file,folder){
     const ext=file.name?.split('.').pop()||'webm'
     const name=`${Date.now()}-${Math.random().toString(36).slice(6)}.${ext}`
@@ -335,7 +370,6 @@ export default function Chat({ session, profile, darkMode }) {
     return supabase.storage.from('photos').getPublicUrl(`${folder}/${name}`).data.publicUrl
   }
 
-  /* ── send ── */
   async function handleSend(){
     if(!newText.trim()&&!photoFile) return
     setSending(true)
@@ -358,7 +392,6 @@ export default function Chat({ session, profile, darkMode }) {
     if(e.key==='Escape'&&editingId){ setEditingId(null); setNewText('') }
   }
 
-  /* ── photo ── */
   function onPhotoChange(e){
     const f=e.target.files?.[0]; if(!f) return
     setPhotoFile(f); setPhotoPreview(URL.createObjectURL(f))
@@ -368,42 +401,82 @@ export default function Chat({ session, profile, darkMode }) {
     if(fileRef.current) fileRef.current.value=''
   }
 
-  /* ── video circle ── */
+  // Исправленная запись видео с предпросмотром себя
   async function startRecord(){
     try{
-      const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:300,height:300},audio:true})
+      const stream=await navigator.mediaDevices.getUserMedia({
+        video: { 
+          facingMode: 'user', 
+          width: { ideal: 300 }, 
+          height: { ideal: 300 } 
+        }, 
+        audio: true 
+      })
       streamRef.current=stream
-      if(previewRef.current){ previewRef.current.srcObject=stream; previewRef.current.play() }
+      
+      // Показываем предпросмотр себя
+      if(previewRef.current){ 
+        previewRef.current.srcObject = stream
+        previewRef.current.muted = true
+        previewRef.current.play()
+      }
+      
       const mime=MediaRecorder.isTypeSupported('video/webm;codecs=vp9')?'video/webm;codecs=vp9':'video/webm'
       const rec=new MediaRecorder(stream,{mimeType:mime})
-      recRef.current=rec; chunksRef.current=[]
+      recRef.current=rec
+      chunksRef.current=[]
+      
       rec.ondataavailable=e=>{ if(e.data.size>0) chunksRef.current.push(e.data) }
       rec.onstop=async()=>{
         stream.getTracks().forEach(t=>t.stop())
         if(previewRef.current) previewRef.current.srcObject=null
         streamRef.current=null
+        
         const blob=new Blob(chunksRef.current,{type:'video/webm'})
         const file=new File([blob],`circle-${Date.now()}.webm`,{type:'video/webm'})
         setSending(true)
         try{
           const url=await upload(file,'circles')
-          await supabase.from('messages').insert({user_id:uid,video_url:url,is_video_circle:true})
+          await supabase.from('messages').insert({
+            user_id:uid,
+            video_url:url,
+            is_video_circle:true
+          })
           scrollDown()
         }catch(e){ console.error(e) }
-        setSending(false); setRecording(false)
+        setSending(false)
+        setRecording(false)
       }
-      rec.start(); setRecording(true)
-      setTimeout(()=>{ if(recRef.current?.state==='recording') recRef.current.stop() },60000)
-    }catch(e){ console.error(e); alert('Нет доступа к камере') }
+      rec.start()
+      setRecording(true)
+      
+      // Авто-остановка через 60 секунд
+      setTimeout(()=>{ 
+        if(recRef.current?.state==='recording') recRef.current.stop()
+      }, 60000)
+    }catch(e){ 
+      console.error(e)
+      alert('Нет доступа к камере. Проверьте разрешения в настройках браузера.')
+    }
   }
 
-  function stopRecord(){ recRef.current?.state==='recording'&&recRef.current.stop() }
+  function stopRecord(){ 
+    if(recRef.current?.state==='recording') {
+      recRef.current.stop()
+    }
+  }
 
   function cancelRecord(){
-    recRef.current?.state==='recording'&&recRef.current.stop()
-    streamRef.current?.getTracks().forEach(t=>t.stop())
+    if(recRef.current?.state==='recording') {
+      recRef.current.stop()
+    }
+    if(streamRef.current) {
+      streamRef.current.getTracks().forEach(t=>t.stop())
+      streamRef.current=null
+    }
     if(previewRef.current) previewRef.current.srcObject=null
-    streamRef.current=null; chunksRef.current=[]; setRecording(false)
+    chunksRef.current=[]
+    setRecording(false)
   }
 
   async function onVideoFile(e){
@@ -418,8 +491,9 @@ export default function Chat({ session, profile, darkMode }) {
     if(videoRef.current) videoRef.current.value=''
   }
 
-  /* ── ctx actions ── */
-  async function deleteMsg(id){ await supabase.from('messages').delete().eq('id',id) }
+  async function deleteMsg(id){ 
+    await supabase.from('messages').delete().eq('id',id) 
+  }
 
   async function pinMsg(id){
     const m=messages.find(x=>x.id===id); if(!m) return
@@ -447,7 +521,6 @@ export default function Chat({ session, profile, darkMode }) {
 
   function copyText(t){ navigator.clipboard?.writeText(t) }
 
-  /* ── pinned ── */
   const pinned = messages.find(m=>m.is_pinned)
   const pName = partner?.name || (profile?.name==='Антон'?'Эльвира':'Антон')
   const pAvatar = partner?.avatar_url
@@ -465,7 +538,6 @@ export default function Chat({ session, profile, darkMode }) {
     transition:'transform .15s'
   }
 
-  /* ── loading ── */
   if(loading) return (
     <div style={{display:'flex',alignItems:'center',justifyContent:'center',
       height:'100%',background:BG,flexDirection:'column',gap:14}}>
@@ -491,7 +563,7 @@ export default function Chat({ session, profile, darkMode }) {
       WebkitOverflowScrolling:'touch'
     }}>
 
-      {/* ═══ ШАПКА ═══ */}
+      {/* ШАПКА */}
       <div style={{
         flexShrink:0,
         background:SURF,
@@ -580,7 +652,7 @@ export default function Chat({ session, profile, darkMode }) {
         </div>
       )}
 
-      {/* ═══ Запись кружочка ═══ */}
+      {/* ЗАПИСЬ КРУЖОЧКА С ПРЕДПРОСМОТРОМ СЕБЯ */}
       {recording && (
         <div style={{
           flexShrink:0,
@@ -593,10 +665,21 @@ export default function Chat({ session, profile, darkMode }) {
         }}>
           <div style={{
             width:62,height:62,borderRadius:'50%',overflow:'hidden',
-            border:'2px solid #C8334A',flexShrink:0
+            border:'2px solid #C8334A',flexShrink:0,
+            background:'#000'
           }}>
-            <video ref={previewRef} muted autoPlay playsInline
-              style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+            <video 
+              ref={previewRef} 
+              autoPlay 
+              playsInline 
+              muted
+              style={{
+                width:'100%',
+                height:'100%',
+                objectFit:'cover',
+                transform: 'scaleX(-1)', // Зеркальное отображение для селфи
+              }}
+            />
           </div>
           <div style={{flex:1}}>
             <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:3}}>
@@ -631,7 +714,7 @@ export default function Chat({ session, profile, darkMode }) {
         </div>
       )}
 
-      {/* ═══ СООБЩЕНИЯ ═══ */}
+      {/* СООБЩЕНИЯ */}
       <div ref={listRef} onScroll={onScroll} style={{
         flex:1,
         overflowY:'auto',
@@ -783,7 +866,7 @@ export default function Chat({ session, profile, darkMode }) {
         </div>
       )}
 
-      {/* ═══ ПОЛЕ ВВОДА (ИСПРАВЛЕННОЕ) ═══ */}
+      {/* ПОЛЕ ВВОДА */}
       <div style={{
         flexShrink:0,
         background:SURF,
@@ -797,7 +880,6 @@ export default function Chat({ session, profile, darkMode }) {
         transform:'translateZ(0)'
       }}>
 
-        {/* Кнопка фото */}
         <button 
           onClick={()=>fileRef.current?.click()} 
           style={iconBtn}
@@ -809,7 +891,6 @@ export default function Chat({ session, profile, darkMode }) {
         </button>
         <input ref={fileRef} type="file" accept="image/*" onChange={onPhotoChange} style={{display:'none'}}/>
 
-        {/* Кнопка кружочка */}
         <button 
           onClick={recording?stopRecord:startRecord}
           style={{
@@ -826,7 +907,6 @@ export default function Chat({ session, profile, darkMode }) {
         </button>
         <input ref={videoRef} type="file" accept="video/*" onChange={onVideoFile} style={{display:'none'}}/>
 
-        {/* Поле ввода текста */}
         <div style={{
           flex:1,
           background:dark?'#3D1520':'#FBF0F2',
@@ -865,7 +945,6 @@ export default function Chat({ session, profile, darkMode }) {
           />
         </div>
 
-        {/* Кнопка отправки */}
         <button 
           onClick={handleSend}
           disabled={sending||(!newText.trim()&&!photoFile)}

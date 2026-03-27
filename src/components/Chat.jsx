@@ -106,14 +106,24 @@ const Bubble = memo(({ msg, isMine, dark, uid, onLongPress, onDoubleClick, onRea
   function onMouseUp() { clearTimeout(timerRef.current) }
 
   return (
-    <div style={{ display:'flex', justifyContent:isMine?'flex-end':'flex-start',
-      marginBottom:2, paddingLeft:isMine?0:8, paddingRight:isMine?8:0, alignItems:'flex-end', gap:6 }}>
+    <div style={{ 
+      display:'flex', 
+      justifyContent:isMine?'flex-end':'flex-start',
+      marginBottom:2, 
+      paddingLeft:isMine?0:8, 
+      paddingRight:isMine?8:0, 
+      alignItems:'flex-end', 
+      gap:6 
+    }}>
 
       {/* Аватар партнёра */}
       {!isMine && (
-        <div style={{ width:28, height:28, borderRadius:'50%', flexShrink:0,
+        <div style={{ 
+          width:28, height:28, borderRadius:'50%', flexShrink:0,
           background:showAvatar?'linear-gradient(135deg,#C8334A,#8B1A2C)':'transparent',
-          overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center', marginBottom:2 }}>
+          overflow:'hidden', display:'flex', alignItems:'center', 
+          justifyContent:'center', marginBottom:2 
+        }}>
           {showAvatar && (partnerAvatar
             ? <img src={partnerAvatar} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
             : <svg viewBox="0 0 40 40" width="28" height="28" fill="none">
@@ -124,21 +134,33 @@ const Bubble = memo(({ msg, isMine, dark, uid, onLongPress, onDoubleClick, onRea
         </div>
       )}
 
-      <div style={{ maxWidth:'76%' }}
-        onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
-        onMouseDown={onMouseDown} onMouseUp={onMouseUp} onMouseLeave={onMouseUp}
+      <div 
+        style={{ maxWidth:'76%', WebkitUserSelect:'none', userSelect:'none', position:'relative' }}
+        onTouchStart={onTouchStart} 
+        onTouchMove={onTouchMove} 
+        onTouchEnd={onTouchEnd}
+        onMouseDown={onMouseDown} 
+        onMouseUp={onMouseUp} 
+        onMouseLeave={onMouseUp}
         onDoubleClick={()=>onDoubleClick(msg.id)}
-        style={{ maxWidth:'76%', WebkitUserSelect:'none', userSelect:'none', position:'relative' }}>
+      >
 
         {/* Видео-кружочек */}
         {msg.is_video_circle && msg.video_url ? (
-          <div style={{ width:180, height:180, borderRadius:'50%', overflow:'hidden',
-            border:`2.5px solid ${isMine?'#C8334A':BDR}`, position:'relative' }}>
-            <video src={msg.video_url} playsInline controls preload="metadata"
-              style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }}/>
+          <div style={{ 
+            width:180, height:180, borderRadius:'50%', overflow:'hidden',
+            border:`2.5px solid ${isMine?'#C8334A':BDR}`, position:'relative' 
+          }}>
+            <video 
+              src={msg.video_url} 
+              playsInline 
+              controls 
+              preload="metadata"
+              style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }}
+            />
           </div>
         ) : (
-          /* Пузырь */
+          /* Пузырь сообщения */
           <div style={{
             display:'inline-block',
             padding: msg.photo_url&&!msg.text ? 3 : '8px 12px 6px',
@@ -146,23 +168,44 @@ const Bubble = memo(({ msg, isMine, dark, uid, onLongPress, onDoubleClick, onRea
             color: isMine ? '#fff' : INK,
             borderRadius: isMine ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
             border: isMine ? 'none' : `.5px solid ${BDR}`,
-            fontSize:15, lineHeight:1.45,
-            wordBreak:'break-word', whiteSpace:'pre-wrap',
+            fontSize:15, 
+            lineHeight:1.45,
+            wordBreak:'break-word', 
+            whiteSpace:'pre-wrap',
             animation:'msgIn .25s ease both',
-            WebkitTransform:'translateZ(0)', transform:'translateZ(0)',
+            WebkitTransform:'translateZ(0)', 
+            transform:'translateZ(0)',
           }}>
             {msg.photo_url && (
-              <img src={msg.photo_url} alt="" loading="lazy"
-                style={{ maxWidth:'100%', maxHeight:280, borderRadius:msg.text?10:14,
-                  display:'block', marginBottom:msg.text?6:0 }}/>
+              <img 
+                src={msg.photo_url} 
+                alt="" 
+                loading="lazy"
+                style={{ 
+                  maxWidth:'100%', 
+                  maxHeight:280, 
+                  borderRadius:msg.text?10:14,
+                  display:'block', 
+                  marginBottom:msg.text?6:0 
+                }}
+              />
             )}
             {msg.text && (
-              <span>{msg.text}
+              <span>
+                {msg.text}
                 {msg.edited_at && <span style={{fontSize:10,opacity:.5,marginLeft:4}}>ред.</span>}
               </span>
             )}
-            <div style={{ fontSize:10, opacity:.55, textAlign:'right', marginTop:2,
-              display:'flex', alignItems:'center', justifyContent:'flex-end', gap:2 }}>
+            <div style={{ 
+              fontSize:10, 
+              opacity:.55, 
+              textAlign:'right', 
+              marginTop:2,
+              display:'flex', 
+              alignItems:'center', 
+              justifyContent:'flex-end', 
+              gap:2 
+            }}>
               {fmtTime(msg.created_at)}
               {isMine && <span style={{fontSize:11}}>✓</span>}
             </div>
@@ -171,16 +214,39 @@ const Bubble = memo(({ msg, isMine, dark, uid, onLongPress, onDoubleClick, onRea
 
         {/* Реакции */}
         {validReacts.length > 0 && (
-          <div style={{ display:'flex', flexWrap:'wrap', gap:3, marginTop:3,
-            justifyContent:isMine?'flex-end':'flex-start' }}>
+          <div style={{ 
+            display:'flex', 
+            flexWrap:'wrap', 
+            gap:3, 
+            marginTop:3,
+            justifyContent:isMine?'flex-end':'flex-start' 
+          }}>
             {validReacts.map(([emoji,users])=>(
-              <button key={emoji} onClick={()=>onReact(msg.id,emoji)} style={{
-                background: users.includes(uid) ? 'rgba(200,51,74,0.15)' : (dark?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.05)'),
-                border: users.includes(uid) ? '1px solid rgba(200,51,74,0.35)' : '1px solid transparent',
-                borderRadius:999, padding:'2px 8px', fontSize:13, cursor:'pointer',
-                display:'flex', alignItems:'center', gap:3, transition:'transform .15s',
-              }}>
-                {emoji}<span style={{fontSize:11,color:dark?'#C4909A':'#9A6070'}}>{users.length}</span>
+              <button 
+                key={emoji} 
+                onClick={()=>onReact(msg.id,emoji)} 
+                style={{
+                  background: users.includes(uid) 
+                    ? 'rgba(200,51,74,0.15)' 
+                    : (dark?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.05)'),
+                  border: users.includes(uid) 
+                    ? '1px solid rgba(200,51,74,0.35)' 
+                    : '1px solid transparent',
+                  borderRadius:999, 
+                  padding:'2px 8px', 
+                  fontSize:13, 
+                  cursor:'pointer',
+                  display:'flex', 
+                  alignItems:'center', 
+                  gap:3, 
+                  transition:'transform .15s',
+                  WebkitTapHighlightColor:'transparent',
+                }}
+              >
+                {emoji}
+                <span style={{fontSize:11,color:dark?'#C4909A':'#9A6070'}}>
+                  {users.length}
+                </span>
               </button>
             ))}
           </div>
@@ -386,6 +452,19 @@ export default function Chat({ session, profile, darkMode }) {
   const pName = partner?.name || (profile?.name==='Антон'?'Эльвира':'Антон')
   const pAvatar = partner?.avatar_url
 
+  const iconBtn = { 
+    width:36,height:36,borderRadius:'50%',
+    background:'rgba(200,51,74,0.09)',
+    border:'none',
+    display:'flex',
+    alignItems:'center',
+    justifyContent:'center',
+    cursor:'pointer',
+    flexShrink:0,
+    WebkitTapHighlightColor:'transparent',
+    transition:'transform .15s'
+  }
+
   /* ── loading ── */
   if(loading) return (
     <div style={{display:'flex',alignItems:'center',justifyContent:'center',
@@ -401,26 +480,39 @@ export default function Chat({ session, profile, darkMode }) {
     </div>
   )
 
-  const iconBtn = { width:36,height:36,borderRadius:'50%',
-    background:'rgba(200,51,74,0.09)',border:'none',display:'flex',
-    alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,
-    WebkitTapHighlightColor:'transparent',transition:'transform .15s' }
-
   return (
-    <div style={{display:'flex',flexDirection:'column',height:'100%',
-      background:BG,position:'relative',overflow:'hidden',
-      WebkitOverflowScrolling:'touch'}}>
+    <div style={{
+      display:'flex',
+      flexDirection:'column',
+      height:'100%',
+      background:BG,
+      position:'relative',
+      overflow:'hidden',
+      WebkitOverflowScrolling:'touch'
+    }}>
 
       {/* ═══ ШАПКА ═══ */}
-      <div style={{flexShrink:0,background:SURF,borderBottom:`.5px solid ${BDR}`,
+      <div style={{
+        flexShrink:0,
+        background:SURF,
+        borderBottom:`.5px solid ${BDR}`,
         paddingTop:'max(10px, env(safe-area-inset-top, 0px))',
-        paddingBottom:10,paddingLeft:14,paddingRight:14,
-        display:'flex',alignItems:'center',gap:11,zIndex:20,
-        WebkitTransform:'translateZ(0)',transform:'translateZ(0)'}}>
+        paddingBottom:10,
+        paddingLeft:14,
+        paddingRight:14,
+        display:'flex',
+        alignItems:'center',
+        gap:11,
+        zIndex:20,
+        WebkitTransform:'translateZ(0)',
+        transform:'translateZ(0)'
+      }}>
         <div style={{position:'relative',flexShrink:0}}>
-          <div style={{width:42,height:42,borderRadius:'50%',overflow:'hidden',
+          <div style={{
+            width:42,height:42,borderRadius:'50%',overflow:'hidden',
             background:'linear-gradient(135deg,#C8334A,#8B1A2C)',
-            display:'flex',alignItems:'center',justifyContent:'center'}}>
+            display:'flex',alignItems:'center',justifyContent:'center'
+          }}>
             {pAvatar
               ? <img src={pAvatar} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
               : <svg viewBox="0 0 40 40" width="40" height="40" fill="none">
@@ -429,13 +521,22 @@ export default function Chat({ session, profile, darkMode }) {
                 </svg>
             }
           </div>
-          <div style={{width:10,height:10,background:'#4CAF50',borderRadius:'50%',
+          <div style={{
+            width:10,height:10,background:'#4CAF50',borderRadius:'50%',
             border:`2px solid ${SURF}`,position:'absolute',bottom:1,right:1,
-            animation:'pulse 2s ease-in-out infinite'}}/>
+            animation:'pulse 2s ease-in-out infinite'
+          }}/>
         </div>
         <div style={{flex:1,minWidth:0}}>
-          <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:16,
-            fontWeight:600,color:INK,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+          <div style={{
+            fontFamily:"'Cormorant Garamond',serif",
+            fontSize:16,
+            fontWeight:600,
+            color:INK,
+            overflow:'hidden',
+            textOverflow:'ellipsis',
+            whiteSpace:'nowrap'
+          }}>
             {pName}
           </div>
           <div style={{fontSize:11,color:'#4CAF50'}}>только для нас двоих</div>
@@ -449,13 +550,25 @@ export default function Chat({ session, profile, darkMode }) {
 
       {/* Закреплённое сообщение */}
       {pinned && (
-        <div style={{flexShrink:0,background:dark?'rgba(200,51,74,0.08)':'rgba(200,51,74,0.05)',
+        <div style={{
+          flexShrink:0,
+          background:dark?'rgba(200,51,74,0.08)':'rgba(200,51,74,0.05)',
           borderBottom:`.5px solid rgba(200,51,74,0.12)`,
-          padding:'6px 14px',display:'flex',alignItems:'center',gap:8}}>
+          padding:'6px 14px',
+          display:'flex',
+          alignItems:'center',
+          gap:8
+        }}>
           <div style={{width:3,height:32,background:'#C8334A',borderRadius:3,flexShrink:0}}/>
           <div style={{flex:1,minWidth:0}}>
             <div style={{fontSize:11,color:'#C8334A',fontWeight:500,marginBottom:1}}>Закреплено</div>
-            <div style={{fontSize:13,color:INK,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+            <div style={{
+              fontSize:13,
+              color:INK,
+              overflow:'hidden',
+              textOverflow:'ellipsis',
+              whiteSpace:'nowrap'
+            }}>
               {pinned.text||'Фото'}
             </div>
           </div>
@@ -469,17 +582,28 @@ export default function Chat({ session, profile, darkMode }) {
 
       {/* ═══ Запись кружочка ═══ */}
       {recording && (
-        <div style={{flexShrink:0,background:SURF,borderBottom:`.5px solid ${BDR}`,
-          padding:'10px 14px',display:'flex',alignItems:'center',gap:12}}>
-          <div style={{width:62,height:62,borderRadius:'50%',overflow:'hidden',
-            border:'2px solid #C8334A',flexShrink:0}}>
+        <div style={{
+          flexShrink:0,
+          background:SURF,
+          borderBottom:`.5px solid ${BDR}`,
+          padding:'10px 14px',
+          display:'flex',
+          alignItems:'center',
+          gap:12
+        }}>
+          <div style={{
+            width:62,height:62,borderRadius:'50%',overflow:'hidden',
+            border:'2px solid #C8334A',flexShrink:0
+          }}>
             <video ref={previewRef} muted autoPlay playsInline
               style={{width:'100%',height:'100%',objectFit:'cover'}}/>
           </div>
           <div style={{flex:1}}>
             <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:3}}>
-              <div style={{width:8,height:8,borderRadius:'50%',background:'#C8334A',
-                animation:'pulse 1s ease-in-out infinite'}}/>
+              <div style={{
+                width:8,height:8,borderRadius:'50%',background:'#C8334A',
+                animation:'pulse 1s ease-in-out infinite'
+              }}/>
               <span style={{fontSize:13,color:'#C8334A',fontWeight:500}}>Запись...</span>
             </div>
             <div style={{fontSize:11,color:'#9A6070'}}>Нажми «Отправить» когда закончишь</div>
@@ -490,10 +614,17 @@ export default function Chat({ session, profile, darkMode }) {
                 <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
               </svg>
             </button>
-            <button onClick={stopRecord} style={{padding:'8px 16px',borderRadius:20,
-              background:'linear-gradient(135deg,#C8334A,#8B1A2C)',color:'white',
-              border:'none',fontSize:13,fontWeight:600,cursor:'pointer',
-              WebkitTapHighlightColor:'transparent'}}>
+            <button onClick={stopRecord} style={{
+              padding:'8px 16px',
+              borderRadius:20,
+              background:'linear-gradient(135deg,#C8334A,#8B1A2C)',
+              color:'white',
+              border:'none',
+              fontSize:13,
+              fontWeight:600,
+              cursor:'pointer',
+              WebkitTapHighlightColor:'transparent'
+            }}>
               Отправить
             </button>
           </div>
@@ -501,13 +632,27 @@ export default function Chat({ session, profile, darkMode }) {
       )}
 
       {/* ═══ СООБЩЕНИЯ ═══ */}
-      <div ref={listRef} onScroll={onScroll} style={{flex:1,overflowY:'auto',
-        padding:'10px 8px',display:'flex',flexDirection:'column',gap:1,
-        WebkitOverflowScrolling:'touch',scrollbarWidth:'none',minHeight:0}}>
-
+      <div ref={listRef} onScroll={onScroll} style={{
+        flex:1,
+        overflowY:'auto',
+        padding:'10px 8px',
+        display:'flex',
+        flexDirection:'column',
+        gap:1,
+        WebkitOverflowScrolling:'touch',
+        scrollbarWidth:'thin',
+        minHeight:0
+      }}>
         {messages.length===0 && (
-          <div style={{display:'flex',flexDirection:'column',alignItems:'center',
-            justifyContent:'center',flex:1,gap:12,opacity:.45}}>
+          <div style={{
+            display:'flex',
+            flexDirection:'column',
+            alignItems:'center',
+            justifyContent:'center',
+            flex:1,
+            gap:12,
+            opacity:.45
+          }}>
             <svg viewBox="0 0 60 56" width="52" height="48" fill="none">
               <path d="M30 52C30 52 3 35 3 16C3 8 9.5 2 18 2C22.5 2 26.5 4.5 30 9C33.5 4.5 37.5 2 42 2C50.5 2 57 8 57 16C57 35 30 52 30 52Z"
                 fill="rgba(200,51,74,0.35)"/>
@@ -525,17 +670,28 @@ export default function Chat({ session, profile, darkMode }) {
             <div key={msg.id}>
               {showDate && (
                 <div style={{textAlign:'center',margin:'10px 0'}}>
-                  <span style={{background:'rgba(200,51,74,0.09)',padding:'3px 14px',
-                    borderRadius:20,fontSize:11,color:'#9A6070',
-                    fontFamily:"'DM Sans',sans-serif"}}>
+                  <span style={{
+                    background:'rgba(200,51,74,0.09)',
+                    padding:'3px 14px',
+                    borderRadius:20,
+                    fontSize:11,
+                    color:'#9A6070',
+                    fontFamily:"'DM Sans',sans-serif"
+                  }}>
                     {fmtDateSep(msg.created_at)}
                   </span>
                 </div>
               )}
               <Bubble
-                msg={msg} isMine={isMine} dark={dark} uid={uid}
-                onLongPress={onLongPress} onDoubleClick={onDoubleTap}
-                onReact={addReact} partnerAvatar={pAvatar} showAvatar={showAvatar}
+                msg={msg}
+                isMine={isMine}
+                dark={dark}
+                uid={uid}
+                onLongPress={onLongPress}
+                onDoubleClick={onDoubleTap}
+                onReact={addReact}
+                partnerAvatar={pAvatar}
+                showAvatar={showAvatar}
               />
             </div>
           )
@@ -546,12 +702,22 @@ export default function Chat({ session, profile, darkMode }) {
       {/* Кнопка вниз */}
       {showDown && (
         <button onClick={scrollDown} style={{
-          position:'absolute',bottom:80,right:14,
-          width:38,height:38,borderRadius:'50%',
-          background:dark?'#1E0A10':'#fff',border:`.5px solid ${BDR}`,
+          position:'absolute',
+          bottom:80,
+          right:14,
+          width:38,
+          height:38,
+          borderRadius:'50%',
+          background:dark?'#1E0A10':'#fff',
+          border:`.5px solid ${BDR}`,
           boxShadow:'0 2px 12px rgba(0,0,0,0.15)',
-          display:'flex',alignItems:'center',justifyContent:'center',
-          cursor:'pointer',zIndex:15,WebkitTapHighlightColor:'transparent'}}>
+          display:'flex',
+          alignItems:'center',
+          justifyContent:'center',
+          cursor:'pointer',
+          zIndex:15,
+          WebkitTapHighlightColor:'transparent'
+        }}>
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#C8334A" strokeWidth="2" strokeLinecap="round">
             <polyline points="6 9 12 15 18 9"/>
           </svg>
@@ -559,14 +725,27 @@ export default function Chat({ session, profile, darkMode }) {
       )}
 
       {/* Контекстное меню */}
-      <ContextMenu menu={ctxMenu} onClose={()=>setCtxMenu(null)}
+      <ContextMenu 
+        menu={ctxMenu} 
+        onClose={()=>setCtxMenu(null)}
         onEdit={(id,t)=>{setEditingId(id);setNewText(t)}}
-        onDelete={deleteMsg} onPin={pinMsg} onCopy={copyText} onReact={addReact}/>
+        onDelete={deleteMsg}
+        onPin={pinMsg}
+        onCopy={copyText}
+        onReact={addReact}
+      />
 
       {/* Превью фото */}
       {photoPreview && (
-        <div style={{flexShrink:0,padding:'8px 14px',background:SURF,
-          borderTop:`.5px solid ${BDR}`,display:'flex',alignItems:'center',gap:10}}>
+        <div style={{
+          flexShrink:0,
+          padding:'8px 14px',
+          background:SURF,
+          borderTop:`.5px solid ${BDR}`,
+          display:'flex',
+          alignItems:'center',
+          gap:10
+        }}>
           <img src={photoPreview} style={{width:54,height:54,objectFit:'cover',borderRadius:10}}/>
           <span style={{flex:1,fontSize:13,color:'#9A6070'}}>Фото прикреплено</span>
           <button onClick={cancelPhoto} style={{...iconBtn,background:'none',width:30,height:30}}>
@@ -579,14 +758,22 @@ export default function Chat({ session, profile, darkMode }) {
 
       {/* Режим редактирования */}
       {editingId && (
-        <div style={{flexShrink:0,padding:'5px 14px',
-          background:'rgba(200,51,74,0.07)',borderTop:'0.5px solid rgba(200,51,74,0.15)',
-          display:'flex',alignItems:'center',gap:8}}>
+        <div style={{
+          flexShrink:0,
+          padding:'5px 14px',
+          background:'rgba(200,51,74,0.07)',
+          borderTop:'0.5px solid rgba(200,51,74,0.15)',
+          display:'flex',
+          alignItems:'center',
+          gap:8
+        }}>
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#C8334A" strokeWidth="2" strokeLinecap="round">
             <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
             <path d="M18.5 2.5a2.1 2.1 0 013 3L12 15l-4 1 1-4z"/>
           </svg>
-          <span style={{flex:1,fontSize:12,color:'#C8334A',fontFamily:"'DM Sans',sans-serif"}}>Редактирование</span>
+          <span style={{flex:1,fontSize:12,color:'#C8334A',fontFamily:"'DM Sans',sans-serif"}}>
+            Редактирование
+          </span>
           <button onClick={()=>{setEditingId(null);setNewText('')}}
             style={{...iconBtn,background:'none',width:28,height:28}}>
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#9A6070" strokeWidth="2.5" strokeLinecap="round">
@@ -596,15 +783,25 @@ export default function Chat({ session, profile, darkMode }) {
         </div>
       )}
 
-      {/* ═══ ПОЛЕ ВВОДА ═══ */}
-      <div style={{flexShrink:0,background:SURF,borderTop:`.5px solid ${BDR}`,
+      {/* ═══ ПОЛЕ ВВОДА (ИСПРАВЛЕННОЕ) ═══ */}
+      <div style={{
+        flexShrink:0,
+        background:SURF,
+        borderTop:`.5px solid ${BDR}`,
         padding:'8px 10px',
         paddingBottom:'calc(8px + env(safe-area-inset-bottom, 0px))',
-        display:'flex',alignItems:'flex-end',gap:7,
-        WebkitTransform:'translateZ(0)',transform:'translateZ(0)'}}>
+        display:'flex',
+        alignItems:'flex-end',
+        gap:7,
+        WebkitTransform:'translateZ(0)',
+        transform:'translateZ(0)'
+      }}>
 
-        {/* Фото */}
-        <button onClick={()=>fileRef.current?.click()} style={iconBtn}>
+        {/* Кнопка фото */}
+        <button 
+          onClick={()=>fileRef.current?.click()} 
+          style={iconBtn}
+        >
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#C8334A" strokeWidth="2" strokeLinecap="round">
             <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
             <circle cx="12" cy="13" r="4"/>
@@ -612,31 +809,55 @@ export default function Chat({ session, profile, darkMode }) {
         </button>
         <input ref={fileRef} type="file" accept="image/*" onChange={onPhotoChange} style={{display:'none'}}/>
 
-        {/* Кружочек */}
-        <button onClick={recording?stopRecord:startRecord}
-          style={{...iconBtn,
+        {/* Кнопка кружочка */}
+        <button 
+          onClick={recording?stopRecord:startRecord}
+          style={{
+            ...iconBtn,
             background:recording?'linear-gradient(135deg,#C8334A,#8B1A2C)':'rgba(200,51,74,0.09)',
-            animation:recording?'glow 1.5s ease-in-out infinite':'none'}}>
+            animation:recording?'glow 1.5s ease-in-out infinite':'none'
+          }}
+        >
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none"
             stroke={recording?'white':'#C8334A'} strokeWidth="2" strokeLinecap="round">
-            <polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/>
+            <polygon points="23 7 16 12 23 17 23 7"/>
+            <rect x="1" y="5" width="15" height="14" rx="2"/>
           </svg>
         </button>
         <input ref={videoRef} type="file" accept="video/*" onChange={onVideoFile} style={{display:'none'}}/>
 
-        {/* Textarea */}
-        <div style={{flex:1,background:dark?'#3D1520':'#FBF0F2',borderRadius:22,
-          border:`.5px solid ${BDR}`,padding:'0 14px',display:'flex',alignItems:'flex-end',minWidth:0}}>
+        {/* Поле ввода текста */}
+        <div style={{
+          flex:1,
+          background:dark?'#3D1520':'#FBF0F2',
+          borderRadius:22,
+          border:`.5px solid ${BDR}`,
+          padding:'0 14px',
+          display:'flex',
+          alignItems:'flex-end',
+          minWidth:0
+        }}>
           <textarea
             value={newText}
             onChange={e=>setNewText(e.target.value)}
             onKeyDown={handleKey}
             placeholder="Сообщение..."
             rows={1}
-            style={{flex:1,border:'none',background:'none',padding:'10px 0',
-              fontSize:16,fontFamily:"'DM Sans',sans-serif",color:INK,
-              resize:'none',outline:'none',maxHeight:100,lineHeight:1.4,
-              WebkitAppearance:'none',width:'100%'}}
+            style={{
+              flex:1,
+              border:'none',
+              background:'none',
+              padding:'10px 0',
+              fontSize:16,
+              fontFamily:"'DM Sans',sans-serif",
+              color:INK,
+              resize:'none',
+              outline:'none',
+              maxHeight:100,
+              lineHeight:1.4,
+              WebkitAppearance:'none',
+              width:'100%'
+            }}
             onInput={e=>{
               e.target.style.height='auto'
               e.target.style.height=Math.min(e.target.scrollHeight,100)+'px'
@@ -644,13 +865,22 @@ export default function Chat({ session, profile, darkMode }) {
           />
         </div>
 
-        {/* Отправить */}
-        <button onClick={handleSend}
+        {/* Кнопка отправки */}
+        <button 
+          onClick={handleSend}
           disabled={sending||(!newText.trim()&&!photoFile)}
-          style={{...iconBtn,
-            background:(newText.trim()||photoFile)?'linear-gradient(135deg,#C8334A,#8B1A2C)':'rgba(200,51,74,0.15)',
-            animation:(newText.trim()||photoFile)?'glow 3s ease-in-out infinite':'none',
-            transition:'all .2s',opacity:sending?.6:1}}>
+          style={{
+            ...iconBtn,
+            background:(newText.trim()||photoFile)
+              ? 'linear-gradient(135deg,#C8334A,#8B1A2C)'
+              : 'rgba(200,51,74,0.15)',
+            animation:(newText.trim()||photoFile)
+              ? 'glow 3s ease-in-out infinite'
+              : 'none',
+            transition:'all .2s',
+            opacity:sending ? 0.6 : 1
+          }}
+        >
           <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round">
             <line x1="22" y1="2" x2="11" y2="13"/>
             <polygon points="22 2 15 22 11 13 2 9 22 2"/>

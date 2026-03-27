@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, memo } from 'react'
+import { useState, useEffect, useRef, memo } from 'react'
 import { supabase } from '../lib/supabase'
 
 const REACTIONS = ['❤️','🔥','😍','😂','👍','💔']
@@ -21,29 +21,17 @@ function diffDate(a,b) {
   return new Date(a).toDateString()!==new Date(b).toDateString()
 }
 
-/* ─── ContextMenu (исправленное позиционирование - всегда над навигацией) ─── */
+/* ─── ContextMenu ─── */
 const ContextMenu = memo(({ menu, onClose, onEdit, onDelete, onPin, onCopy, onReact }) => {
   if (!menu) return null
   
-  // Исправляем позиционирование - меню всегда в центре или над навигацией
   const getPosition = () => {
     const viewportHeight = window.innerHeight
-    const menuHeight = 320 // примерная высота меню
-    const navHeight = 56 + (parseInt(getComputedStyle(document.documentElement).getPropertyValue('--safe-bottom')) || 0)
-    
-    // Центрируем меню
+    const menuHeight = 320
     let top = (viewportHeight - menuHeight) / 2
-    
-    // Если меню выходит за границы, корректируем
     if (top < 20) top = 20
-    if (top + menuHeight > viewportHeight - navHeight - 10) {
-      top = viewportHeight - menuHeight - navHeight - 10
-    }
-    
-    // Горизонтальное центрирование
-    const left = (window.innerWidth - 240) / 2
-    
-    return { top, left, right: 'auto' }
+    const left = (window.innerWidth - 260) / 2
+    return { top, left }
   }
   
   const position = getPosition()
@@ -61,7 +49,6 @@ const ContextMenu = memo(({ menu, onClose, onEdit, onDelete, onPin, onCopy, onRe
       border:'.5px solid rgba(200,51,74,0.15)',
       top: position.top,
       left: position.left,
-      right: position.right,
     },
     reactions:{ display:'flex', gap:6, padding:'14px 16px', borderBottom:'.5px solid rgba(200,51,74,0.08)', justifyContent:'center' },
     remoji:{ fontSize:28, cursor:'pointer', padding:'4px 8px', borderRadius:12, transition:'transform .15s', WebkitUserSelect:'none' },
@@ -300,6 +287,7 @@ export default function Chat({ session, profile, darkMode }) {
   const [ctxMenu,    setCtxMenu]    = useState(null)
   const [showDown,   setShowDown]   = useState(false)
   const [partner,    setPartner]    = useState(null)
+  const [recordTime, setRecordTime] = useState(0)
 
   const endRef     = useRef(null)
   const listRef    = useRef(null)
@@ -309,6 +297,7 @@ export default function Chat({ session, profile, darkMode }) {
   const chunksRef  = useRef([])
   const streamRef  = useRef(null)
   const previewRef = useRef(null)
+  const timerRef   = useRef(null)
 
   const dark = darkMode
   const BG   = dark ? '#200A10' : '#FBF0F2'
@@ -317,7 +306,23 @@ export default function Chat({ session, profile, darkMode }) {
   const BDR  = 'rgba(200,51,74,0.13)'
   const uid  = session?.user?.id
 
+  // Таймер записи
+  useEffect(() => {
+    if (recording) {
+      setRecordTime(0)
+      timerRef.current = setInterval(() => {
+        setRecordTime(t => t + 1)
+      }, 1000)
+    } else {
+      if (timerRef.current) clearInterval(timerRef.current)
+    }
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current)
+    }
+  }, [recording])
+
   useEffect(()=>{
+    if (!uid) return
     loadMessages()
     loadPartner()
     const ch = supabase.channel('chat')
@@ -333,7 +338,7 @@ export default function Chat({ session, profile, darkMode }) {
       })
       .subscribe()
     return ()=>supabase.removeChannel(ch)
-  },[])
+  },[uid])
 
   async function loadMessages(){
     const {data}=await supabase.from('messages').select('*')
@@ -395,20 +400,14 @@ export default function Chat({ session, profile, darkMode }) {
     if(fileRef.current) fileRef.current.value=''
   }
 
-  // Исправленная запись видео - большой кружочек внизу
   async function startRecord(){
     try{
       const stream=await navigator.mediaDevices.getUserMedia({
-        video: { 
-          facingMode: 'user', 
-          width: { ideal: 300 }, 
-          height: { ideal: 300 } 
-        }, 
-        audio: true 
+        video: { facingMode: 'user', width: 300, height: 300 },
+        audio: true
       })
       streamRef.current=stream
       
-      // Показываем предпросмотр себя в большом кружочке
       if(previewRef.current){ 
         previewRef.current.srcObject = stream
         previewRef.current.muted = true
@@ -427,6 +426,10 @@ export default function Chat({ session, profile, darkMode }) {
         streamRef.current=null
         
         const blob=new Blob(chunksRef.current,{type:'video/webm'})
+        if(blob.size < 1000) {
+          setRecording(false)
+          return
+        }
         const file=new File([blob],`circle-${Date.now()}.webm`,{type:'video/webm'})
         setSending(true)
         try{
@@ -444,26 +447,21 @@ export default function Chat({ session, profile, darkMode }) {
       rec.start()
       setRecording(true)
       
-      // Авто-остановка через 60 секунд
       setTimeout(()=>{ 
         if(recRef.current?.state==='recording') recRef.current.stop()
       }, 60000)
     }catch(e){ 
       console.error(e)
-      alert('Нет доступа к камере. Проверьте разрешения в настройках браузера.')
+      alert('Нет доступа к камере')
     }
   }
 
   function stopRecord(){ 
-    if(recRef.current?.state==='recording') {
-      recRef.current.stop()
-    }
+    if(recRef.current?.state==='recording') recRef.current.stop()
   }
 
   function cancelRecord(){
-    if(recRef.current?.state==='recording') {
-      recRef.current.stop()
-    }
+    if(recRef.current?.state==='recording') recRef.current.stop()
     if(streamRef.current) {
       streamRef.current.getTracks().forEach(t=>t.stop())
       streamRef.current=null
@@ -514,6 +512,12 @@ export default function Chat({ session, profile, darkMode }) {
   function onDoubleTap(id){ addReact(id,'❤️') }
 
   function copyText(t){ navigator.clipboard?.writeText(t) }
+
+  const formatRecordTime = (s) => {
+    const mins = Math.floor(s / 60)
+    const secs = s % 60
+    return `${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}`
+  }
 
   const pinned = messages.find(m=>m.is_pinned)
   const pName = partner?.name || (profile?.name==='Антон'?'Эльвира':'Антон')
@@ -570,8 +574,6 @@ export default function Chat({ session, profile, darkMode }) {
         alignItems:'center',
         gap:11,
         zIndex:20,
-        WebkitTransform:'translateZ(0)',
-        transform:'translateZ(0)'
       }}>
         <div style={{position:'relative',flexShrink:0}}>
           <div style={{
@@ -678,9 +680,9 @@ export default function Chat({ session, profile, darkMode }) {
 
         {messages.map((msg,i)=>{
           const isMine = msg.user_id===uid
-          const showDate = i===0||diffDate(messages[i-1].created_at,msg.created_at)
+          const showDate = i===0||diffDate(messages[i-1]?.created_at,msg.created_at)
           const nextMsg = messages[i+1]
-          const showAvatar = !isMine && (!nextMsg || nextMsg.user_id===uid || diffDate(msg.created_at,nextMsg.created_at))
+          const showAvatar = !isMine && (!nextMsg || nextMsg.user_id===uid || diffDate(msg.created_at,nextMsg?.created_at))
           return (
             <div key={msg.id}>
               {showDate && (
@@ -739,7 +741,7 @@ export default function Chat({ session, profile, darkMode }) {
         </button>
       )}
 
-      {/* Контекстное меню - теперь в центре */}
+      {/* Контекстное меню */}
       <ContextMenu 
         menu={ctxMenu} 
         onClose={()=>setCtxMenu(null)}
@@ -798,28 +800,34 @@ export default function Chat({ session, profile, darkMode }) {
         </div>
       )}
 
-      {/* ЗАПИСЬ КРУЖОЧКА - БОЛЬШОЙ КРУГ ВНИЗУ */}
+      {/* ЗАПИСЬ КРУЖОЧКА */}
       {recording && (
         <div style={{
-          position: 'absolute',
-          bottom: 'calc(70px + env(safe-area-inset-bottom, 0px))',
+          position: 'fixed',
+          bottom: 0,
           left: 0,
           right: 0,
+          zIndex: 100,
+          background: 'rgba(0,0,0,0.9)',
+          backdropFilter: 'blur(20px)',
           display: 'flex',
-          justifyContent: 'center',
+          flexDirection: 'column',
           alignItems: 'center',
-          zIndex: 50,
+          justifyContent: 'center',
+          padding: '30px 20px',
+          paddingBottom: 'calc(100px + env(safe-area-inset-bottom, 0px))',
           animation: 'slideUp 0.3s ease',
         }}>
           <div style={{
-            width: 200,
-            height: 200,
+            width: 260,
+            height: 260,
             borderRadius: '50%',
             overflow: 'hidden',
             border: '4px solid #C8334A',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+            boxShadow: '0 0 0 4px rgba(200,51,74,0.3)',
             background: '#000',
             position: 'relative',
+            marginBottom: 30,
           }}>
             <video 
               ref={previewRef} 
@@ -833,19 +841,16 @@ export default function Chat({ session, profile, darkMode }) {
                 transform: 'scaleX(-1)',
               }}
             />
-            {/* Анимация записи */}
             <div style={{
               position: 'absolute',
-              bottom: 12,
-              left: '50%',
-              transform: 'translateX(-50%)',
+              top: 16,
+              right: 16,
               display: 'flex',
               alignItems: 'center',
-              gap: 8,
+              gap: 6,
               background: 'rgba(0,0,0,0.6)',
-              padding: '6px 14px',
+              padding: '6px 12px',
               borderRadius: 20,
-              backdropFilter: 'blur(8px)',
             }}>
               <div style={{
                 width: 10,
@@ -854,37 +859,47 @@ export default function Chat({ session, profile, darkMode }) {
                 background: '#C8334A',
                 animation: 'pulse 1s ease-in-out infinite',
               }}/>
-              <span style={{ fontSize: 12, color: 'white' }}>Запись...</span>
+              <span style={{ fontSize: 12, color: 'white', fontWeight: 500 }}>ЗАПИСЬ</span>
+            </div>
+            <div style={{
+              position: 'absolute',
+              bottom: 16,
+              left: 16,
+              background: 'rgba(0,0,0,0.6)',
+              padding: '4px 12px',
+              borderRadius: 20,
+              fontSize: 14,
+              color: 'white',
+              fontFamily: 'monospace',
+              fontWeight: 'bold',
+            }}>
+              {formatRecordTime(recordTime)}
             </div>
           </div>
           
-          {/* Кнопки управления */}
           <div style={{
-            position: 'absolute',
-            bottom: -60,
-            left: 0,
-            right: 0,
             display: 'flex',
             justifyContent: 'center',
-            gap: 24,
-            padding: '12px 20px',
-            background: SURF,
-            borderTop: `.5px solid ${BDR}`,
+            gap: 40,
           }}>
             <button onClick={cancelRecord} style={{
-              ...iconBtn,
-              width: 48,
-              height: 48,
-              background: 'rgba(200,51,74,0.1)',
+              width: 60,
+              height: 60,
               borderRadius: '50%',
+              background: 'rgba(255,255,255,0.15)',
+              border: '2px solid rgba(255,255,255,0.3)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
             }}>
-              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#9A6070" strokeWidth="2" strokeLinecap="round">
+              <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round">
                 <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
               </svg>
             </button>
             <button onClick={stopRecord} style={{
-              width: 56,
-              height: 56,
+              width: 70,
+              height: 70,
               borderRadius: '50%',
               background: 'linear-gradient(135deg,#C8334A,#8B1A2C)',
               border: 'none',
@@ -892,12 +907,22 @@ export default function Chat({ session, profile, darkMode }) {
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
-              boxShadow: '0 4px 16px rgba(200,51,74,0.4)',
+              boxShadow: '0 4px 20px rgba(200,51,74,0.5)',
             }}>
-              <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="white" strokeWidth="2">
+              <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="white" strokeWidth="2">
                 <rect x="6" y="6" width="12" height="12" fill="white" stroke="none"/>
               </svg>
             </button>
+          </div>
+          
+          <div style={{
+            marginTop: 24,
+            fontSize: 12,
+            color: 'rgba(255,255,255,0.5)',
+            textAlign: 'center',
+          }}>
+            Нажмите «Отправить», чтобы отправить кружочек<br/>
+            или «✕», чтобы отменить
           </div>
         </div>
       )}
@@ -912,15 +937,10 @@ export default function Chat({ session, profile, darkMode }) {
         display:'flex',
         alignItems:'flex-end',
         gap:7,
-        WebkitTransform:'translateZ(0)',
-        transform:'translateZ(0)',
         zIndex: recording ? 10 : 20,
       }}>
 
-        <button 
-          onClick={()=>fileRef.current?.click()} 
-          style={iconBtn}
-        >
+        <button onClick={()=>fileRef.current?.click()} style={iconBtn}>
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#C8334A" strokeWidth="2" strokeLinecap="round">
             <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
             <circle cx="12" cy="13" r="4"/>
@@ -928,14 +948,11 @@ export default function Chat({ session, profile, darkMode }) {
         </button>
         <input ref={fileRef} type="file" accept="image/*" onChange={onPhotoChange} style={{display:'none'}}/>
 
-        <button 
-          onClick={recording?stopRecord:startRecord}
-          style={{
-            ...iconBtn,
-            background:recording?'linear-gradient(135deg,#C8334A,#8B1A2C)':'rgba(200,51,74,0.09)',
-            animation:recording?'glow 1.5s ease-in-out infinite':'none'
-          }}
-        >
+        <button onClick={recording?stopRecord:startRecord} style={{
+          ...iconBtn,
+          background:recording?'linear-gradient(135deg,#C8334A,#8B1A2C)':'rgba(200,51,74,0.09)',
+          animation:recording?'glow 1.5s ease-in-out infinite':'none'
+        }}>
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none"
             stroke={recording?'white':'#C8334A'} strokeWidth="2" strokeLinecap="round">
             <polygon points="23 7 16 12 23 17 23 7"/>
@@ -982,21 +999,13 @@ export default function Chat({ session, profile, darkMode }) {
           />
         </div>
 
-        <button 
-          onClick={handleSend}
-          disabled={sending||(!newText.trim()&&!photoFile)}
-          style={{
-            ...iconBtn,
-            background:(newText.trim()||photoFile)
-              ? 'linear-gradient(135deg,#C8334A,#8B1A2C)'
-              : 'rgba(200,51,74,0.15)',
-            animation:(newText.trim()||photoFile)
-              ? 'glow 3s ease-in-out infinite'
-              : 'none',
-            transition:'all .2s',
-            opacity:sending ? 0.6 : 1
-          }}
-        >
+        <button onClick={handleSend} disabled={sending||(!newText.trim()&&!photoFile)} style={{
+          ...iconBtn,
+          background:(newText.trim()||photoFile)?'linear-gradient(135deg,#C8334A,#8B1A2C)':'rgba(200,51,74,0.15)',
+          animation:(newText.trim()||photoFile)?'glow 3s ease-in-out infinite':'none',
+          transition:'all .2s',
+          opacity:sending?0.6:1
+        }}>
           <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round">
             <line x1="22" y1="2" x2="11" y2="13"/>
             <polygon points="22 2 15 22 11 13 2 9 22 2"/>

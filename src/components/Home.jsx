@@ -1,913 +1,1429 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 
-/* ── UTILS ── */
-function pad(n) { return String(n).padStart(2, '0') }
+const COUPLE_START = new Date('2025-10-17T00:00:00')
 
-function fmtTime(date) {
-  const d = new Date(date)
-  return `${pad(d.getHours())}:${pad(d.getMinutes())}`
-}
-
-function fmtDateSep(date) {
-  const d = new Date(date)
-  const now = new Date()
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  const yesterday = new Date(today)
-  yesterday.setDate(yesterday.getDate() - 1)
-  
-  const target = new Date(d.getFullYear(), d.getMonth(), d.getDate())
-  
-  if (target.getTime() === today.getTime()) return 'Сегодня'
-  if (target.getTime() === yesterday.getTime()) return 'Вчера'
-  return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
-}
-
-function diffDate(a, b) {
-  const d1 = new Date(a)
-  const d2 = new Date(b)
-  return d1.toDateString() !== d2.toDateString()
-}
-
-function isLastInGroup(msg, nextMsg, uid) {
-  if (!nextMsg) return true
-  if (msg.user_id !== nextMsg.user_id) return true
-  return false
-}
-
-function isFirstInGroup(msg, prevMsg) {
-  if (!prevMsg) return true
-  if (msg.user_id !== prevMsg.user_id) return true
-  return false
-}
-
-function needAvatar(msg, nextMsg, uid) {
-  if (msg.user_id === uid) return false
-  if (!nextMsg) return true
-  if (msg.user_id !== nextMsg.user_id) return true
-  return false
-}
-
-function escapeHtml(text) {
-  const map = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#039;'
+/* ─────────────────────────────────────────
+   Helpers
+───────────────────────────────────────── */
+function getRelTime(start) {
+  const now  = new Date()
+  const diff = now - start
+  const totalDays = Math.floor(diff / 86400000)
+  return {
+    totalDays,
+    years:   Math.floor(totalDays / 365),
+    months:  Math.floor((totalDays % 365) / 30),
+    days:    totalDays % 30,
+    hours:   Math.floor((diff % 86400000) / 3600000),
+    minutes: Math.floor((diff % 3600000)  / 60000),
+    seconds: Math.floor((diff % 60000)    / 1000),
   }
-  return text.replace(/[&<>"']/g, m => map[m])
 }
 
-function parseText(text) {
-  if (!text) return ''
-  let escaped = escapeHtml(text)
-  
-  escaped = escaped.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" style="color:#C8334A;text-decoration:none;">$1</a>')
-  escaped = escaped.replace(/\*\*(.+?)\*\*/g, '<strong style="font-weight:700;">$1</strong>')
-  escaped = escaped.replace(/\*(.+?)\*/g, '<em style="font-style:italic;">$1</em>')
-  escaped = escaped.replace(/`(.+?)`/g, '<code style="background:rgba(0,0,0,0.08);padding:2px 6px;border-radius:6px;font-family:monospace;">$1</code>')
-  escaped = escaped.replace(/^&gt;\s(.+)$/gm, '<div style="border-left:3px solid #C8334A;padding-left:12px;margin:4px 0;color:rgba(0,0,0,0.6);">$1</div>')
-  
-  return escaped
+function getAnniv(start) {
+  const now  = new Date()
+  let next   = new Date(start)
+  next.setFullYear(now.getFullYear())
+  if (next <= now) next.setFullYear(now.getFullYear() + 1)
+  const daysUntil  = Math.ceil((next - now) / 86400000)
+  const daysPassed = Math.floor((now - start) / 86400000)
+  const progress   = Math.min(((daysPassed % 365) / 365) * 100, 100)
+  return { daysUntil, progress }
 }
 
-async function compressImage(file) {
-  return new Promise((resolve) => {
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      const img = new Image()
-      img.onload = () => {
-        const canvas = document.createElement('canvas')
-        let width = img.width
-        let height = img.height
-        const maxSize = 1280
-        
-        if (width > height && width > maxSize) {
-          height = (height * maxSize) / width
-          width = maxSize
-        } else if (height > maxSize) {
-          width = (width * maxSize) / height
-          height = maxSize
+function getTimeUntil(target) {
+  if (!target) return null
+  const diff = new Date(target) - new Date()
+  if (diff <= 0) return null
+  return {
+    days:    Math.floor(diff / 86400000),
+    hours:   Math.floor((diff % 86400000) / 3600000),
+    minutes: Math.floor((diff % 3600000)  / 60000),
+    seconds: Math.floor((diff % 60000)    / 1000),
+  }
+}
+
+function localToUTC(s) { return s ? new Date(s).toISOString() : null }
+function utcToLocal(s) {
+  if (!s) return ''
+  const d = new Date(s)
+  return new Date(d - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
+}
+
+const pad = n => String(n).padStart(2, '0')
+
+/* ─────────────────────────────────────────
+   Typewriter hook
+───────────────────────────────────────── */
+function useTypewriter(text, speed = 55) {
+  const [out, setOut]   = useState('')
+  const [done, setDone] = useState(false)
+  useEffect(() => {
+    if (!text) return
+    setOut(''); setDone(false)
+    let i = 0
+    const id = setInterval(() => {
+      setOut(text.slice(0, ++i))
+      if (i >= text.length) { clearInterval(id); setDone(true) }
+    }, speed)
+    return () => clearInterval(id)
+  }, [text, speed])
+  return { out, done }
+}
+
+/* ─────────────────────────────────────────
+   Background floating layer — NO emoji,
+   all CSS/SVG shapes
+───────────────────────────────────────── */
+
+// 4-pointed sparkle star path
+const SPARK = 'M10 0 L11.2 8.8 L20 10 L11.2 11.2 L10 20 L8.8 11.2 L0 10 L8.8 8.8 Z'
+
+// Heart SVG path (20×18 viewBox)
+const HEART_PATH = 'M10 16.5 C10 16.5 1.5 10.5 1.5 5 C1.5 2.5 3.6 0.5 6 0.5 C7.5 0.5 8.8 1.3 10 2.8 C11.2 1.3 12.5 0.5 14 0.5 C16.4 0.5 18.5 2.5 18.5 5 C18.5 10.5 10 16.5 10 16.5 Z'
+
+// Static pre-computed positions so we never re-randomise on render
+const FLOATERS = [
+  // bokeh circles
+  { id: 'b1', type: 'bokeh', x: 8,  y: 18, s: 28, o: 0.10, dur: 20, del: 0   },
+  { id: 'b2', type: 'bokeh', x: 82, y: 40, s: 36, o: 0.08, dur: 26, del: 4   },
+  { id: 'b3', type: 'bokeh', x: 45, y: 72, s: 22, o: 0.12, dur: 18, del: 8   },
+  { id: 'b4', type: 'bokeh', x: 92, y: 12, s: 18, o: 0.09, dur: 22, del: 1   },
+  { id: 'b5', type: 'bokeh', x: 28, y: 88, s: 30, o: 0.07, dur: 30, del: 12  },
+  { id: 'b6', type: 'bokeh', x: 68, y: 65, s: 24, o: 0.10, dur: 24, del: 6   },
+  // SVG hearts
+  { id: 'h1', type: 'heart', x: 14, y: 28, s: 10, o: 0.18, dur: 14, del: 2   },
+  { id: 'h2', type: 'heart', x: 88, y: 58, s: 8,  o: 0.15, dur: 20, del: 6   },
+  { id: 'h3', type: 'heart', x: 55, y: 12, s: 12, o: 0.12, dur: 17, del: 9   },
+  { id: 'h4', type: 'heart', x: 72, y: 82, s: 9,  o: 0.18, dur: 13, del: 3   },
+  { id: 'h5', type: 'heart', x: 5,  y: 62, s: 7,  o: 0.22, dur: 22, del: 11  },
+  { id: 'h6', type: 'heart', x: 38, y: 48, s: 11, o: 0.12, dur: 16, del: 5   },
+  // 4-pointed sparkles
+  { id: 's1', type: 'spark', x: 30, y: 8,  s: 8,  o: 0.28, dur: 7,  del: 1   },
+  { id: 's2', type: 'spark', x: 64, y: 32, s: 6,  o: 0.22, dur: 9,  del: 4   },
+  { id: 's3', type: 'spark', x: 90, y: 68, s: 7,  o: 0.18, dur: 8,  del: 7   },
+  { id: 's4', type: 'spark', x: 48, y: 90, s: 5,  o: 0.30, dur: 10, del: 3   },
+  { id: 's5', type: 'spark', x: 18, y: 50, s: 9,  o: 0.20, dur: 6,  del: 9   },
+]
+
+function FloatingLayer() {
+  return (
+    <div aria-hidden style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0, overflow: 'hidden' }}>
+      <style>{`
+        @keyframes floatBob {
+          0%,100% { transform: translateY(0) scale(1); }
+          50%      { transform: translateY(-18px) scale(1.06); }
         }
-        
-        canvas.width = width
-        canvas.height = height
-        const ctx = canvas.getContext('2d')
-        ctx.drawImage(img, 0, 0, width, height)
-        
-        canvas.toBlob((blob) => {
-          resolve(new File([blob], file.name, { type: 'image/jpeg', lastModified: Date.now() }))
-        }, 'image/jpeg', 0.85)
+        @keyframes sparkPulse {
+          0%,100% { transform: scale(1) rotate(0deg); }
+          50%      { transform: scale(1.4) rotate(45deg); }
+        }
+      `}</style>
+      {FLOATERS.map(f => {
+        const base = {
+          position: 'absolute',
+          left:  `${f.x}%`,
+          top:   `${f.y}%`,
+          opacity: f.o,
+          animationName:           f.type === 'spark' ? 'sparkPulse' : 'floatBob',
+          animationDuration:       `${f.dur}s`,
+          animationDelay:          `${f.del}s`,
+          animationTimingFunction: 'ease-in-out',
+          animationIterationCount: 'infinite',
+        }
+
+        if (f.type === 'bokeh') return (
+          <div key={f.id} style={{
+            ...base,
+            width:  f.s,
+            height: f.s,
+            borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(255,107,138,0.9) 0%, transparent 70%)',
+            filter: `blur(${f.s * 0.45}px)`,
+          }} />
+        )
+
+        if (f.type === 'heart') return (
+          <svg key={f.id} style={{ ...base, width: f.s, height: f.s * 0.9 }}
+            viewBox="0 0 20 18" fill="rgba(200,51,74,0.7)">
+            <path d={HEART_PATH} />
+          </svg>
+        )
+
+        // sparkle
+        return (
+          <svg key={f.id} style={{ ...base, width: f.s, height: f.s }}
+            viewBox="0 0 20 20" fill="rgba(255,200,220,0.9)">
+            <path d={SPARK} />
+          </svg>
+        )
+      })}
+    </div>
+  )
+}
+
+/* ─────────────────────────────────────────
+   Floating hearts rising from bottom
+───────────────────────────────────────── */
+function FloatingHearts() {
+  const [hearts, setHearts] = useState([])
+  useEffect(() => {
+    const spawn = () => {
+      const h = {
+        id: Date.now() + Math.random(),
+        left: 10 + Math.random() * 80,
+        dur: 6 + Math.random() * 6,
+        size: 8 + Math.random() * 10,
+        delay: Math.random() * 2,
       }
-      img.src = e.target.result
+      setHearts(prev => [...prev.slice(-8), h])
     }
-    reader.readAsDataURL(file)
-  })
-}
-
-const VALID_REACTIONS = new Set(['❤️', '🔥', '😍', '😂', '👍', '💔'])
-
-/* ── SVG ICONS ── */
-function IcoPhoto() {
+    spawn(); spawn()
+    const id = setInterval(spawn, 1800)
+    return () => clearInterval(id)
+  }, [])
   return (
-    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <rect x="2" y="4" width="20" height="16" rx="2" />
-      <circle cx="8.5" cy="10.5" r="2.5" />
-      <path d="M21 15l-5-4-3 3-4-4-5 5" />
-    </svg>
+    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
+      {hearts.map(h => (
+        <div key={h.id} style={{
+          position: 'absolute', bottom: 0, left: `${h.left}%`,
+          animation: `floatUp ${h.dur}s ${h.delay}s linear forwards`,
+          opacity: 0,
+        }}>
+          <svg width={h.size} viewBox="0 0 34 30" fill="rgba(255,255,255,0.5)">
+            <path d="M17 28C17 28 1 18 1 7.5C1 3.5 4.5 0.5 8.5 0.5C11.5 0.5 14 2 17 5C20 2 22.5 0.5 25.5 0.5C29.5 0.5 33 3.5 33 7.5C33 18 17 28 17 28Z"/>
+          </svg>
+        </div>
+      ))}
+    </div>
   )
 }
 
-function IcoMic() {
+/* ─────────────────────────────────────────
+   SVG gradient heart between avatars — bright, high-contrast
+───────────────────────────────────────── */
+function CentreHeart() {
   return (
-    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" />
-      <path d="M19 10v1a7 7 0 0 1-14 0v-1" />
-      <line x1="12" y1="19" x2="12" y2="22" />
-    </svg>
+    <div style={{
+      width: 60, height: 56,
+      filter: 'drop-shadow(0 0 18px rgba(255,45,85,0.95)) drop-shadow(0 0 6px rgba(255,255,255,0.4))',
+      animation: 'heartbeatBig 1.4s cubic-bezier(0.37,0,0.63,1) infinite',
+      flexShrink: 0,
+    }}>
+      <svg width="60" height="56" viewBox="0 0 60 56" fill="none" aria-hidden>
+        <defs>
+          <linearGradient id="hg" x1="0" y1="0" x2="60" y2="56" gradientUnits="userSpaceOnUse">
+            <stop offset="0%"   stopColor="#E8556A" />
+            <stop offset="50%"  stopColor="#FF2D55" />
+            <stop offset="100%" stopColor="#D10043" />
+          </linearGradient>
+        </defs>
+        {/* Bright solid fill heart */}
+        <path
+          d="M30 52 C30 52 3 35 3 16 C3 8 9.5 2 18 2 C22.5 2 26.5 4.5 30 9 C33.5 4.5 37.5 2 42 2 C50.5 2 57 8 57 16 C57 35 30 52 30 52 Z"
+          fill="url(#hg)"
+        />
+        {/* White highlight for depth */}
+        <path
+          d="M16 9 C13 12 12 16 13 20"
+          stroke="rgba(255,255,255,0.55)"
+          strokeWidth="3"
+          strokeLinecap="round"
+          fill="none"
+        />
+        <style>{`
+          @keyframes heartbeatBig {
+            0%,100% { transform: scale(1); }
+            20%      { transform: scale(1.35); }
+            40%      { transform: scale(1.05); }
+            60%      { transform: scale(1.22); }
+            80%      { transform: scale(1); }
+          }
+        `}</style>
+      </svg>
+    </div>
   )
 }
 
-function IcoSend() {
+/* ─────────────────────────────────────────
+   SVG heart outline progress bar
+   Draws around the heart stroke gradually
+───────────────────────────────────────── */
+function HeartProgress({ progress, daysUntil }) {
+  // Heart outline path in a 100×90 viewBox
+  const heartOutline = 'M50 82 C50 82 6 55 6 25 C6 12 15 4 26 4 C33 4 40 8 50 16 C60 8 67 4 74 4 C85 4 94 12 94 25 C94 55 50 82 50 82 Z'
+  const pathLen = 230 // approximate path length for this shape
+  const filled  = pathLen * (progress / 100)
+
   return (
-    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <line x1="22" y1="2" x2="11" y2="13" />
-      <polygon points="22 2 15 22 11 13 2 9 22 2" />
-    </svg>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, marginTop: 20 }}>
+      <div style={{ position: 'relative', width: 110, height: 100 }}>
+        <svg viewBox="0 0 100 90" width="110" height="99" overflow="visible">
+          <defs>
+            <linearGradient id="hpg" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%"   stopColor="rgba(255,255,255,0.25)" />
+              <stop offset="100%" stopColor="rgba(255,255,255,0.08)" />
+            </linearGradient>
+            <linearGradient id="hpf" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%"   stopColor="#fff8b0" />
+              <stop offset="50%"  stopColor="#ffd6e0" />
+              <stop offset="100%" stopColor="#ffffff" />
+            </linearGradient>
+          </defs>
+          {/* background heart */}
+          <path d={heartOutline} fill="url(#hpg)" stroke="rgba(255,255,255,0.15)" strokeWidth="2" />
+          {/* animated progress stroke */}
+          <path
+            d={heartOutline}
+            fill="none"
+            stroke="url(#hpf)"
+            strokeWidth="4"
+            strokeLinecap="round"
+            strokeDasharray={`${filled} ${pathLen}`}
+            style={{ transition: 'stroke-dasharray 1.2s ease', filter: 'drop-shadow(0 0 4px rgba(255,230,230,0.6))' }}
+          />
+        </svg>
+        {/* percentage inside */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center',
+          paddingTop: 6,
+        }}>
+          <span style={{ fontFamily: 'var(--font-display)', fontSize: 17, fontWeight: 700, color: 'white', lineHeight: 1 }}>
+            {Math.round(progress)}%
+          </span>
+        </div>
+      </div>
+      <span style={{
+        fontFamily: 'var(--font-body)',
+        fontSize: 12,
+        color: 'rgba(255,255,255,0.65)',
+        textAlign: 'center',
+      }}>
+        {daysUntil === 0 ? 'Сегодня годовщина!' : `до годовщины ${daysUntil} дн`}
+      </span>
+    </div>
   )
 }
 
-function IcoClose() {
+/* ─────────────────────────────────────────
+   Floating particle field
+───────────────────────────────────────── */
+const PARTICLES = [
+  { left: '8%',  top: '12%', s: 1.0, d: 0,   dur: 7  },
+  { left: '88%', top: '8%',  s: 0.7, d: 1.2, dur: 9  },
+  { left: '20%', top: '75%', s: 0.8, d: 0.6, dur: 8  },
+  { left: '78%', top: '70%', s: 0.6, d: 2.1, dur: 11 },
+  { left: '50%', top: '5%',  s: 0.5, d: 0.3, dur: 6  },
+  { left: '35%', top: '85%', s: 0.9, d: 1.8, dur: 10 },
+  { left: '92%', top: '40%', s: 0.6, d: 0.9, dur: 8  },
+  { left: '5%',  top: '55%', s: 0.7, d: 1.5, dur: 9  },
+  { left: '65%', top: '20%', s: 0.5, d: 2.5, dur: 12 },
+  { left: '15%', top: '38%', s: 0.8, d: 0.4, dur: 7  },
+]
+function ParticleField() {
   return (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2">
-      <line x1="18" y1="6" x2="6" y2="18" />
-      <line x1="6" y1="6" x2="18" y2="18" />
-    </svg>
+    <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: 0 }}>
+      <style>{`
+        @keyframes particleFloat {
+          0%, 100% { transform: translateY(0) scale(var(--ps, 1)); opacity: 0.4; }
+          50%       { transform: translateY(-18px) scale(calc(var(--ps,1)*1.15)); opacity: 0.8; }
+        }
+        .particle-heart { position: absolute; animation: particleFloat var(--pd,8s) ease-in-out var(--pdelay,0s) infinite; }
+      `}</style>
+      {PARTICLES.map((p, i) => (
+        <div key={i} className="particle-heart"
+          style={{ left: p.left, top: p.top, '--ps': p.s, '--pd': p.dur+'s', '--pdelay': p.d+'s' }}>
+          <svg viewBox="0 0 16 14" width={Math.round(10*p.s)} height={Math.round(9*p.s)} fill="none">
+            <path d="M8 12.5S1 8.5 1 4C1 2 2.5.5 4.5.5c1 0 2 .6 3.5 2C9.5 1.1 10.5.5 11.5.5 13.5.5 15 2 15 4 15 8.5 8 12.5 8 12.5Z"
+              fill="rgba(255,255,255,0.55)" />
+          </svg>
+        </div>
+      ))}
+    </div>
   )
 }
 
-function IcoReply() {
+/* ─────────────────────────────────────────
+   Binary star connection between avatars
+───────────────────────────────────────── */
+function BinaryConnection() {
   return (
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <polyline points="3 11 9 5 9 9 15 9 15 13 9 13 9 17 3 11" />
-    </svg>
+    <div style={{ position: 'relative', width: 80, height: 84, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <style>{`
+        @keyframes orbTrack {
+          0%, 100% { left:4px;  top:50%; transform:translateY(-50%) scale(0.85); opacity:0.6; }
+          25%      { left:28%; top:28%; transform:translateY(0)      scale(1.1);  opacity:1; }
+          50%      { left:50%; top:50%; transform:translateY(-50%)    scale(1.2);  opacity:1; }
+          75%      { left:72%; top:28%; transform:translateY(0)      scale(1.1);  opacity:1; }
+        }
+        @keyframes connPulse {
+          0%,100% { opacity:0.15; } 50% { opacity:0.4; }
+        }
+        .orb-dot {
+          position:absolute;
+          width:8px; height:8px; border-radius:50%;
+          background:white;
+          box-shadow:0 0 10px 3px rgba(255,255,255,0.7),0 0 20px 6px rgba(200,51,74,0.3);
+          animation:orbTrack 3s ease-in-out infinite;
+          pointer-events:none;
+        }
+      `}</style>
+      <svg viewBox="0 0 80 84" width="80" height="84" style={{ position:'absolute', inset:0 }}>
+        <path d="M 0 42 Q 40 16 80 42" stroke="rgba(255,255,255,0.25)" strokeWidth="1.5" fill="none"
+          strokeDasharray="4 3" style={{ animation:'connPulse 2s ease-in-out infinite' }} />
+        <path d="M 0 42 Q 40 68 80 42" stroke="rgba(255,255,255,0.1)" strokeWidth="1" fill="none"
+          strokeDasharray="3 4" style={{ animation:'connPulse 2.5s ease-in-out 0.5s infinite' }} />
+      </svg>
+      <div className="orb-dot" />
+      <div style={{ position:'relative', zIndex:2 }}><CentreHeart /></div>
+    </div>
   )
 }
 
-function IcoEdit() {
+/* ─────────────────────────────────────────
+   Orbital progress ring around day counter
+───────────────────────────────────────── */
+function OrbitalRing({ progress, children }) {
+  const r = 118
+  const circ = 2 * Math.PI * r
+  const filled = circ * (progress / 100)
+  const angle = -Math.PI / 2 + (progress / 100) * 2 * Math.PI
   return (
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4z" />
-    </svg>
+    <div style={{ position:'relative', display:'inline-flex', alignItems:'center', justifyContent:'center' }}>
+      <svg viewBox="0 0 260 260" width="260" height="260"
+        style={{ position:'absolute', top:'50%', left:'50%', transform:'translate(-50%,-50%)', pointerEvents:'none' }}>
+        <defs>
+          <linearGradient id="orbGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%"   stopColor="rgba(255,255,255,0.05)" />
+            <stop offset="50%"  stopColor="rgba(255,255,255,0.55)" />
+            <stop offset="100%" stopColor="rgba(255,200,220,0.2)" />
+          </linearGradient>
+        </defs>
+        <circle cx="130" cy="130" r={r} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="1.5"/>
+        <circle cx="130" cy="130" r={r} fill="none" stroke="url(#orbGrad)" strokeWidth="2"
+          strokeDasharray={`${filled} ${circ}`} strokeLinecap="round" transform="rotate(-90 130 130)"
+          style={{ transition:'stroke-dasharray 2s ease', filter:'drop-shadow(0 0 5px rgba(255,200,220,0.5))' }}/>
+        <circle cx={130 + r * Math.cos(angle)} cy={130 + r * Math.sin(angle)}
+          r="5" fill="white"
+          style={{ filter:'drop-shadow(0 0 8px rgba(255,255,255,0.95))' }}/>
+      </svg>
+      {children}
+    </div>
   )
 }
 
-function IcoCopy() {
+/* ─────────────────────────────────────────
+   Glow digit — premium counter display
+───────────────────────────────────────── */
+function GlowDigit({ value, prevValue }) {
+  const changed = value !== prevValue
   return (
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-    </svg>
+    <span
+      key={value}
+      className="glow-digit"
+      style={{ animationName: changed ? 'digitFlip' : 'none' }}
+    >
+      {value}
+    </span>
   )
 }
 
-function IcoPin() {
+/* ─────────────────────────────────────────
+   Zodiac sign from birthday date
+───────────────────────────────────────── */
+function getZodiac(dateStr) {
+  if (!dateStr) return null
+  const d = new Date(dateStr)
+  const m = d.getMonth() + 1
+  const day = d.getDate()
+  if ((m === 3 && day >= 21) || (m === 4 && day <= 19)) return 'Овен'
+  if ((m === 4 && day >= 20) || (m === 5 && day <= 20)) return 'Телец'
+  if ((m === 5 && day >= 21) || (m === 6 && day <= 20)) return 'Близнецы'
+  if ((m === 6 && day >= 21) || (m === 7 && day <= 22)) return 'Рак'
+  if ((m === 7 && day >= 23) || (m === 8 && day <= 22)) return 'Лев'
+  if ((m === 8 && day >= 23) || (m === 9 && day <= 22)) return 'Дева'
+  if ((m === 9 && day >= 23) || (m === 10 && day <= 22)) return 'Весы'
+  if ((m === 10 && day >= 23) || (m === 11 && day <= 21)) return 'Скорпион'
+  if ((m === 11 && day >= 22) || (m === 12 && day <= 21)) return 'Стрелец'
+  if ((m === 12 && day >= 22) || (m === 1 && day <= 19)) return 'Козерог'
+  if ((m === 1 && day >= 20) || (m === 2 && day <= 18)) return 'Водолей'
+  return 'Рыбы'
+}
+
+function formatBirthday(dateStr) {
+  if (!dateStr) return null
+  const d = new Date(dateStr)
+  return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
+}
+
+/* ─────────────────────────────────────────
+   Avatar ring — clickable, CSS animated gradient
+───────────────────────────────────────── */
+function AvatarRing({ src, name, birthday, onClick }) {
   return (
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <line x1="12" y1="17" x2="12" y2="22" />
-      <path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1V4h-8v2h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17z" />
-    </svg>
+    <div
+      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7, cursor: 'pointer' }}
+      onClick={onClick}
+    >
+      {/* outer spinning gradient ring */}
+      <div className="av-ring" style={{ transition: 'opacity 0.15s, transform 0.15s' }}
+        onTouchStart={e => e.currentTarget.style.opacity = '0.75'}
+        onTouchEnd={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = '' }}
+      >
+        <div className="av-gap">
+          <div className="av-inner">
+            {src
+              ? <img src={src} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+              : <div className="av-initials-wrap">
+                  <svg viewBox="0 0 40 40" width="36" height="36" fill="none">
+                    <circle cx="20" cy="16" r="8" fill="rgba(139,26,44,0.7)"/>
+                    <path d="M4 38c0-8.8 7.2-16 16-16s16 7.2 16 16" fill="rgba(139,26,44,0.5)"/>
+                  </svg>
+                </div>
+            }
+          </div>
+        </div>
+      </div>
+      <span style={{
+        fontFamily: 'var(--font-body)',
+        fontSize: 12,
+        fontWeight: 700,
+        color: 'white',
+        textShadow: '0 1px 4px rgba(0,0,0,0.5)',
+      }}>
+        {name}
+      </span>
+      {birthday && (
+        <span style={{
+          fontFamily: 'var(--font-body)',
+          fontSize: 10,
+          color: 'rgba(255,255,255,0.65)',
+          textShadow: '0 1px 3px rgba(0,0,0,0.4)',
+          marginTop: -4,
+        }}>
+          {formatBirthday(birthday)}
+        </span>
+      )}
+    </div>
   )
 }
 
-function IcoDelete() {
-  return (
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <polyline points="3 6 5 6 21 6" />
-      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-      <line x1="10" y1="11" x2="10" y2="17" />
-      <line x1="14" y1="11" x2="14" y2="17" />
-    </svg>
-  )
-}
-
-function IcoVideo() {
-  return (
-    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <rect x="2" y="6" width="16" height="12" rx="2" />
-      <polygon points="22 8 18 12 22 16 22 8" />
-    </svg>
-  )
-}
-
-/* ── CONTEXT MENU ── */
-function ContextMenu({ msg, isMine, onReact, onReply, onEdit, onCopy, onPin, onDelete, onClose }) {
+/* ─────────────────────────────────────────
+   Partner card modal
+───────────────────────────────────────── */
+function PartnerCard({ profile, onClose }) {
+  if (!profile) return null
+  const birthday = formatBirthday(profile.birthday)
+  const zodiac   = getZodiac(profile.birthday)
   return (
     <div
       style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: 'rgba(0,0,0,0.4)',
-        backdropFilter: 'blur(6px)',
-        zIndex: 200,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
+        position: 'fixed', inset: 0, zIndex: 200,
+        background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(8px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: 20, animation: 'fadeIn 0.2s ease',
       }}
       onClick={onClose}
     >
       <div
-        style={{
-          background: '#FFFFFF',
-          borderRadius: 16,
-          padding: 12,
-          minWidth: 200,
-          boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
-        }}
         onClick={e => e.stopPropagation()}
+        style={{
+          background: 'linear-gradient(160deg, #200A10 0%, #3D1520 60%, #4A2030 100%)',
+          borderRadius: 24,
+          padding: '32px 24px 28px',
+          maxWidth: 300, width: '100%',
+          boxShadow: '0 24px 80px rgba(0,0,0,0.6)',
+          border: '1px solid rgba(200,51,74,0.2)',
+          textAlign: 'center',
+          position: 'relative',
+          animation: 'slideUp 0.3s cubic-bezier(0.34,1.56,0.64,1) both',
+        }}
       >
-        <div style={{ display: 'flex', gap: 12, justifyContent: 'center', padding: '8px 0', borderBottom: '1px solid rgba(0,0,0,0.08)' }}>
-          {['❤️', '🔥', '😍', '😂', '👍', '💔'].map(emoji => (
-            <button
-              key={emoji}
-              onClick={() => { onReact(msg.id, emoji); onClose() }}
-              style={{
-                background: 'none',
-                border: 'none',
-                fontSize: 28,
-                cursor: 'pointer',
-                padding: 4,
-              }}
-            >
-              {emoji}
-            </button>
-          ))}
-        </div>
-        
-        <div style={{ marginTop: 8 }}>
-          <MenuItem icon={<IcoReply />} label="Ответить" onClick={() => { onReply(msg); onClose() }} />
-          {isMine && <MenuItem icon={<IcoEdit />} label="Редактировать" onClick={() => { onEdit(msg); onClose() }} />}
-          {msg.text && <MenuItem icon={<IcoCopy />} label="Копировать" onClick={() => { onCopy(msg.text); onClose() }} />}
-          <MenuItem icon={<IcoPin />} label={msg.is_pinned ? "Открепить" : "Закрепить"} onClick={() => { onPin(msg.id); onClose() }} />
-          {isMine && <MenuItem icon={<IcoDelete />} label="Удалить" onClick={() => { onDelete(msg.id); onClose() }} danger />}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function MenuItem({ icon, label, onClick, danger }) {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 12,
-        width: '100%',
-        padding: '10px 12px',
-        background: 'none',
-        border: 'none',
-        borderRadius: 8,
-        cursor: 'pointer',
-        color: danger ? '#E24B4A' : '#1C0A0E',
-        fontSize: 15,
-        fontFamily: 'DM Sans, sans-serif',
-      }}
-    >
-      <span style={{ width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{icon}</span>
-      <span>{label}</span>
-    </button>
-  )
-}
-
-/* ── MESSAGE COMPONENT ── */
-const Message = React.memo(function Message({
-  msg, isMine, dark, partnerName, partnerAvatar,
-  onLongPress, onReact, onReply, onEdit, onCopy, onPin, onDelete,
-  isFirst, isLast, showAv, messages, replyMsg
-}) {
-  const timerRef = useRef(null)
-  const movedRef = useRef(false)
-  const posRef = useRef({ x: 0, y: 0 })
-  const lastTapRef = useRef(0)
-  
-  const GRAD = 'linear-gradient(135deg, #C8334A, #8B1A2C)'
-  const BG = isMine ? GRAD : (dark ? '#1E0A10' : '#FFFFFF')
-  const COLOR = isMine ? '#FFFFFF' : (dark ? '#F5E8EA' : '#1C0A0E')
-  const MUTED = dark ? '#8A5060' : '#9A6070'
-  
-  const borderRadius = isMine
-    ? isLast ? '18px 18px 4px 18px' : '18px 18px 8px 18px'
-    : isLast ? '18px 18px 18px 4px' : '18px 18px 18px 8px'
-
-  const handleTouchStart = (e) => {
-    movedRef.current = false
-    const touch = e.touches[0]
-    posRef.current = { x: touch.clientX, y: touch.clientY }
-    timerRef.current = setTimeout(() => {
-      if (!movedRef.current) onLongPress()
-    }, 500)
-  }
-
-  const handleTouchMove = (e) => {
-    const touch = e.touches[0]
-    const dx = Math.abs(touch.clientX - posRef.current.x)
-    const dy = Math.abs(touch.clientY - posRef.current.y)
-    if (dx > 10 || dy > 10) {
-      movedRef.current = true
-      if (timerRef.current) clearTimeout(timerRef.current)
-    }
-  }
-
-  const handleTouchEnd = () => {
-    if (timerRef.current) clearTimeout(timerRef.current)
-  }
-
-  const handleClick = () => {
-    const now = Date.now()
-    if (now - lastTapRef.current < 300) {
-      onReact(msg.id, '❤️')
-    }
-    lastTapRef.current = now
-  }
-
-  return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: isMine ? 'flex-end' : 'flex-start',
-        marginTop: isFirst ? 12 : 4,
-        marginBottom: isLast ? 12 : 2,
-        paddingLeft: !isMine && showAv ? 48 : 16,
-        paddingRight: isMine ? 16 : 16,
-      }}
-    >
-      {!isMine && showAv && (
-        <div
+        <button
+          onClick={onClose}
           style={{
-            position: 'absolute',
-            left: 12,
-            width: 36,
-            height: 36,
-            borderRadius: '50%',
-            background: partnerAvatar ? `url(${partnerAvatar}) center/cover` : GRAD,
-            marginTop: -8,
-          }}
-        />
-      )}
-      
-      {msg.reply_to_id && replyMsg && (
-        <div
-          style={{
-            background: dark ? '#3D1520' : '#F2F2F2',
-            borderRadius: 12,
-            padding: '6px 10px',
-            marginBottom: 4,
-            maxWidth: 260,
-            borderLeft: `3px solid #C8334A`,
+            position: 'absolute', top: 14, right: 14,
+            background: 'rgba(255,255,255,0.1)', border: 'none',
+            borderRadius: '50%', width: 36, height: 36,
+            color: 'white', fontSize: 18, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}
         >
-          <div style={{ fontSize: 12, color: '#C8334A', fontWeight: 600 }}>
-            {replyMsg.user_id === msg.user_id ? 'Вы' : partnerName}
-          </div>
-          <div style={{ fontSize: 13, color: MUTED, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {replyMsg.text?.slice(0, 60)}
-          </div>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+
+        {/* Avatar */}
+        <div style={{
+          width: 88, height: 88, borderRadius: '50%', margin: '0 auto 16px',
+          border: '3px solid rgba(255,255,255,0.25)',
+          boxShadow: '0 0 20px rgba(200,51,74,0.3)',
+          overflow: 'hidden', background: 'var(--blush-2, #F2D0D6)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          {profile.avatar_url
+            ? <img src={profile.avatar_url} alt={profile.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            : <svg viewBox="0 0 40 40" width="44" height="44" fill="none">
+                <circle cx="20" cy="16" r="8" fill="rgba(139,26,44,0.7)"/>
+                <path d="M4 38c0-8.8 7.2-16 16-16s16 7.2 16 16" fill="rgba(139,26,44,0.5)"/>
+              </svg>
+          }
         </div>
-      )}
-      
-      <div
-        style={{
-          maxWidth: '75%',
-          background: BG,
-          borderRadius,
-          padding: '8px 12px',
-          position: 'relative',
-        }}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        onClick={handleClick}
-      >
-        {msg.is_video_circle && msg.video_url ? (
-          <video
-            src={msg.video_url}
-            style={{ width: 180, height: 180, borderRadius: '50%', objectFit: 'cover' }}
-            controls
-          />
-        ) : msg.photo_url ? (
-          <img
-            src={msg.photo_url}
-            alt=""
-            style={{ maxWidth: 280, maxHeight: 280, borderRadius: 12, cursor: 'pointer' }}
-            onClick={(e) => e.stopPropagation()}
-          />
-        ) : msg.text ? (
-          <div
-            style={{ color: COLOR, fontSize: 15, lineHeight: 1.45, wordBreak: 'break-word' }}
-            dangerouslySetInnerHTML={{ __html: parseText(msg.text) }}
-          />
-        ) : null}
-        
-        <div style={{ fontSize: 11, color: isMine ? 'rgba(255,255,255,0.6)' : MUTED, marginTop: 4, textAlign: 'right' }}>
-          {fmtTime(msg.created_at)}
-          {msg.edited_at && <span style={{ marginLeft: 4 }}>(ред.)</span>}
+
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, color: 'white', marginBottom: 4 }}>
+          {profile.name || 'Партнёр'}
         </div>
+
+        {birthday && (
+          <div style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'rgba(255,255,255,0.65)', marginBottom: 16 }}>
+            {birthday}
+          </div>
+        )}
+
+        {zodiac && (
+          <div style={{
+            display: 'inline-block',
+            background: 'rgba(200,51,74,0.15)',
+            border: '1px solid rgba(200,51,74,0.3)',
+            borderRadius: 20,
+            padding: '6px 18px',
+            fontFamily: 'var(--font-body)',
+            fontSize: 13,
+            fontWeight: 600,
+            color: 'var(--rose-light, #E8556A)',
+          }}>
+            {zodiac}
+          </div>
+        )}
       </div>
-      
-      {msg.reactions && Object.keys(msg.reactions).length > 0 && (
-        <div style={{ display: 'flex', gap: 4, marginTop: 2, marginRight: 4 }}>
-          {Object.entries(msg.reactions).map(([emoji, users]) => (
-            VALID_REACTIONS.has(emoji) && users.length > 0 && (
-              <button
-                key={emoji}
-                onClick={() => onReact(msg.id, emoji)}
-                style={{
-                  background: dark ? '#3D1520' : '#F0F0F0',
-                  borderRadius: 20,
-                  padding: '2px 6px',
-                  fontSize: 13,
-                  border: 'none',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 4,
-                }}
-              >
-                <span>{emoji}</span>
-                <span style={{ fontSize: 11, color: MUTED }}>{users.length}</span>
-              </button>
-            )
-          ))}
-        </div>
-      )}
     </div>
   )
-})
+}
 
-/* ── MAIN CHAT COMPONENT ── */
-export default function Chat({ session, profile, darkMode }) {
-  const [messages, setMessages] = useState([])
-  const [partner, setPartner] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [loadingMore, setLoadingMore] = useState(false)
-  const [allLoaded, setAllLoaded] = useState(false)
-  const [newText, setNewText] = useState('')
-  const [sending, setSending] = useState(false)
-  const [showDown, setShowDown] = useState(false)
-  const [photoFile, setPhotoFile] = useState(null)
-  const [photoPreview, setPhotoPreview] = useState(null)
-  const [editingId, setEditingId] = useState(null)
-  const [replyTo, setReplyTo] = useState(null)
-  const [ctxMenu, setCtxMenu] = useState(null)
-  const [pinnedMsg, setPinnedMsg] = useState(null)
-  
-  const listRef = useRef(null)
-  const endRef = useRef(null)
-  const photoRef = useRef(null)
-  
-  const uid = session?.user?.id
-  const BG = darkMode ? '#200A10' : '#FBF0F2'
-  const SURF = darkMode ? '#1E0A10' : '#FFFFFF'
-  const SURF2 = darkMode ? '#3D1520' : '#FBF0F2'
-  const INK = darkMode ? '#F5E8EA' : '#1C0A0E'
-  const MUTED = darkMode ? '#8A5060' : '#9A6070'
-  const BDR = darkMode ? 'rgba(232,85,106,0.18)' : 'rgba(200,51,74,0.13)'
-  const GRAD = 'linear-gradient(135deg, #C8334A, #8B1A2C)'
-  
+/* ─────────────────────────────────────────
+   Ripple + mouse-glow helpers
+───────────────────────────────────────── */
+function addRipple(e) {
+  const el = e.currentTarget
+  const rect = el.getBoundingClientRect()
+  const rip = document.createElement('div')
+  rip.className = 'ripple-el'
+  rip.style.left = (e.clientX - rect.left) + 'px'
+  rip.style.top = (e.clientY - rect.top) + 'px'
+  el.appendChild(rip)
+  setTimeout(() => rip.remove(), 700)
+}
+
+function mouseGlow(e) {
+  const rect = e.currentTarget.getBoundingClientRect()
+  e.currentTarget.style.setProperty('--mx', ((e.clientX - rect.left) / rect.width * 100) + '%')
+  e.currentTarget.style.setProperty('--my', ((e.clientY - rect.top) / rect.height * 100) + '%')
+}
+
+/* ─────────────────────────────────────────
+   MAIN COMPONENT
+───────────────────────────────────────── */
+export default function Home({ session, profile, onNavigate }) {
+  const [time,           setTime]           = useState(getRelTime(COUPLE_START))
+  const [prevTime,       setPrevTime]       = useState(null)
+  const [settings,       setSettings]       = useState(null)
+  const [nextEvent,      setNextEvent]      = useState(null)
+  const [countdown,      setCountdown]      = useState(null)
+  const [partnerProfile, setPartnerProfile] = useState(null)
+  const [editMsg,        setEditMsg]        = useState(false)
+  const [editMeet,       setEditMeet]       = useState(false)
+  const [newMsg,         setNewMsg]         = useState('')
+  const [newMeet,        setNewMeet]        = useState('')
+  const [saving,         setSaving]         = useState(false)
+  const [showPartnerCard, setShowPartnerCard] = useState(false)
+
+  const loveMsg   = settings?.love_message || 'Ты — лучшее, что случилось в моей жизни'
+  const { out, done } = useTypewriter(loveMsg, 55)
+
+  /* Live counter — every second */
   useEffect(() => {
+    const id = setInterval(() => {
+      setPrevTime(t => t)
+      setTime(getRelTime(COUPLE_START))
+    }, 1000)
+    return () => clearInterval(id)
+  }, [])
+
+  /* Meeting countdown */
+  useEffect(() => {
+    if (!settings?.next_meeting) { setCountdown(null); return }
+    const tick = () => setCountdown(getTimeUntil(settings.next_meeting))
+    tick()
+    const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
+  }, [settings?.next_meeting])
+
+  /* Load data */
+  const loadData = useCallback(async () => {
+    if (!session?.user?.id) return
+    const pid = profile?.partner_id
+
+    if (pid) {
+      const { data } = await supabase.from('profiles').select('*').eq('id', pid).single()
+      setPartnerProfile(data)
+    }
+
+    const uids = [session.user.id, pid].filter(Boolean)
+    const { data: all } = await supabase.from('couple_settings').select('*').in('user_id', uids)
+    if (all?.length) {
+      const my = all.find(s => s.user_id === session.user.id)
+      const pt = all.find(s => s.user_id === pid)
+      let lm = null, la = null
+      for (const s of all) {
+        if (s.next_meeting) {
+          const at = new Date(s.updated_at || s.created_at || 0)
+          if (!la || at > la) { lm = s.next_meeting; la = at }
+        }
+      }
+      const merged = { love_message: my?.love_message || pt?.love_message || '', next_meeting: lm }
+      setSettings(merged)
+      setNewMsg(merged.love_message)
+      setNewMeet(utcToLocal(merged.next_meeting))
+    }
+
+    const today = new Date().toISOString().slice(0, 10)
+    const { data: evs } = await supabase.from('calendar_events')
+      .select('*').gte('event_date', today)
+      .order('event_date', { ascending: true }).limit(1)
+    if (evs?.length) setNextEvent(evs[0])
+  }, [session?.user?.id, profile?.partner_id])
+
+  useEffect(() => { loadData() }, [loadData])
+
+  async function saveMsg() {
+    setSaving(true)
+    const { data: ex } = await supabase.from('couple_settings').select('id').eq('user_id', session.user.id).maybeSingle()
+    if (ex) await supabase.from('couple_settings').update({ love_message: newMsg, updated_at: new Date().toISOString() }).eq('id', ex.id)
+    else await supabase.from('couple_settings').insert({ user_id: session.user.id, love_message: newMsg })
+    setSettings(p => ({ ...p, love_message: newMsg }))
+    setEditMsg(false)
+    setSaving(false)
+  }
+
+  async function saveMeet() {
+    setSaving(true)
+    const utc = localToUTC(newMeet)
+    const now = new Date().toISOString()
+    const { data: myEx } = await supabase.from('couple_settings').select('id').eq('user_id', session.user.id).maybeSingle()
+    if (myEx) await supabase.from('couple_settings').update({ next_meeting: utc, updated_at: now }).eq('id', myEx.id)
+    else await supabase.from('couple_settings').insert({ user_id: session.user.id, next_meeting: utc })
     if (profile?.partner_id) {
-      supabase.from('profiles').select('*').eq('id', profile.partner_id).single().then(({ data }) => {
-        setPartner(data)
-      })
+      const { data: pEx } = await supabase.from('couple_settings').select('id').eq('user_id', profile.partner_id).maybeSingle()
+      if (pEx) await supabase.from('couple_settings').update({ next_meeting: utc, updated_at: now }).eq('id', pEx.id)
+      else await supabase.from('couple_settings').insert({ user_id: profile.partner_id, next_meeting: utc })
     }
-  }, [profile])
-  
-  const loadMessages = useCallback(async () => {
-    const { data } = await supabase
-      .from('messages')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(50)
-    setMessages((data || []).reverse())
-    setLoading(false)
-    setTimeout(() => {
-      if (endRef.current) endRef.current.scrollIntoView({ behavior: 'auto' })
-    }, 100)
-  }, [])
-  
-  const loadMore = useCallback(async () => {
-    if (loadingMore || allLoaded || !messages.length) return
-    setLoadingMore(true)
-    const { data } = await supabase
-      .from('messages')
-      .select('*')
-      .lt('created_at', messages[0].created_at)
-      .order('created_at', { ascending: false })
-      .limit(50)
-    if (!data || data.length < 50) setAllLoaded(true)
-    setMessages(prev => [...(data || []).reverse(), ...prev])
-    setLoadingMore(false)
-  }, [loadingMore, allLoaded, messages])
-  
-  const handleScroll = useCallback((e) => {
-    const el = e.currentTarget
-    if (!el) return
-    setShowDown(el.scrollHeight - el.scrollTop - el.clientHeight > 300)
-    if (el.scrollTop < 100 && !loadingMore && !allLoaded) loadMore()
-  }, [loadingMore, allLoaded, loadMore])
-  
-  const scrollDown = () => {
-    if (endRef.current) endRef.current.scrollIntoView({ behavior: 'smooth' })
+    setSettings(p => ({ ...p, next_meeting: utc }))
+    setEditMeet(false)
+    setSaving(false)
   }
-  
-  const uploadPhoto = async (file) => {
-    const compressed = await compressImage(file)
-    const ext = compressed.name.split('.').pop()
-    const path = `chat/${Date.now()}-${Math.random().toString(36).slice(7)}.${ext}`
-    const { error } = await supabase.storage.from('photos').upload(path, compressed)
-    if (error) throw error
-    return supabase.storage.from('photos').getPublicUrl(path).data.publicUrl
-  }
-  
-  const sendMessage = async () => {
-    if ((!newText.trim() && !photoFile) || sending) return
-    
-    setSending(true)
-    try {
-      let photoUrl = null
-      if (photoFile) {
-        photoUrl = await uploadPhoto(photoFile)
-      }
-      
-      const msgData = {
-        user_id: uid,
-        text: newText.trim() || null,
-        photo_url: photoUrl,
-        reply_to_id: replyTo?.id || null,
-      }
-      
-      if (editingId) {
-        await supabase.from('messages').update({
-          text: msgData.text,
-          edited_at: new Date().toISOString(),
-        }).eq('id', editingId)
-      } else {
-        await supabase.from('messages').insert(msgData)
-      }
-      
-      setNewText('')
-      setPhotoFile(null)
-      setPhotoPreview(null)
-      setReplyTo(null)
-      setEditingId(null)
-      setTimeout(scrollDown, 100)
-    } catch (err) {
-      console.error(err)
-    }
-    setSending(false)
-  }
-  
-  const deleteMsg = async (id) => {
-    await supabase.from('messages').delete().eq('id', id)
-  }
-  
-  const pinMsg = async (id) => {
-    const msg = messages.find(m => m.id === id)
-    await supabase.from('messages').update({ is_pinned: !msg?.is_pinned }).eq('id', id)
-    if (!msg?.is_pinned) {
-      const { data } = await supabase.from('messages').select('*').eq('id', id).single()
-      setPinnedMsg(data)
-    } else {
-      setPinnedMsg(null)
-    }
-  }
-  
-  const addReact = async (msgId, emoji) => {
-    const msg = messages.find(m => m.id === msgId)
-    if (!msg) return
-    
-    let reactions = msg.reactions || {}
-    const users = reactions[emoji] || []
-    
-    if (users.includes(uid)) {
-      reactions[emoji] = users.filter(id => id !== uid)
-      if (reactions[emoji].length === 0) delete reactions[emoji]
-    } else {
-      reactions[emoji] = [...users, uid]
-    }
-    
-    await supabase.from('messages').update({ reactions }).eq('id', msgId)
-  }
-  
-  const copyText = (text) => {
-    navigator.clipboard.writeText(text)
-  }
-  
-  useEffect(() => {
-    loadMessages()
-    
-    const channel = supabase.channel('chat-v1')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
-        setMessages(prev => [...prev, payload.new])
-        setTimeout(scrollDown, 100)
-      })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, (payload) => {
-        setMessages(prev => prev.map(m => m.id === payload.new.id ? payload.new : m))
-      })
-      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'messages' }, (payload) => {
-        setMessages(prev => prev.filter(m => m.id !== payload.old.id))
-      })
-      .subscribe()
-    
-    return () => { supabase.removeChannel(channel) }
-  }, [loadMessages])
-  
-  useEffect(() => {
-    supabase.from('messages').select('*').eq('is_pinned', true).single().then(({ data }) => {
-      if (data) setPinnedMsg(data)
-    })
-  }, [])
-  
-  const groupedMessages = useMemo(() => {
-    return messages.map((msg, i) => {
-      const prev = messages[i - 1]
-      const next = messages[i + 1]
-      const showDate = i === 0 || diffDate(msg.created_at, prev?.created_at)
-      const isFirst = isFirstInGroup(msg, prev)
-      const isLast = isLastInGroup(msg, next, uid)
-      const showAv = needAvatar(msg, next, uid)
-      const replyMsg = msg.reply_to_id ? messages.find(m => m.id === msg.reply_to_id) : null
-      return { msg, showDate, isFirst, isLast, showAv, replyMsg }
-    })
-  }, [messages, uid])
-  
+
+  const anniv  = getAnniv(COUPLE_START)
+  const myName = profile?.name || 'Антон'
+  const pName  = partnerProfile?.name || 'Эльвира'
+
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: BG }}>
-      {/* Header */}
-      <div style={{
-        background: SURF,
-        borderBottom: `0.5px solid ${BDR}`,
-        padding: `max(10px, env(safe-area-inset-top, 0px)) 16px 10px`,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 12,
-      }}>
-        <div style={{
-          width: 42,
-          height: 42,
-          borderRadius: '50%',
-          background: partner?.avatar_url ? `url(${partner?.avatar_url}) center/cover` : GRAD,
-          position: 'relative',
-        }}>
-          <div style={{
-            position: 'absolute',
-            bottom: 2,
-            right: 2,
-            width: 12,
-            height: 12,
-            borderRadius: '50%',
-            background: '#4CAF50',
-            border: `2px solid ${SURF}`,
-          }} />
-        </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 18, fontWeight: 600, color: INK }}>
-            {partner?.name || 'Партнёр'}
+    <>
+      <style>{`
+        /* ── Avatar rings ── */
+        @property --ring-a {
+          syntax: '<angle>';
+          initial-value: 0deg;
+          inherits: false;
+        }
+        .av-ring {
+          width: 84px; height: 84px;
+          border-radius: 50%;
+          padding: 2.5px;
+          background: conic-gradient(from var(--ring-a),
+            #E8556A, #8B1A2C, #8B1A2C, #8B1A2C, #E8556A);
+          animation: ringRotate 4s linear infinite;
+        }
+        @keyframes ringRotate { to { --ring-a: 360deg; } }
+
+        /* Fallback for browsers without @property */
+        @supports not (background: conic-gradient(from 0deg, red, blue)) {
+          .av-ring {
+            background: linear-gradient(135deg, #E8556A, #8B1A2C, #8B1A2C, #8B1A2C);
+            background-size: 300% 300%;
+            animation: gradShift 4s ease infinite;
+          }
+        }
+        @keyframes gradShift {
+          0%   { background-position: 0% 50%; }
+          50%  { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+
+        .av-gap {
+          width: 100%; height: 100%;
+          border-radius: 50%;
+          padding: 2px;
+          background: var(--theme-gradient, linear-gradient(160deg, #C8334A 0%, #8B1A2C 100%));
+        }
+        .av-inner {
+          width: 100%; height: 100%;
+          border-radius: 50%;
+          background: var(--blush-2, #F2D0D6);
+          overflow: hidden;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .av-initials {
+          font-family: var(--font-display);
+          font-size: 26px;
+          font-weight: 600;
+          color: #8B1A2C;
+          line-height: 1;
+          /* SVG-style person silhouette as text fallback */
+        }
+
+        /* ── Glow digits ── */
+        .glow-digit {
+          display: inline-block;
+          font-family: 'Courier New', 'SF Mono', monospace;
+          text-shadow:
+            0 0 10px rgba(255,200,220,0.8),
+            0 0 22px rgba(255,150,200,0.5),
+            0 0 40px rgba(139,26,44,0.3);
+          animation: digitFlip 0.35s cubic-bezier(0.34,1.56,0.64,1) both;
+        }
+        @keyframes digitFlip {
+          from { opacity: 0.4; transform: scaleY(0.7) translateY(-4px); }
+          to   { opacity: 1;   transform: scaleY(1)   translateY(0); }
+        }
+
+        /* ── Home layout ── */
+        .home-wrap {
+          min-height: 100%;
+          padding: 0 0 130px;
+          position: relative;
+          overflow: hidden;
+        }
+
+        /* ── Hero banner ── */
+        .home-banner {
+          background: var(--gradient-banner, linear-gradient(160deg, #C8334A 0%, #8B1A2C 100%));
+          background-size: 200% 200%;
+          animation: gradientShift 8s ease infinite;
+          border-radius: 0 0 28px 28px;
+          padding: 56px 20px 20px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          position: relative;
+          z-index: 1;
+          box-shadow: 0 8px 40px rgba(139,26,44,0.35), 0 4px 16px rgba(200,51,74,0.2);
+          overflow: hidden;
+        }
+        /* shimmer overlay */
+        .home-banner::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          border-radius: inherit;
+          background: linear-gradient(135deg,
+            rgba(255,255,255,0.1) 0%,
+            transparent 35%,
+            transparent 65%,
+            rgba(255,255,255,0.05) 100%);
+          pointer-events: none;
+        }
+
+        /* ── Avatar row ── */
+        .av-row { display: flex; align-items: center; gap: 20px; margin-bottom: 28px; }
+
+        /* ── Day counter ── */
+        .day-counter { text-align: center; color: white; }
+        .day-number {
+          font-family: var(--font-display);
+          font-size: clamp(60px, 15vw, 88px);
+          font-weight: 700;
+          line-height: 1;
+          letter-spacing: -3px;
+          animation: countIn 0.7s cubic-bezier(0.34,1.56,0.64,1) both;
+        }
+        @keyframes countIn {
+          from { opacity:0; transform: scale(0.65); }
+          to   { opacity:1; transform: scale(1); }
+        }
+        .day-label {
+          font-size: 17px;
+          font-weight: 600;
+          opacity: 0.82;
+          margin-top: 2px;
+          font-family: var(--font-body);
+        }
+        .day-breakdown {
+          display: flex;
+          gap: 14px;
+          justify-content: center;
+          margin-top: 12px;
+        }
+        .day-unit { display: flex; flex-direction: column; align-items: center; }
+        .day-unit-val {
+          font-family: var(--font-display);
+          font-size: 20px;
+          font-weight: 700;
+          color: white;
+          text-shadow: 0 0 14px rgba(255,180,210,0.6);
+        }
+        .day-unit-lbl {
+          font-family: var(--font-body);
+          font-size: 10px;
+          opacity: 0.6;
+          text-transform: uppercase;
+          letter-spacing: 0.6px;
+          color: white;
+        }
+
+        /* Live clock bar */
+        .live-clock-bar {
+          margin-top: 14px;
+          display: flex;
+          gap: 1px;
+          align-items: center;
+          justify-content: center;
+          background: rgba(0,0,0,0.15);
+          border: 1px solid rgba(255,255,255,0.15);
+          border-radius: 14px;
+          padding: 8px 20px;
+          letter-spacing: 3px;
+          font-size: 24px;
+          color: white;
+          font-weight: 700;
+        }
+        .clock-sep {
+          opacity: 0.5;
+          animation: sepBlink 1s step-end infinite;
+          margin: 0 1px;
+        }
+        @keyframes sepBlink { 0%,100%{opacity:0.5} 50%{opacity:0.1} }
+
+        /* ── Content below banner ── */
+        .home-content {
+          padding: 0 15px;
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
+          margin-top: 20px;
+          position: relative;
+          z-index: 1;
+        }
+
+        /* ── Cards ── */
+        .hc {
+          background: var(--surface, #FFFFFF);
+          border-radius: var(--radius-lg, 20px);
+          border: var(--border-width, 0.5px) solid var(--border, rgba(200,51,74,0.13));
+          padding: 18px 20px;
+          box-shadow: var(--shadow);
+          animation: slideUp 0.5s ease both;
+          position: relative; overflow: hidden;
+        }
+        .app.dark .hc { background: var(--surface-2, #1E0A10); border-color: rgba(200,51,74,0.18); }
+        /* Mouse glow effect */
+        .hc::after {
+          content: ''; position: absolute; inset: 0; border-radius: inherit;
+          background: radial-gradient(circle at var(--mx, 50%) var(--my, 50%), rgba(200,51,74,0.07), transparent 60%);
+          opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 0;
+        }
+        .hc:hover::after { opacity: 1; }
+        /* Ripple */
+        .ripple-el {
+          position: absolute; border-radius: 50%;
+          width: 60px; height: 60px; margin-left: -30px; margin-top: -30px;
+          background: rgba(200,51,74,0.2);
+          transform: scale(0); animation: ripple 0.6s ease-out forwards;
+          pointer-events: none; z-index: 1;
+        }
+        .hc-title {
+          font-family: var(--font-body);
+          font-size: 11px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 1.2px;
+          color: var(--text-muted);
+          margin-bottom: 12px;
+        }
+
+        /* ── Love message ── */
+        .love-card {
+          background: linear-gradient(150deg, #C8334A 0%, #8B1A2C 55%, #8B1A2C 100%);
+          border-radius: 22px;
+          padding: 20px;
+          color: white;
+          position: relative;
+          box-shadow: 0 8px 32px rgba(139,26,44,0.32);
+          animation: slideUp 0.5s ease both;
+        }
+        .love-card::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          border-radius: inherit;
+          border: 1px solid rgba(255,255,255,0.12);
+          pointer-events: none;
+        }
+        .love-text {
+          font-family: var(--font-display);
+          font-style: italic;
+          font-size: clamp(15px, 4vw, 18px);
+          line-height: 1.6;
+          min-height: 48px;
+          position: relative;
+          z-index: 1;
+        }
+        .cursor {
+          display: inline-block;
+          width: 2px; height: 1em;
+          background: rgba(255,255,255,0.8);
+          margin-left: 3px;
+          vertical-align: text-bottom;
+          animation: curBlink 0.9s step-end infinite;
+        }
+        @keyframes curBlink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+        /* edit button — SVG pencil */
+        .love-edit-btn {
+          position: absolute;
+          top: 14px; right: 14px;
+          background: rgba(255,255,255,0.18);
+          border: 1px solid rgba(255,255,255,0.2);
+          border-radius: 50%;
+          width: 34px; height: 34px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          color: white;
+          transition: background 0.15s;
+          z-index: 2;
+        }
+        .love-edit-btn:active { background: rgba(255,255,255,0.32); }
+
+        .love-textarea {
+          width: 100%;
+          background: rgba(255,255,255,0.14);
+          border: 1.5px solid rgba(255,255,255,0.35);
+          border-radius: 14px;
+          color: white;
+          font-family: var(--font-body);
+          font-size: 15px;
+          padding: 10px 12px;
+          resize: none;
+          min-height: 88px;
+          outline: none;
+        }
+        .love-textarea::placeholder { color: rgba(255,255,255,0.45); }
+
+        /* ── Action grid ── */
+        .action-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 12px;
+        }
+        .action-btn {
+          background: var(--bg-card);
+          border: 1px solid rgba(200,51,74,0.08);
+          border-radius: 20px;
+          padding: 18px 12px 14px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 10px;
+          cursor: pointer;
+          box-shadow: var(--shadow);
+          transition: transform 0.15s, box-shadow 0.15s;
+          position: relative;
+          overflow: hidden;
+        }
+        .action-btn::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(135deg, rgba(200,51,74,0.04) 0%, transparent 100%);
+          pointer-events: none;
+        }
+        .action-btn:active {
+          transform: scale(0.94);
+          box-shadow: 0 2px 8px rgba(139,26,44,0.12);
+        }
+        .action-btn-icon {
+          width: 42px; height: 42px;
+          border-radius: 14px;
+          background: linear-gradient(135deg, rgba(200,51,74,0.1) 0%, rgba(139,26,44,0.08) 100%);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: var(--rose, #C8334A);
+          transition: transform 0.2s ease;
+        }
+        .action-btn:hover .action-btn-icon { transform: scale(1.1) rotate(-3deg); }
+        .action-btn-label {
+          font-family: var(--font-body);
+          font-size: 12px;
+          font-weight: 700;
+          color: var(--text);
+          text-align: center;
+          line-height: 1.3;
+        }
+        .app.dark .action-btn { background: var(--surface-2, #1E0A10); border-color: rgba(200,51,74,0.12); }
+        .app.dark .action-btn-label { color: var(--ink, #F5E8EA); }
+        .app.dark .action-btn-icon { background: rgba(200,51,74,0.15); }
+
+        /* ── Meeting countdown ── */
+        .meet-values { display: flex; gap: 10px; justify-content: center; }
+        .meet-unit {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          background: linear-gradient(135deg, var(--blush, #FBF0F2) 0%, var(--blush-2, #F2D0D6) 100%);
+          border-radius: 16px;
+          padding: 12px 14px;
+          min-width: 58px;
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.8), 0 2px 8px rgba(139,26,44,0.08);
+        }
+        .app.dark .meet-unit { background: rgba(139,26,44,0.12); box-shadow: none; }
+        .meet-num {
+          font-family: var(--font-display);
+          font-size: 28px;
+          font-weight: 700;
+          color: #8B1A2C;
+          line-height: 1;
+          text-shadow: 0 1px 0 rgba(255,255,255,0.6);
+        }
+        .app.dark .meet-num { color: var(--rose-light, #E8556A); text-shadow: none; }
+        .meet-lbl {
+          font-family: var(--font-body);
+          font-size: 10px;
+          color: #8B1A2C;
+          opacity: 0.7;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          margin-top: 3px;
+        }
+        .app.dark .meet-lbl { color: var(--rose-light, #E8556A); }
+
+        /* ── Next event ── */
+        .event-row { display: flex; align-items: center; gap: 14px; }
+        .event-emoji-block {
+          width: 48px; height: 48px;
+          border-radius: 16px;
+          background: linear-gradient(135deg, rgba(200,51,74,0.12) 0%, rgba(139,26,44,0.08) 100%);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 24px;
+          flex-shrink: 0;
+        }
+        .event-info { flex: 1; min-width: 0; }
+        .event-name {
+          font-family: var(--font-body);
+          font-weight: 700;
+          font-size: 15px;
+          color: var(--text);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .app.dark .event-name { color: var(--ink, #F5E8EA); }
+        .event-date { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+        .event-badge {
+          background: linear-gradient(135deg, #C8334A, #8B1A2C);
+          color: white;
+          border-radius: 12px;
+          padding: 6px 12px;
+          font-size: 12px;
+          font-weight: 700;
+          font-family: var(--font-body);
+          white-space: nowrap;
+          flex-shrink: 0;
+          box-shadow: 0 3px 12px rgba(139,26,44,0.3);
+        }
+
+        /* ── Buttons ── */
+        .btn-primary {
+          background: linear-gradient(135deg, #C8334A, #8B1A2C);
+          color: white;
+          border: none;
+          border-radius: 13px;
+          padding: 11px 22px;
+          font-family: var(--font-body);
+          font-weight: 700;
+          font-size: 14px;
+          cursor: pointer;
+          box-shadow: 0 4px 16px rgba(139,26,44,0.3), inset 0 1px 0 rgba(255,255,255,0.15);
+          transition: transform 0.12s, box-shadow 0.12s;
+        }
+        .btn-primary:active {
+          transform: scale(0.96);
+          box-shadow: 0 2px 8px rgba(139,26,44,0.25);
+        }
+        .btn-ghost {
+          background: rgba(0,0,0,0.05);
+          border: none;
+          border-radius: 13px;
+          padding: 11px 18px;
+          font-family: var(--font-body);
+          font-weight: 600;
+          font-size: 14px;
+          color: var(--text-muted);
+          cursor: pointer;
+        }
+        .app.dark .btn-ghost { background: rgba(255,255,255,0.08); }
+        .btn-outline-sm {
+          background: transparent;
+          border: 1.5px solid rgba(139,26,44,0.3);
+          color: #8B1A2C;
+          border-radius: 11px;
+          padding: 7px 16px;
+          font-family: var(--font-body);
+          font-size: 12px;
+          font-weight: 600;
+          cursor: pointer;
+          margin-top: 10px;
+          transition: background 0.15s;
+        }
+        .btn-outline-sm:active { background: rgba(139,26,44,0.08); }
+        .app.dark .btn-outline-sm { border-color: rgba(247,168,196,0.3); color: var(--rose-light, #E8556A); }
+
+        /* date input override */
+        input[type='datetime-local'] {
+          width: 100%;
+          padding: 10px 12px;
+          border: 2px solid rgba(200,51,74,0.18);
+          border-radius: 13px;
+          font-family: var(--font-body);
+          font-size: 14px;
+          background: var(--bg);
+          color: var(--text);
+          margin-bottom: 12px;
+          outline: none;
+        }
+        input[type='datetime-local']:focus { border-color: var(--rose, #C8334A); }
+        .app.dark input[type='datetime-local'] { background: #3A3050; border-color: #3A3050; color: var(--ink, #F5E8EA); }
+      `}</style>
+
+      <FloatingLayer />
+
+      <div className="home-wrap">
+        {/* ════════ HERO BANNER ════════ */}
+        <div className="home-banner">
+          {/* Avatars + Heart */}
+          {/* Floating particle hearts */}
+          <ParticleField />
+          <FloatingHearts />
+
+          <div className="av-row">
+            <AvatarRing
+              src={profile?.avatar_url}
+              name={myName}
+              birthday={profile?.birthday}
+              onClick={() => onNavigate?.('settings')}
+            />
+            <BinaryConnection />
+            <AvatarRing
+              src={partnerProfile?.avatar_url}
+              name={pName}
+              birthday={partnerProfile?.birthday}
+              onClick={() => setShowPartnerCard(true)}
+            />
           </div>
-          <div style={{ fontSize: 12, color: MUTED }}>онлайн</div>
-        </div>
-        <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: MUTED }}>
-          <IcoVideo />
-        </button>
-      </div>
-      
-      {/* Pinned message */}
-      {pinnedMsg && (
-        <div style={{
-          background: SURF2,
-          borderBottom: `1px solid ${BDR}`,
-          padding: '8px 16px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-        }}>
-          <div style={{ width: 3, height: 24, background: '#C8334A', borderRadius: 2 }} />
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: '#C8334A' }}>Закреплено</div>
-            <div style={{ fontSize: 13, color: INK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {pinnedMsg.text}
+
+          {showPartnerCard && (
+            <PartnerCard profile={partnerProfile} onClose={() => setShowPartnerCard(false)} />
+          )}
+
+          {/* Day counter wrapped in orbital ring */}
+          <OrbitalRing progress={anniv.progress}>
+          <div className="day-counter">
+            <div className="day-number">
+              {String(time.totalDays).split('').map((d, i) => (
+                <GlowDigit key={`${i}-${d}`} value={d} />
+              ))}
             </div>
-          </div>
-          <button onClick={() => setPinnedMsg(null)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
-            <IcoClose />
-          </button>
-        </div>
-      )}
-      
-      {/* Messages list */}
-      <div
-        ref={listRef}
-        onScroll={handleScroll}
-        style={{ flex: 1, overflowY: 'auto', padding: '16px 0' }}
-      >
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: 40, color: MUTED }}>Загрузка...</div>
-        ) : (
-          groupedMessages.map(({ msg, showDate, isFirst, isLast, showAv, replyMsg }) => (
-            <div key={msg.id}>
-              {showDate && (
-                <div style={{ textAlign: 'center', margin: '16px 0' }}>
-                  <span style={{ background: SURF2, padding: '4px 12px', borderRadius: 12, fontSize: 12, color: MUTED }}>
-                    {fmtDateSep(msg.created_at)}
-                  </span>
+            <div className="day-label">
+              {time.totalDays === 1 ? 'день' : time.totalDays < 5 ? 'дня' : 'дней'} вместе
+            </div>
+
+            {/* Breakdown */}
+            <div className="day-breakdown">
+              {time.years > 0 && (
+                <div className="day-unit">
+                  <span className="day-unit-val">{time.years}</span>
+                  <span className="day-unit-lbl">лет</span>
                 </div>
               )}
-              <Message
-                msg={msg}
-                isMine={msg.user_id === uid}
-                dark={darkMode}
-                partnerName={partner?.name}
-                partnerAvatar={partner?.avatar_url}
-                onLongPress={() => setCtxMenu(msg)}
-                onReact={addReact}
-                onReply={setReplyTo}
-                onEdit={(m) => { setEditingId(m.id); setNewText(m.text); setReplyTo(null); setCtxMenu(null) }}
-                onCopy={copyText}
-                onPin={pinMsg}
-                onDelete={deleteMsg}
-                isFirst={isFirst}
-                isLast={isLast}
-                showAv={showAv}
-                messages={messages}
-                replyMsg={replyMsg}
-              />
+              <div className="day-unit">
+                <span className="day-unit-val">{time.months}</span>
+                <span className="day-unit-lbl">мес</span>
+              </div>
+              <div className="day-unit">
+                <span className="day-unit-val">{time.days}</span>
+                <span className="day-unit-lbl">дн</span>
+              </div>
             </div>
-          ))
-        )}
-        <div ref={endRef} />
-        
-        {showDown && (
-          <button
-            onClick={scrollDown}
-            style={{
-              position: 'sticky',
-              bottom: 20,
-              left: '50%',
-              transform: 'translateX(-50%)',
-              background: GRAD,
-              border: 'none',
-              borderRadius: 20,
-              padding: '8px 16px',
-              color: 'white',
-              fontSize: 12,
-              cursor: 'pointer',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-            }}
-          >
-            ↓ Новые сообщения
-          </button>
-        )}
-      </div>
-      
-      {/* Reply/Edit preview */}
-      {(replyTo || editingId) && (
-        <div style={{
-          background: SURF2,
-          borderTop: `1px solid ${BDR}`,
-          padding: '8px 16px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-        }}>
-          <div style={{ width: 3, height: 24, background: '#C8334A', borderRadius: 2 }} />
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: '#C8334A' }}>
-              {replyTo ? 'Ответ' : 'Редактирование'}
-            </div>
-            <div style={{ fontSize: 13, color: MUTED }}>
-              {replyTo?.text || newText}
+
+            {/* Live clock */}
+            <div className="live-clock-bar">
+              <GlowDigit value={pad(time.hours)}   />
+              <span className="clock-sep">:</span>
+              <GlowDigit value={pad(time.minutes)} />
+              <span className="clock-sep">:</span>
+              <GlowDigit value={pad(time.seconds)} />
             </div>
           </div>
-          <button onClick={() => { setReplyTo(null); setEditingId(null) }} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
-            <IcoClose />
-          </button>
+          </OrbitalRing>
+
+          {/* Heart progress bar */}
+          <HeartProgress progress={anniv.progress} daysUntil={anniv.daysUntil} />
         </div>
-      )}
-      
-      {/* Photo preview */}
-      {photoPreview && (
-        <div style={{
-          background: SURF2,
-          borderTop: `1px solid ${BDR}`,
-          padding: '8px 16px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 12,
-        }}>
-          <img src={photoPreview} alt="" style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'cover' }} />
-          <div style={{ flex: 1, fontSize: 13, color: MUTED }}>Фото прикреплено</div>
-          <button onClick={() => { setPhotoFile(null); setPhotoPreview(null) }} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
-            <IcoClose />
-          </button>
-        </div>
-      )}
-      
-      {/* Input area */}
-      <div style={{
-        background: SURF,
-        borderTop: `0.5px solid ${BDR}`,
-        padding: `8px 16px calc(8px + env(safe-area-inset-bottom, 0px))`,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8 }}>
-          <button
-            onClick={() => photoRef.current?.click()}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: MUTED, padding: 8 }}
-          >
-            <IcoPhoto />
-          </button>
-          <input ref={photoRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => {
-            const file = e.target.files[0]
-            if (file) {
-              setPhotoFile(file)
-              setPhotoPreview(URL.createObjectURL(file))
-            }
-          }} />
-          
-          <textarea
-            value={newText}
-            onChange={(e) => setNewText(e.target.value)}
-            placeholder="Сообщение..."
-            style={{
-              flex: 1,
-              background: SURF2,
-              border: `0.5px solid ${BDR}`,
-              borderRadius: 20,
-              padding: '10px 16px',
-              fontSize: 16,
-              fontFamily: 'DM Sans, sans-serif',
-              color: INK,
-              resize: 'none',
-              outline: 'none',
-              maxHeight: 100,
-            }}
-            rows={1}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault()
-                sendMessage()
-              }
-            }}
-          />
-          
-          {!newText.trim() && !photoFile ? (
-            <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: MUTED, padding: 8 }}>
-              <IcoMic />
-            </button>
-          ) : (
-            <button
-              onClick={sendMessage}
-              disabled={sending}
-              style={{
-                background: GRAD,
-                border: 'none',
-                borderRadius: 28,
-                width: 40,
-                height: 40,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                color: 'white',
-              }}
-            >
-              <IcoSend />
-            </button>
+
+        {/* ════════ CONTENT ════════ */}
+        <div className="home-content">
+
+          {/* Love message */}
+          <div className="love-card" style={{ animationDelay: '0s' }}>
+            {editMsg ? (
+              <div>
+                <textarea
+                  className="love-textarea"
+                  value={newMsg}
+                  onChange={e => setNewMsg(e.target.value)}
+                  placeholder="Напиши что-то прекрасное..."
+                  autoFocus
+                />
+                <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                  <button className="btn-primary" onClick={saveMsg} disabled={saving}>
+                    {saving ? '...' : 'Сохранить'}
+                  </button>
+                  <button
+                    className="btn-ghost"
+                    style={{ background: 'rgba(255,255,255,0.15)', color: 'white' }}
+                    onClick={() => setEditMsg(false)}
+                  >
+                    Отмена
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <button className="love-edit-btn" onClick={() => setEditMsg(true)} aria-label="Редактировать">
+                  {/* SVG pencil */}
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4z"/>
+                  </svg>
+                </button>
+                <p className="love-text">
+                  «{out}»{!done && <span className="cursor" />}
+                </p>
+              </>
+            )}
+          </div>
+
+          {/* Quick actions */}
+          <div className="action-grid">
+            {[
+              { id: 'moments',  label: 'Наши\nмоменты',
+                icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="22" height="22"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg> },
+              { id: 'letter',   label: 'Написать\nписьмо',
+                icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="22" height="22"><rect x="2" y="5" width="20" height="14" rx="2"/><polyline points="2,5 12,13 22,5"/></svg> },
+              { id: 'clock',    label: 'Часы\nлюбви',
+                icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" width="22" height="22"><circle cx="12" cy="12" r="9"/><line x1="12" y1="12" x2="12" y2="7.5" strokeWidth="2"/><line x1="12" y1="12" x2="15.5" y2="14" strokeWidth="1.5"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/></svg> },
+              { id: 'calendar', label: 'Наш\nкалендарь',
+                icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="22" height="22"><rect x="3" y="4" width="18" height="17" rx="2"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> },
+            ].map(a => (
+              <button key={a.id} className="action-btn" onClick={() => onNavigate?.(a.id)}>
+                <div className="action-btn-icon">{a.icon}</div>
+                <span className="action-btn-label" style={{ whiteSpace: 'pre-line' }}>{a.label}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Next event */}
+          {nextEvent && (
+            <div className="hc" style={{ animationDelay: '0.1s' }} onMouseMove={mouseGlow} onClick={addRipple}>
+              <div className="hc-title">Ближайшее событие</div>
+              <div className="event-row">
+                <div className="event-emoji-block">
+                  {nextEvent.emoji
+                    ? <span style={{ fontSize: 24 }}>{nextEvent.emoji}</span>
+                    : <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="var(--rose)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="4" width="18" height="17" rx="2"/>
+                        <line x1="8" y1="2" x2="8" y2="6"/>
+                        <line x1="16" y1="2" x2="16" y2="6"/>
+                        <line x1="3" y1="10" x2="21" y2="10"/>
+                      </svg>
+                  }
+                </div>
+                <div className="event-info">
+                  <div className="event-name">{nextEvent.title}</div>
+                  <div className="event-date">
+                    {new Date(nextEvent.event_date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}
+                  </div>
+                </div>
+                <div className="event-badge">
+                  {Math.max(0, Math.ceil((new Date(nextEvent.event_date) - new Date()) / 86400000))} дн
+                </div>
+              </div>
+            </div>
           )}
+
+          {/* Meeting countdown */}
+          <div className="hc" style={{ animationDelay: '0.18s' }} onMouseMove={mouseGlow} onClick={addRipple}>
+            <div className="hc-title">До встречи</div>
+            {editMeet ? (
+              <div>
+                <input type="datetime-local" value={newMeet} onChange={e => setNewMeet(e.target.value)} />
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button className="btn-primary" onClick={saveMeet} disabled={saving}>
+                    {saving ? '...' : 'Сохранить'}
+                  </button>
+                  <button className="btn-ghost" onClick={() => setEditMeet(false)}>Отмена</button>
+                </div>
+              </div>
+            ) : countdown ? (
+              <>
+                <div className="meet-values">
+                  {[
+                    [countdown.days,    'дн'],
+                    [pad(countdown.hours),   'ч'],
+                    [pad(countdown.minutes), 'мин'],
+                    [pad(countdown.seconds), 'сек'],
+                  ].map(([v, l]) => (
+                    <div key={l} className="meet-unit">
+                      <div className="meet-num">{v}</div>
+                      <div className="meet-lbl">{l}</div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <button className="btn-outline-sm" onClick={() => setEditMeet(true)}>Изменить</button>
+                </div>
+              </>
+            ) : (
+              <div style={{ textAlign: 'center' }}>
+                <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>
+                  {settings?.next_meeting ? 'Время встречи прошло' : 'Когда ваша следующая встреча?'}
+                </p>
+                <button className="btn-outline-sm" onClick={() => setEditMeet(true)}>Установить дату</button>
+              </div>
+            )}
+          </div>
+
         </div>
       </div>
-      
-      {/* Context menu */}
-      {ctxMenu && (
-        <ContextMenu
-          msg={ctxMenu}
-          isMine={ctxMenu.user_id === uid}
-          onReact={addReact}
-          onReply={setReplyTo}
-          onEdit={(m) => { setEditingId(m.id); setNewText(m.text); setReplyTo(null); setCtxMenu(null) }}
-          onCopy={copyText}
-          onPin={pinMsg}
-          onDelete={deleteMsg}
-          onClose={() => setCtxMenu(null)}
-        />
-      )}
-    </div>
+    </>
   )
 }

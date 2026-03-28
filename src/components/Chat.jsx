@@ -69,19 +69,10 @@ function parseText(text) {
   if (!text) return ''
   let escaped = escapeHtml(text)
   
-  // Ссылки [text](url)
   escaped = escaped.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" style="color:#C8334A;text-decoration:none;">$1</a>')
-  
-  // Жирный **text**
   escaped = escaped.replace(/\*\*(.+?)\*\*/g, '<strong style="font-weight:700;">$1</strong>')
-  
-  // Курсив *text*
   escaped = escaped.replace(/\*(.+?)\*/g, '<em style="font-style:italic;">$1</em>')
-  
-  // Код `text`
   escaped = escaped.replace(/`(.+?)`/g, '<code style="background:rgba(0,0,0,0.08);padding:2px 6px;border-radius:6px;font-family:monospace;">$1</code>')
-  
-  // Цитата > text
   escaped = escaped.replace(/^&gt;\s(.+)$/gm, '<div style="border-left:3px solid #C8334A;padding-left:12px;margin:4px 0;color:rgba(0,0,0,0.6);">$1</div>')
   
   return escaped
@@ -123,12 +114,6 @@ async function compressImage(file) {
 
 const VALID_REACTIONS = new Set(['❤️', '🔥', '😍', '😂', '👍', '💔'])
 
-function hasValidReactions(reactions) {
-  if (!reactions) return false
-  const keys = Object.keys(reactions)
-  return keys.some(k => VALID_REACTIONS.has(k))
-}
-
 /* ── SVG ICONS ── */
 function IcoPhoto() {
   return (
@@ -136,15 +121,6 @@ function IcoPhoto() {
       <rect x="2" y="4" width="20" height="16" rx="2" />
       <circle cx="8.5" cy="10.5" r="2.5" />
       <path d="M21 15l-5-4-3 3-4-4-5 5" />
-    </svg>
-  )
-}
-
-function IcoCircle() {
-  return (
-    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <circle cx="12" cy="12" r="10" />
-      <circle cx="12" cy="12" r="4" fill="currentColor" />
     </svg>
   )
 }
@@ -232,14 +208,10 @@ function IcoVideo() {
   )
 }
 
-function IcoReaction({ emoji, size = 28 }) {
-  return (
-    <span style={{ fontSize: size, lineHeight: 1 }}>{emoji}</span>
-  )
-}
-
 /* ── CONTEXT MENU ── */
-function ContextMenu({ x, y, msg, isMine, onReact, onReply, onEdit, onCopy, onPin, onDelete, onClose }) {
+function ContextMenu({ msg, isMine, onReact, onReply, onEdit, onCopy, onPin, onDelete, onClose }) {
+  const GRAD = 'linear-gradient(135deg, #C8334A, #8B1A2C)'
+  
   return (
     <div
       style={{
@@ -267,7 +239,6 @@ function ContextMenu({ x, y, msg, isMine, onReact, onReply, onEdit, onCopy, onPi
         }}
         onClick={e => e.stopPropagation()}
       >
-        {/* Reactions row */}
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center', padding: '8px 0', borderBottom: '1px solid rgba(0,0,0,0.08)' }}>
           {['❤️', '🔥', '😍', '😂', '👍', '💔'].map(emoji => (
             <button
@@ -279,17 +250,13 @@ function ContextMenu({ x, y, msg, isMine, onReact, onReply, onEdit, onCopy, onPi
                 fontSize: 28,
                 cursor: 'pointer',
                 padding: 4,
-                transition: 'transform 0.1s',
               }}
-              onMouseDown={e => e.target.style.transform = 'scale(0.9)'}
-              onMouseUp={e => e.target.style.transform = 'scale(1)'}
             >
               {emoji}
             </button>
           ))}
         </div>
         
-        {/* Actions */}
         <div style={{ marginTop: 8 }}>
           <MenuItem icon={<IcoReply />} label="Ответить" onClick={() => { onReply(msg); onClose() }} />
           {isMine && <MenuItem icon={<IcoEdit />} label="Редактировать" onClick={() => { onEdit(msg); onClose() }} />}
@@ -319,10 +286,7 @@ function MenuItem({ icon, label, onClick, danger }) {
         color: danger ? '#E24B4A' : '#1C0A0E',
         fontSize: 15,
         fontFamily: 'DM Sans, sans-serif',
-        transition: 'background 0.1s',
       }}
-      onMouseDown={e => e.target.style.background = 'rgba(0,0,0,0.05)'}
-      onMouseUp={e => e.target.style.background = 'none'}
     >
       <span style={{ width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{icon}</span>
       <span>{label}</span>
@@ -340,9 +304,11 @@ const Message = React.memo(function Message({
   const movedRef = useRef(false)
   const posRef = useRef({ x: 0, y: 0 })
   const lastTapRef = useRef(0)
-
-  const bg = isMine ? GRAD : (dark ? SURF : '#FFFFFF')
-  const color = isMine ? '#FFFFFF' : INK
+  
+  const GRAD = 'linear-gradient(135deg, #C8334A, #8B1A2C)'
+  const BG = isMine ? GRAD : (dark ? '#1E0A10' : '#FFFFFF')
+  const COLOR = isMine ? '#FFFFFF' : (dark ? '#F5E8EA' : '#1C0A0E')
+  const MUTED = dark ? '#8A5060' : '#9A6070'
   
   const borderRadius = isMine
     ? isLast ? '18px 18px 4px 18px' : '18px 18px 8px 18px'
@@ -371,7 +337,7 @@ const Message = React.memo(function Message({
     if (timerRef.current) clearTimeout(timerRef.current)
   }
 
-  const handleDoubleTap = () => {
+  const handleClick = () => {
     const now = Date.now()
     if (now - lastTapRef.current < 300) {
       onReact(msg.id, '❤️')
@@ -391,7 +357,6 @@ const Message = React.memo(function Message({
         paddingRight: isMine ? 16 : 16,
       }}
     >
-      {/* Avatar */}
       {!isMine && showAv && (
         <div
           style={{
@@ -406,16 +371,15 @@ const Message = React.memo(function Message({
         />
       )}
       
-      {/* Reply preview */}
       {msg.reply_to_id && replyMsg && (
         <div
           style={{
-            background: dark ? SURF2 : '#F2F2F2',
+            background: dark ? '#3D1520' : '#F2F2F2',
             borderRadius: 12,
             padding: '6px 10px',
             marginBottom: 4,
             maxWidth: 260,
-            borderLeft: `3px solid ${GRAD}`,
+            borderLeft: `3px solid #C8334A`,
           }}
         >
           <div style={{ fontSize: 12, color: '#C8334A', fontWeight: 600 }}>
@@ -427,11 +391,10 @@ const Message = React.memo(function Message({
         </div>
       )}
       
-      {/* Bubble */}
       <div
         style={{
           maxWidth: '75%',
-          background: bg,
+          background: BG,
           borderRadius,
           padding: '8px 12px',
           position: 'relative',
@@ -439,9 +402,8 @@ const Message = React.memo(function Message({
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        onClick={handleDoubleTap}
+        onClick={handleClick}
       >
-        {/* Photo/video content */}
         {msg.is_video_circle && msg.video_url ? (
           <video
             src={msg.video_url}
@@ -457,19 +419,17 @@ const Message = React.memo(function Message({
           />
         ) : msg.text ? (
           <div
-            style={{ color, fontSize: 15, lineHeight: 1.45, wordBreak: 'break-word' }}
+            style={{ color: COLOR, fontSize: 15, lineHeight: 1.45, wordBreak: 'break-word' }}
             dangerouslySetInnerHTML={{ __html: parseText(msg.text) }}
           />
         ) : null}
         
-        {/* Time */}
         <div style={{ fontSize: 11, color: isMine ? 'rgba(255,255,255,0.6)' : MUTED, marginTop: 4, textAlign: 'right' }}>
           {fmtTime(msg.created_at)}
           {msg.edited_at && <span style={{ marginLeft: 4 }}>(ред.)</span>}
         </div>
       </div>
       
-      {/* Reactions */}
       {msg.reactions && Object.keys(msg.reactions).length > 0 && (
         <div style={{ display: 'flex', gap: 4, marginTop: 2, marginRight: 4 }}>
           {Object.entries(msg.reactions).map(([emoji, users]) => (
@@ -478,7 +438,7 @@ const Message = React.memo(function Message({
                 key={emoji}
                 onClick={() => onReact(msg.id, emoji)}
                 style={{
-                  background: dark ? SURF2 : '#F0F0F0',
+                  background: dark ? '#3D1520' : '#F0F0F0',
                   borderRadius: 20,
                   padding: '2px 6px',
                   fontSize: 13,
@@ -530,7 +490,6 @@ export default function Chat({ session, profile, darkMode }) {
   const BDR = darkMode ? 'rgba(232,85,106,0.18)' : 'rgba(200,51,74,0.13)'
   const GRAD = 'linear-gradient(135deg, #C8334A, #8B1A2C)'
   
-  // Load partner info
   useEffect(() => {
     if (profile?.partner_id) {
       supabase.from('profiles').select('*').eq('id', profile.partner_id).single().then(({ data }) => {
@@ -539,7 +498,6 @@ export default function Chat({ session, profile, darkMode }) {
     }
   }, [profile])
   
-  // Load messages
   const loadMessages = useCallback(async () => {
     const { data } = await supabase
       .from('messages')
@@ -553,7 +511,6 @@ export default function Chat({ session, profile, darkMode }) {
     }, 100)
   }, [])
   
-  // Load more
   const loadMore = useCallback(async () => {
     if (loadingMore || allLoaded || !messages.length) return
     setLoadingMore(true)
@@ -568,7 +525,6 @@ export default function Chat({ session, profile, darkMode }) {
     setLoadingMore(false)
   }, [loadingMore, allLoaded, messages])
   
-  // Scroll handler
   const handleScroll = useCallback((e) => {
     const el = e.currentTarget
     if (!el) return
@@ -580,7 +536,6 @@ export default function Chat({ session, profile, darkMode }) {
     if (endRef.current) endRef.current.scrollIntoView({ behavior: 'smooth' })
   }
   
-  // Upload photo
   const uploadPhoto = async (file) => {
     const compressed = await compressImage(file)
     const ext = compressed.name.split('.').pop()
@@ -590,7 +545,6 @@ export default function Chat({ session, profile, darkMode }) {
     return supabase.storage.from('photos').getPublicUrl(path).data.publicUrl
   }
   
-  // Send message
   const sendMessage = async () => {
     if ((!newText.trim() && !photoFile) || sending) return
     
@@ -629,12 +583,10 @@ export default function Chat({ session, profile, darkMode }) {
     setSending(false)
   }
   
-  // Delete message
   const deleteMsg = async (id) => {
     await supabase.from('messages').delete().eq('id', id)
   }
   
-  // Pin message
   const pinMsg = async (id) => {
     const msg = messages.find(m => m.id === id)
     await supabase.from('messages').update({ is_pinned: !msg?.is_pinned }).eq('id', id)
@@ -646,7 +598,6 @@ export default function Chat({ session, profile, darkMode }) {
     }
   }
   
-  // Add/remove reaction
   const addReact = async (msgId, emoji) => {
     const msg = messages.find(m => m.id === msgId)
     if (!msg) return
@@ -664,12 +615,10 @@ export default function Chat({ session, profile, darkMode }) {
     await supabase.from('messages').update({ reactions }).eq('id', msgId)
   }
   
-  // Copy text
   const copyText = (text) => {
     navigator.clipboard.writeText(text)
   }
   
-  // Real-time subscription
   useEffect(() => {
     loadMessages()
     
@@ -689,19 +638,17 @@ export default function Chat({ session, profile, darkMode }) {
     return () => { supabase.removeChannel(channel) }
   }, [loadMessages])
   
-  // Load pinned message
   useEffect(() => {
     supabase.from('messages').select('*').eq('is_pinned', true).single().then(({ data }) => {
       if (data) setPinnedMsg(data)
     })
   }, [])
   
-  // Group messages
   const groupedMessages = useMemo(() => {
     return messages.map((msg, i) => {
       const prev = messages[i - 1]
       const next = messages[i + 1]
-      const showDate = i === 0 || diffDate(msg.created_at, prev.created_at)
+      const showDate = i === 0 || diffDate(msg.created_at, prev?.created_at)
       const isFirst = isFirstInGroup(msg, prev)
       const isLast = isLastInGroup(msg, next, uid)
       const showAv = needAvatar(msg, next, uid)
@@ -720,7 +667,6 @@ export default function Chat({ session, profile, darkMode }) {
         display: 'flex',
         alignItems: 'center',
         gap: 12,
-        transform: 'translateZ(0)',
       }}>
         <div style={{
           width: 42,
@@ -801,7 +747,7 @@ export default function Chat({ session, profile, darkMode }) {
                 onLongPress={() => setCtxMenu(msg)}
                 onReact={addReact}
                 onReply={setReplyTo}
-                onEdit={(m) => { setEditingId(m.id); setNewText(m.text); setReplyTo(null) }}
+                onEdit={(m) => { setEditingId(m.id); setNewText(m.text); setReplyTo(null); setCtxMenu(null) }}
                 onCopy={copyText}
                 onPin={pinMsg}
                 onDelete={deleteMsg}
@@ -887,7 +833,6 @@ export default function Chat({ session, profile, darkMode }) {
         background: SURF,
         borderTop: `0.5px solid ${BDR}`,
         padding: `8px 16px calc(8px + env(safe-area-inset-bottom, 0px))`,
-        transform: 'translateZ(0)',
       }}>
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8 }}>
           <button

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 
 /* ── UTILS ── */
@@ -27,12 +27,6 @@ function diffDate(a, b) {
   const d1 = new Date(a)
   const d2 = new Date(b)
   return d1.toDateString() !== d2.toDateString()
-}
-
-function isSameGroup(m1, m2) {
-  if (!m1 || !m2) return false
-  if (m1.user_id !== m2.user_id) return false
-  return Math.abs(new Date(m2.created_at) - new Date(m1.created_at)) / 1000 <= 121
 }
 
 function isLastInGroup(msg, nextMsg, uid) {
@@ -210,8 +204,6 @@ function IcoVideo() {
 
 /* ── CONTEXT MENU ── */
 function ContextMenu({ msg, isMine, onReact, onReply, onEdit, onCopy, onPin, onDelete, onClose }) {
-  const GRAD = 'linear-gradient(135deg, #C8334A, #8B1A2C)'
-  
   return (
     <div
       style={{

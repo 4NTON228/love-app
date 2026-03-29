@@ -3,39 +3,45 @@ import { supabase } from '../lib/supabase'
 
 const REACTIONS = ['❤️','🔥','😍','😂','👍','💔']
 const VALID_REACTIONS = new Set(REACTIONS)
-const GROUP_DIFF_SECONDS = 121 // из tweb: newGroupDiff = 121
+const GROUP_DIFF_SECONDS = 121
 
 /* ─────────────────────────────────────────────────────────────────────────────
  * UTILS
  * ──────────────────────────────────────────────────────────────────────────── */
 function pad(n) { return String(n).padStart(2,'0') }
+
 function fmtTime(d) {
   const dt = new Date(d)
   return `${pad(dt.getHours())}:${pad(dt.getMinutes())}`
 }
+
 function fmtDateSep(d) {
-  const dt = new Date(d), now = new Date()
-  const y = new Date(now); y.setDate(y.getDate()-1)
-  if (dt.toDateString()===now.toDateString()) return 'Сегодня'
-  if (dt.toDateString()===y.toDateString()) return 'Вчера'
-  return dt.toLocaleDateString('ru-RU',{day:'numeric',month:'long',year:'numeric'})
+  const dt = new Date(d)
+  const now = new Date()
+  const yesterday = new Date(now)
+  yesterday.setDate(yesterday.getDate() - 1)
+  if (dt.toDateString() === now.toDateString()) return 'Сегодня'
+  if (dt.toDateString() === yesterday.toDateString()) return 'Вчера'
+  return dt.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
 }
-function diffDate(a,b) {
+
+function diffDate(a, b) {
   return new Date(a).toDateString() !== new Date(b).toDateString()
 }
+
 function fmtDuration(sec) {
   if (!sec) return '0:00'
   const mins = Math.floor(sec / 60)
   const secs = sec % 60
-  return `${mins}:${secs.toString().padStart(2,'0')}`
+  return `${mins}:${secs.toString().padStart(2, '0')}`
 }
+
 function fmtRecordTime(sec) {
   const mins = Math.floor(sec / 60)
   const secs = sec % 60
-  return `${mins}:${secs.toString().padStart(2,'0')}`
+  return `${mins}:${secs.toString().padStart(2, '0')}`
 }
 
-// Группировка сообщений (как в tweb)
 function isSameGroup(msg1, msg2) {
   if (!msg1 || !msg2) return false
   if (msg1.user_id !== msg2.user_id) return false
@@ -43,7 +49,6 @@ function isSameGroup(msg1, msg2) {
   return diff <= GROUP_DIFF_SECONDS
 }
 
-// Показывать аватар только у последнего в группе
 function shouldShowAvatar(msg, nextMsg) {
   if (!nextMsg) return true
   if (nextMsg.user_id !== msg.user_id) return true
@@ -51,14 +56,12 @@ function shouldShowAvatar(msg, nextMsg) {
   return false
 }
 
-// Проверка на валидные реакции (только emoji, не UUID)
 function hasValidReactions(reactions) {
   if (!reactions) return false
   const validKeys = Object.keys(reactions).filter(k => VALID_REACTIONS.has(k))
   return validKeys.length > 0
 }
 
-// Форматирование текста (жирный, курсив, код, ссылки, цитаты)
 function parseText(text) {
   if (!text) return null
   return text
@@ -72,7 +75,6 @@ function parseText(text) {
     .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener" style="color:#C8334A;text-decoration:underline">$1</a>')
 }
 
-// Сжатие фото (max 1280px, quality 0.85)
 async function compressImage(file) {
   return new Promise(resolve => {
     const img = new Image()
@@ -102,9 +104,7 @@ async function compressImage(file) {
  * COMPONENTS
  * ──────────────────────────────────────────────────────────────────────────── */
 
-// Видео-кружочек (отображение)
 const VideoCircle = memo(({ url, isMine, time }) => {
-  const videoRef = useRef(null)
   return (
     <div style={{ position: 'relative', display: 'inline-block' }}>
       <div style={{
@@ -112,7 +112,6 @@ const VideoCircle = memo(({ url, isMine, time }) => {
         border: `2.5px solid ${isMine ? '#C8334A' : 'rgba(200,51,74,0.25)'}`,
       }}>
         <video
-          ref={videoRef}
           src={url}
           playsInline
           controls
@@ -129,7 +128,6 @@ const VideoCircle = memo(({ url, isMine, time }) => {
   )
 })
 
-// Голосовое сообщение (20 баров waveform)
 const VoiceMessage = memo(({ url, isMine, duration, time, dark }) => {
   const [playing, setPlaying] = useState(false)
   const [progress, setProgress] = useState(0)
@@ -207,7 +205,6 @@ const VoiceMessage = memo(({ url, isMine, duration, time, dark }) => {
   )
 })
 
-// Превью ответа на сообщение
 const ReplyPreview = memo(({ replyMsg, isMine, dark }) => {
   const text = replyMsg.text || 'Фото'
   return (
@@ -226,11 +223,8 @@ const ReplyPreview = memo(({ replyMsg, isMine, dark }) => {
   )
 })
 
-// Реакции
 const Reactions = memo(({ reactions, uid, onReact, msgId, isMine, dark }) => {
-  const valid = Object.entries(reactions)
-    .filter(([e]) => VALID_REACTIONS.has(e))
-
+  const valid = Object.entries(reactions).filter(([e]) => VALID_REACTIONS.has(e))
   if (valid.length === 0) return null
 
   return (
@@ -263,7 +257,6 @@ const Reactions = memo(({ reactions, uid, onReact, msgId, isMine, dark }) => {
   )
 })
 
-// Текстовый пузырь (с форматированием)
 const TextBubble = memo(({ msg, isMine, dark, radius, bg, color }) => {
   return (
     <div style={{
@@ -304,12 +297,10 @@ const TextBubble = memo(({ msg, isMine, dark, radius, bg, color }) => {
   )
 })
 
-// Основной компонент сообщения
 const Message = memo(({
   msg, isMine, dark, uid, partner, partnerAvatar,
   onLongPress, onDoubleClick, onReact,
-  isLast, // последнее в группе — показываем аватар и хвостик
-  replyMsg, // сообщение на которое отвечаем
+  isLast, replyMsg,
 }) => {
   const timerRef = useRef(null)
   const movedRef = useRef(false)
@@ -368,10 +359,8 @@ const Message = memo(({
       onContextMenu={e => { e.preventDefault(); onLongPress(msg, e.clientX, e.clientY) }}
       style={{ WebkitUserSelect: 'none', userSelect: 'none', position: 'relative' }}
     >
-      {/* Превью ответа */}
       {replyMsg && <ReplyPreview replyMsg={replyMsg} isMine={isMine} dark={dark} />}
 
-      {/* Тип сообщения */}
       {msg.is_video_circle && msg.video_url ? (
         <VideoCircle url={msg.video_url} isMine={isMine} time={fmtTime(msg.created_at)} />
       ) : msg.is_voice && msg.audio_url ? (
@@ -380,7 +369,6 @@ const Message = memo(({
         <TextBubble msg={msg} isMine={isMine} dark={dark} radius={radius} bg={bubbleBg} color={bubbleColor} />
       )}
 
-      {/* Реакции */}
       {hasValidReactions(msg.reactions) && (
         <Reactions reactions={msg.reactions} uid={uid} onReact={onReact} msgId={msg.id} isMine={isMine} dark={dark} />
       )}
@@ -388,7 +376,6 @@ const Message = memo(({
   )
 })
 
-// Контекстное меню (по центру экрана)
 const ContextMenu = memo(({ menu, onClose, onEdit, onDelete, onPin, onCopy, onReply, onReact }) => {
   if (!menu) return null
 
@@ -402,6 +389,7 @@ const ContextMenu = memo(({ menu, onClose, onEdit, onDelete, onPin, onCopy, onRe
     borderRadius: 20,
     overflow: 'hidden',
     minWidth: 240,
+    maxWidth: 'calc(100% - 40px)',
     boxShadow: '0 12px 48px rgba(0,0,0,0.25)',
     border: '0.5px solid rgba(200,51,74,0.12)',
     animation: 'slideUp 0.2s ease both'
@@ -430,7 +418,6 @@ const ContextMenu = memo(({ menu, onClose, onEdit, onDelete, onPin, onCopy, onRe
         }}
       />
       <div style={menuStyle}>
-        {/* Реакции сверху */}
         <div style={{
           display: 'flex', gap: 4, padding: '10px 14px',
           borderBottom: '0.5px solid rgba(200,51,74,0.08)', justifyContent: 'center'
@@ -489,7 +476,6 @@ const ContextMenu = memo(({ menu, onClose, onEdit, onDelete, onPin, onCopy, onRe
   )
 })
 
-// Оверлей поиска
 const SearchOverlay = memo(({ messages, onClose }) => {
   const [query, setQuery] = useState('')
   const [index, setIndex] = useState(0)
@@ -507,7 +493,7 @@ const SearchOverlay = memo(({ messages, onClose }) => {
   return (
     <div style={{
       position: 'absolute', inset: 0, zIndex: 50,
-      background: 'var(--bg-card, #FFFFFF)',
+      background: '#FFFFFF',
       display: 'flex', flexDirection: 'column'
     }}>
       <div style={{
@@ -522,7 +508,7 @@ const SearchOverlay = memo(({ messages, onClose }) => {
           placeholder="Поиск..."
           style={{
             flex: 1, border: 'none', background: 'none',
-            fontSize: 16, outline: 'none', color: 'var(--ink, #1C0A0E)'
+            fontSize: 16, outline: 'none', color: '#1C0A0E'
           }}
         />
         {results.length > 0 && (
@@ -545,7 +531,7 @@ const SearchOverlay = memo(({ messages, onClose }) => {
           >
             <div style={{ fontSize: 11, color: '#C8334A', marginBottom: 4 }}>{fmtDateSep(msg.created_at)}</div>
             <div
-              style={{ fontSize: 14, color: 'var(--ink, #1C0A0E)' }}
+              style={{ fontSize: 14, color: '#1C0A0E' }}
               dangerouslySetInnerHTML={{
                 __html: msg.text?.replace(
                   new RegExp(`(${query})`, 'gi'),
@@ -564,33 +550,28 @@ const SearchOverlay = memo(({ messages, onClose }) => {
  * MAIN CHAT COMPONENT
  * ──────────────────────────────────────────────────────────────────────────── */
 export default function Chat({ session, profile, darkMode }) {
-  // Данные
   const [messages, setMessages] = useState([])
   const [partner, setPartner] = useState(null)
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
   const [allLoaded, setAllLoaded] = useState(false)
 
-  // UI
   const [newText, setNewText] = useState('')
   const [sending, setSending] = useState(false)
   const [showDown, setShowDown] = useState(false)
   const [showSearch, setShowSearch] = useState(false)
   const [partnerTyping, setPartnerTyping] = useState(false)
 
-  // Медиа
   const [photoFile, setPhotoFile] = useState(null)
   const [photoPreview, setPhotoPreview] = useState(null)
   const [recording, setRecording] = useState(false)
   const [voiceRecording, setVoiceRecording] = useState(false)
   const [recordSeconds, setRecordSeconds] = useState(0)
 
-  // Действия с сообщениями
   const [editingId, setEditingId] = useState(null)
   const [replyTo, setReplyTo] = useState(null)
   const [ctxMenu, setCtxMenu] = useState(null)
 
-  // Refs
   const listRef = useRef(null)
   const endRef = useRef(null)
   const photoRef = useRef(null)
@@ -613,16 +594,17 @@ export default function Chat({ session, profile, darkMode }) {
   const GRAD = 'linear-gradient(135deg, #C8334A, #8B1A2C)'
   const uid = session?.user?.id
 
-  /* ─────────────────────────────────────────────────────────────────────────
-   * DATA LOADING
-   * ─────────────────────────────────────────────────────────────────────── */
   async function loadMessages() {
     const { data } = await supabase
       .from('messages')
       .select('*')
       .order('created_at', { ascending: false })
       .limit(50)
-    setMessages((data || []).reverse())
+    if (data && data.length) {
+      setMessages(data.reverse())
+    } else {
+      setMessages([])
+    }
     setLoading(false)
     setTimeout(scrollToBottom, 100)
   }
@@ -654,9 +636,6 @@ export default function Chat({ session, profile, darkMode }) {
     setPartner(data)
   }
 
-  /* ─────────────────────────────────────────────────────────────────────────
-   * REALTIME
-   * ─────────────────────────────────────────────────────────────────────── */
   useEffect(() => {
     if (!uid) return
     loadMessages()
@@ -664,7 +643,10 @@ export default function Chat({ session, profile, darkMode }) {
 
     const channel = supabase.channel('chat')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, p => {
-        setMessages(prev => prev.find(m => m.id === p.new.id) ? prev : [...prev, p.new])
+        setMessages(prev => {
+          if (prev.find(m => m.id === p.new.id)) return prev
+          return [...prev, p.new]
+        })
         setTimeout(scrollToBottom, 60)
       })
       .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'messages' }, p => {
@@ -675,7 +657,6 @@ export default function Chat({ session, profile, darkMode }) {
       })
       .subscribe()
 
-    // Typing indicator
     const typingChannel = supabase.channel('typing')
       .on('postgres_changes', {
         event: 'UPDATE', schema: 'public', table: 'typing_status',
@@ -689,9 +670,6 @@ export default function Chat({ session, profile, darkMode }) {
     }
   }, [uid, partner?.id])
 
-  /* ─────────────────────────────────────────────────────────────────────────
-   * SCROLL
-   * ─────────────────────────────────────────────────────────────────────── */
   function scrollToBottom() {
     endRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
@@ -706,9 +684,6 @@ export default function Chat({ session, profile, darkMode }) {
     }
   }
 
-  /* ─────────────────────────────────────────────────────────────────────────
-   * UPLOAD
-   * ─────────────────────────────────────────────────────────────────────── */
   async function upload(file, folder) {
     const ext = file.name?.split('.').pop() || 'webm'
     const name = `${Date.now()}-${Math.random().toString(36).slice(6)}.${ext}`
@@ -717,9 +692,6 @@ export default function Chat({ session, profile, darkMode }) {
     return supabase.storage.from('photos').getPublicUrl(`${folder}/${name}`).data.publicUrl
   }
 
-  /* ─────────────────────────────────────────────────────────────────────────
-   * SEND MESSAGE
-   * ─────────────────────────────────────────────────────────────────────── */
   async function handleSend() {
     if (!newText.trim() && !photoFile) return
     setSending(true)
@@ -748,6 +720,7 @@ export default function Chat({ session, profile, darkMode }) {
       }
       setNewText('')
       cancelPhoto()
+      await loadMessages()
       scrollToBottom()
     } catch (e) { console.error(e) }
     setSending(false)
@@ -765,9 +738,6 @@ export default function Chat({ session, profile, darkMode }) {
     }
   }
 
-  /* ─────────────────────────────────────────────────────────────────────────
-   * PHOTO
-   * ─────────────────────────────────────────────────────────────────────── */
   async function onPhotoChange(e) {
     const file = e.target.files?.[0]
     if (!file) return
@@ -783,9 +753,6 @@ export default function Chat({ session, profile, darkMode }) {
     if (photoRef.current) photoRef.current.value = ''
   }
 
-  /* ─────────────────────────────────────────────────────────────────────────
-   * VIDEO CIRCLE (запись)
-   * ─────────────────────────────────────────────────────────────────────── */
   async function startVideoRecord() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -822,6 +789,7 @@ export default function Chat({ session, profile, darkMode }) {
             video_url: url,
             is_video_circle: true
           })
+          await loadMessages()
           scrollToBottom()
         } catch (e) { console.error(e) }
         setSending(false)
@@ -830,6 +798,7 @@ export default function Chat({ session, profile, darkMode }) {
       recorder.start()
       setRecording(true)
       setRecordSeconds(0)
+      if (recordTimer.current) clearInterval(recordTimer.current)
       recordTimer.current = setInterval(() => {
         setRecordSeconds(s => s + 1)
       }, 1000)
@@ -875,15 +844,13 @@ export default function Chat({ session, profile, darkMode }) {
         video_url: url,
         is_video_circle: true
       })
+      await loadMessages()
       scrollToBottom()
     } catch (e) { console.error(e) }
     setSending(false)
     if (videoFileRef.current) videoFileRef.current.value = ''
   }
 
-  /* ─────────────────────────────────────────────────────────────────────────
-   * VOICE MESSAGE (запись)
-   * ─────────────────────────────────────────────────────────────────────── */
   async function startVoiceRecord() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
@@ -913,6 +880,7 @@ export default function Chat({ session, profile, darkMode }) {
             is_voice: true,
             duration: recordSeconds
           })
+          await loadMessages()
           scrollToBottom()
         } catch (e) { console.error(e) }
         setSending(false)
@@ -921,6 +889,7 @@ export default function Chat({ session, profile, darkMode }) {
       recorder.start()
       setVoiceRecording(true)
       setRecordSeconds(0)
+      if (recordTimer.current) clearInterval(recordTimer.current)
       recordTimer.current = setInterval(() => {
         setRecordSeconds(s => s + 1)
       }, 1000)
@@ -951,9 +920,6 @@ export default function Chat({ session, profile, darkMode }) {
     setRecordSeconds(0)
   }
 
-  /* ─────────────────────────────────────────────────────────────────────────
-   * MESSAGE ACTIONS
-   * ─────────────────────────────────────────────────────────────────────── */
   async function deleteMsg(id) {
     await supabase.from('messages').delete().eq('id', id)
   }
@@ -1011,9 +977,6 @@ export default function Chat({ session, profile, darkMode }) {
     navigator.clipboard?.writeText(text)
   }
 
-  /* ─────────────────────────────────────────────────────────────────────────
-   * TYPING INDICATOR
-   * ─────────────────────────────────────────────────────────────────────── */
   async function sendTyping(isTyping) {
     await supabase.from('typing_status').upsert({
       user_id: uid,
@@ -1031,20 +994,15 @@ export default function Chat({ session, profile, darkMode }) {
     }, 3000)
   }
 
-  /* ─────────────────────────────────────────────────────────────────────────
-   * RENDER
-   * ─────────────────────────────────────────────────────────────────────── */
   const pinnedMsg = messages.find(m => m.is_pinned)
   const partnerName = partner?.name || (profile?.name === 'Антон' ? 'Эльвира' : 'Антон')
   const partnerAvatar = partner?.avatar_url
 
-  // Иконка кнопки
   const IconBtn = ({ onClick, icon, active, glow, onMouseDown, onMouseUp, onTouchStart, onTouchEnd }) => {
     const iconMap = {
       camera: <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke={active ? 'white' : ROSE} strokeWidth="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>,
       video: <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke={active ? 'white' : ROSE} strokeWidth="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>,
       mic: <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke={active ? 'white' : ROSE} strokeWidth="2"><path d="M12 2a3 3 0 00-3 3v7a3 3 0 006 0V5a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2M12 19v3"/></svg>,
-      send: <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="white" strokeWidth="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
     }
     const baseStyle = {
       width: 36, height: 36, borderRadius: '50%',
@@ -1081,7 +1039,6 @@ export default function Chat({ session, profile, darkMode }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: BG, position: 'relative', overflow: 'hidden' }}>
 
-      {/* HEADER */}
       <div style={{
         flexShrink: 0, background: SURF, borderBottom: `0.5px solid ${BDR}`,
         paddingTop: 'max(12px, env(safe-area-inset-top, 0px))',
@@ -1110,12 +1067,9 @@ export default function Chat({ session, profile, darkMode }) {
             {partnerTyping ? 'печатает...' : 'наша история'}
           </div>
         </div>
-        <button onClick={() => setShowSearch(true)} style={IconBtn({ icon: 'camera' }).style}>
-          🔍
-        </button>
+        <button onClick={() => setShowSearch(true)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer' }}>🔍</button>
       </div>
 
-      {/* PINNED MESSAGE */}
       {pinnedMsg && (
         <div style={{
           flexShrink: 0, background: dark ? 'rgba(200,51,74,0.1)' : 'rgba(200,51,74,0.05)',
@@ -1129,13 +1083,10 @@ export default function Chat({ session, profile, darkMode }) {
               {pinnedMsg.text || 'Фото'}
             </div>
           </div>
-          <button onClick={() => pinMsg(pinnedMsg.id)} style={{ ...IconBtn({ icon: 'camera' }).style, background: 'none', width: 30, height: 30 }}>
-            ✕
-          </button>
+          <button onClick={() => pinMsg(pinnedMsg.id)} style={{ background: 'none', border: 'none', fontSize: 16, cursor: 'pointer' }}>✕</button>
         </div>
       )}
 
-      {/* REPLY INDICATOR */}
       {replyTo && (
         <div style={{
           flexShrink: 0, padding: '6px 14px', background: SURF,
@@ -1154,7 +1105,6 @@ export default function Chat({ session, profile, darkMode }) {
         </div>
       )}
 
-      {/* EDITING INDICATOR */}
       {editingId && (
         <div style={{
           flexShrink: 0, padding: '6px 14px', background: 'rgba(200,51,74,0.07)',
@@ -1166,7 +1116,6 @@ export default function Chat({ session, profile, darkMode }) {
         </div>
       )}
 
-      {/* MESSAGES */}
       <div
         ref={listRef}
         onScroll={handleScroll}
@@ -1238,7 +1187,6 @@ export default function Chat({ session, profile, darkMode }) {
         <div ref={endRef} />
       </div>
 
-      {/* SCROLL DOWN BUTTON */}
       {showDown && (
         <button
           onClick={scrollToBottom}
@@ -1257,7 +1205,6 @@ export default function Chat({ session, profile, darkMode }) {
         </button>
       )}
 
-      {/* CONTEXT MENU */}
       <ContextMenu
         menu={ctxMenu}
         onClose={() => setCtxMenu(null)}
@@ -1269,12 +1216,10 @@ export default function Chat({ session, profile, darkMode }) {
         onReply={onReply}
       />
 
-      {/* SEARCH OVERLAY */}
       {showSearch && (
         <SearchOverlay messages={messages} onClose={() => setShowSearch(false)} />
       )}
 
-      {/* PHOTO PREVIEW */}
       {photoPreview && (
         <div style={{
           flexShrink: 0, padding: '8px 14px', background: SURF,
@@ -1286,7 +1231,6 @@ export default function Chat({ session, profile, darkMode }) {
         </div>
       )}
 
-      {/* VIDEO RECORDING OVERLAY */}
       {recording && (
         <div style={{
           position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100,
@@ -1305,7 +1249,9 @@ export default function Chat({ session, profile, darkMode }) {
               playsInline
               muted
               style={{
-                width: '100%', height: '100%', objectFit: 'cover',
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
                 transform: 'scaleX(-1)'
               }}
             />
@@ -1352,7 +1298,6 @@ export default function Chat({ session, profile, darkMode }) {
         </div>
       )}
 
-      {/* VOICE RECORDING OVERLAY */}
       {voiceRecording && (
         <div style={{
           position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100,
@@ -1402,7 +1347,6 @@ export default function Chat({ session, profile, darkMode }) {
         </div>
       )}
 
-      {/* INPUT BAR */}
       <div style={{
         flexShrink: 0, background: SURF, borderTop: `0.5px solid ${BDR}`,
         padding: '8px 10px', paddingBottom: 'calc(8px + env(safe-area-inset-bottom, 0px))',

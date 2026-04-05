@@ -100,8 +100,10 @@ function parseText(text) {
 async function compressImage(file) {
   return new Promise(resolve => {
     const img = new Image()
-    img.src = URL.createObjectURL(file)
+    const objectUrl = URL.createObjectURL(file)
+    img.src = objectUrl
     img.onload = () => {
+      URL.revokeObjectURL(objectUrl)
       const canvas = document.createElement('canvas')
       const maxSize = 1280
       let width = img.width
@@ -559,6 +561,31 @@ const SearchOverlay = memo(function SearchOverlay({ messages, dark, onClose }) {
 })
 
 /* ─────────────────────────────────────────────────────────────────────────────
+ * ICON BUTTON
+ * ──────────────────────────────────────────────────────────────────────────── */
+function IconBtn({ onClick, icon, active, glow, onMouseDown, onMouseUp, onTouchStart, onTouchEnd }) {
+  const stroke = active ? 'white' : '#C8334A'
+  const iconMap = {
+    camera: <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke={stroke} strokeWidth="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>,
+    video:  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke={stroke} strokeWidth="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>,
+    mic:    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke={stroke} strokeWidth="2"><path d="M12 2a3 3 0 00-3 3v7a3 3 0 006 0V5a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2M12 19v3"/></svg>,
+  }
+  const baseStyle = {
+    width: 36, height: 36, borderRadius: '50%',
+    background: active ? 'linear-gradient(135deg, #C8334A, #8B1A2C)' : 'rgba(200,51,74,0.09)',
+    border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
+    cursor: 'pointer', flexShrink: 0, transition: 'transform 0.15s',
+    animation: glow ? 'glow 1.5s ease-in-out infinite' : 'none'
+  }
+  const handlers = {}
+  if (onMouseDown) handlers.onMouseDown = onMouseDown
+  if (onMouseUp)   handlers.onMouseUp   = onMouseUp
+  if (onTouchStart) handlers.onTouchStart = onTouchStart
+  if (onTouchEnd)  handlers.onTouchEnd  = onTouchEnd
+  return <button onClick={onClick} style={baseStyle} {...handlers}>{iconMap[icon]}</button>
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
  * MAIN CHAT COMPONENT
  * ──────────────────────────────────────────────────────────────────────────── */
 export default function Chat({ session, profile, darkMode }) {
@@ -577,7 +604,6 @@ export default function Chat({ session, profile, darkMode }) {
   const [photoFile, setPhotoFile] = useState(null)
   const [photoPreview, setPhotoPreview] = useState(null)
   const [recording, setRecording] = useState(false)
-  const [voiceRecording, setVoiceRecording] = useState(false)
   const [voiceRec, setVoiceRec] = useState(false)
   const [recordSeconds, setRecordSeconds] = useState(0)
 
@@ -589,17 +615,17 @@ export default function Chat({ session, profile, darkMode }) {
   const endRef = useRef(null)
   const photoRef = useRef(null)
   const videoFileRef = useRef(null)
-  const previewVideoRef = useRef(null)
   const previewVidRef = useRef(null)
   const recorderRef = useRef(null)
   const chunksRef = useRef([])
   const streamRef = useRef(null)
+  const cancelledRef = useRef(false)
   const typingTimer = useRef(null)
-  const recordTimer = useRef(null)
   const recTimer = useRef(null)
   const voiceRecRef = useRef(null)
   const voiceChunks = useRef([])
   const voiceStream = useRef(null)
+  const voiceSecRef = useRef(0)
 
   const dark = darkMode
   const BG = dark ? '#200A10' : '#FBF0F2'
@@ -675,18 +701,20 @@ export default function Chat({ session, profile, darkMode }) {
       })
       .subscribe()
 
-    const typingChannel = supabase.channel('typing')
+    return () => { supabase.removeChannel(channel) }
+  }, [uid])
+
+  useEffect(() => {
+    if (!partner?.id) return
+    const typingChannel = supabase.channel(`typing-${partner.id}`)
       .on('postgres_changes', {
         event: 'UPDATE', schema: 'public', table: 'typing_status',
-        filter: `user_id=eq.${partner?.id}`
+        filter: `user_id=eq.${partner.id}`
       }, p => setPartnerTyping(p.new.is_typing))
       .subscribe()
 
-    return () => {
-      supabase.removeChannel(channel)
-      supabase.removeChannel(typingChannel)
-    }
-  }, [uid, partner?.id])
+    return () => { supabase.removeChannel(typingChannel) }
+  }, [partner?.id])
 
   function scrollToBottom() {
     endRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -740,8 +768,6 @@ export default function Chat({ session, profile, darkMode }) {
       }
       setNewText('')
       cancelPhoto()
-      await loadMessages()
-      scrollToBottom()
     } catch (e) { console.error(e) }
     setSending(false)
   }
@@ -773,86 +799,6 @@ export default function Chat({ session, profile, darkMode }) {
     if (photoRef.current) photoRef.current.value = ''
   }
 
-  async function startVideoRecord() {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: { ideal: 360 }, height: { ideal: 360 } },
-        audio: true
-      })
-      streamRef.current = stream
-      if (previewVideoRef.current) {
-        previewVideoRef.current.srcObject = stream
-        previewVideoRef.current.muted = true
-        previewVideoRef.current.play()
-      }
-      const mime = MediaRecorder.isTypeSupported('video/mp4') ? 'video/mp4' : 'video/webm'
-      const recorder = new MediaRecorder(stream, { mimeType: mime })
-      recorderRef.current = recorder
-      chunksRef.current = []
-      recorder.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data) }
-      recorder.onstop = async () => {
-        stream.getTracks().forEach(t => t.stop())
-        if (previewVideoRef.current) previewVideoRef.current.srcObject = null
-        streamRef.current = null
-        const blob = new Blob(chunksRef.current, { type: mime })
-        if (blob.size < 1000) {
-          setRecording(false)
-          return
-        }
-        const ext = mime === 'video/mp4' ? 'mp4' : 'webm'
-        const file = new File([blob], `circle-${Date.now()}.${ext}`, { type: mime })
-        setSending(true)
-        try {
-          const url = await upload(file, 'circles')
-          await supabase.from('messages').insert({
-            user_id: uid,
-            video_url: url,
-            is_video_circle: true
-          })
-          await loadMessages()
-          scrollToBottom()
-        } catch (e) { console.error(e) }
-        setSending(false)
-        setRecording(false)
-      }
-      recorder.start()
-      setRecording(true)
-      setRecordSeconds(0)
-      if (recordTimer.current) clearInterval(recordTimer.current)
-      recordTimer.current = setInterval(() => {
-        setRecordSeconds(s => s + 1)
-      }, 1000)
-      setTimeout(() => {
-        if (recorderRef.current?.state === 'recording') recorderRef.current.stop()
-      }, 60000)
-    } catch (e) {
-      console.error(e)
-      alert('Нет доступа к камере')
-    }
-  }
-
-  function stopVideoRecord() {
-    if (recorderRef.current?.state === 'recording') {
-      recorderRef.current.stop()
-    }
-    if (recordTimer.current) clearInterval(recordTimer.current)
-  }
-
-  function cancelVideoRecord() {
-    if (recorderRef.current?.state === 'recording') {
-      recorderRef.current.stop()
-    }
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(t => t.stop())
-      streamRef.current = null
-    }
-    if (previewVideoRef.current) previewVideoRef.current.srcObject = null
-    if (recordTimer.current) clearInterval(recordTimer.current)
-    chunksRef.current = []
-    setRecording(false)
-    setRecordSeconds(0)
-  }
-
   async function onVideoFile(e) {
     const file = e.target.files?.[0]
     if (!file) return
@@ -864,83 +810,12 @@ export default function Chat({ session, profile, darkMode }) {
         video_url: url,
         is_video_circle: true
       })
-      await loadMessages()
-      scrollToBottom()
     } catch (e) { console.error(e) }
     setSending(false)
     if (videoFileRef.current) videoFileRef.current.value = ''
   }
 
-  async function startVoiceRecord() {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      streamRef.current = stream
-      const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-        ? 'audio/webm;codecs=opus'
-        : 'audio/webm'
-      const recorder = new MediaRecorder(stream, { mimeType: mime })
-      recorderRef.current = recorder
-      chunksRef.current = []
-      recorder.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data) }
-      recorder.onstop = async () => {
-        stream.getTracks().forEach(t => t.stop())
-        streamRef.current = null
-        const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
-        if (blob.size < 1000) {
-          setVoiceRecording(false)
-          return
-        }
-        const file = new File([blob], `voice-${Date.now()}.webm`, { type: 'audio/webm' })
-        setSending(true)
-        try {
-          const url = await upload(file, 'voices')
-          await supabase.from('messages').insert({
-            user_id: uid,
-            audio_url: url,
-            is_voice: true,
-            duration: recordSeconds
-          })
-          await loadMessages()
-          scrollToBottom()
-        } catch (e) { console.error(e) }
-        setSending(false)
-        setVoiceRecording(false)
-      }
-      recorder.start()
-      setVoiceRecording(true)
-      setRecordSeconds(0)
-      if (recordTimer.current) clearInterval(recordTimer.current)
-      recordTimer.current = setInterval(() => {
-        setRecordSeconds(s => s + 1)
-      }, 1000)
-    } catch (e) {
-      console.error(e)
-      alert('Нет доступа к микрофону')
-    }
-  }
-
-  function stopVoiceRecord() {
-    if (recorderRef.current?.state === 'recording') {
-      recorderRef.current.stop()
-    }
-    if (recordTimer.current) clearInterval(recordTimer.current)
-  }
-
-  function cancelVoiceRecord() {
-    if (recorderRef.current?.state === 'recording') {
-      recorderRef.current.stop()
-    }
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(t => t.stop())
-      streamRef.current = null
-    }
-    if (recordTimer.current) clearInterval(recordTimer.current)
-    chunksRef.current = []
-    setVoiceRecording(false)
-    setRecordSeconds(0)
-  }
-
-  // ── spec-named video record wrappers ──────────────────────────────────────
+  // ── video circle recording ────────────────────────────────────────────────
   async function startRecord() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -963,6 +838,7 @@ export default function Chat({ session, profile, darkMode }) {
         if (previewVidRef.current) previewVidRef.current.srcObject = null
         streamRef.current = null
         clearInterval(recTimer.current)
+        if (cancelledRef.current) { cancelledRef.current = false; setRecording(false); setRecordSeconds(0); return }
         const blob = new Blob(chunksRef.current, { type: 'video/webm' })
         if (blob.size < 1000) { setRecording(false); setRecordSeconds(0); return }
         const file = new File([blob], `circle-${Date.now()}.webm`, { type: 'video/webm' })
@@ -991,11 +867,12 @@ export default function Chat({ session, profile, darkMode }) {
   }
 
   function cancelRecord() {
+    cancelledRef.current = true
     clearInterval(recTimer.current)
-    if (recorderRef.current?.state === 'recording') recorderRef.current.stop()
     if (streamRef.current) { streamRef.current.getTracks().forEach(t => t.stop()); streamRef.current = null }
     if (previewVidRef.current) previewVidRef.current.srcObject = null
     chunksRef.current = []
+    if (recorderRef.current?.state === 'recording') recorderRef.current.stop()
     setRecording(false)
     setRecordSeconds(0)
   }
@@ -1015,7 +892,8 @@ export default function Chat({ session, profile, darkMode }) {
         stream.getTracks().forEach(t => t.stop())
         voiceStream.current = null
         clearInterval(recTimer.current)
-        const sec = recordSeconds
+        const sec = voiceSecRef.current
+        voiceSecRef.current = 0
         const blob = new Blob(voiceChunks.current, { type: 'audio/webm' })
         if (blob.size < 1000) { setVoiceRec(false); setRecordSeconds(0); return }
         const file = new File([blob], `voice-${Date.now()}.webm`, { type: 'audio/webm' })
@@ -1032,8 +910,9 @@ export default function Chat({ session, profile, darkMode }) {
       rec.start()
       setVoiceRec(true)
       setRecordSeconds(0)
+      voiceSecRef.current = 0
       clearInterval(recTimer.current)
-      recTimer.current = setInterval(() => setRecordSeconds(s => s + 1), 1000)
+      recTimer.current = setInterval(() => { voiceSecRef.current++; setRecordSeconds(s => s + 1) }, 1000)
     } catch (e) { console.error(e); alert('Нет доступа к микрофону') }
   }
 
@@ -1113,31 +992,6 @@ export default function Chat({ session, profile, darkMode }) {
   const pinnedMsg = messages.find(m => m.is_pinned)
   const partnerName = partner?.name || (profile?.name === 'Антон' ? 'Эльвира' : 'Антон')
   const partnerAvatar = partner?.avatar_url
-
-  const IconBtn = ({ onClick, icon, active, glow, onMouseDown, onMouseUp, onTouchStart, onTouchEnd }) => {
-    const iconMap = {
-      camera: <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke={active ? 'white' : ROSE} strokeWidth="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>,
-      video: <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke={active ? 'white' : ROSE} strokeWidth="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>,
-      mic: <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke={active ? 'white' : ROSE} strokeWidth="2"><path d="M12 2a3 3 0 00-3 3v7a3 3 0 006 0V5a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2M12 19v3"/></svg>,
-    }
-    const baseStyle = {
-      width: 36, height: 36, borderRadius: '50%',
-      background: active ? GRAD : 'rgba(200,51,74,0.09)',
-      border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      cursor: 'pointer', flexShrink: 0, transition: 'transform 0.15s',
-      animation: glow ? 'glow 1.5s ease-in-out infinite' : 'none'
-    }
-    const handlers = {}
-    if (onMouseDown) handlers.onMouseDown = onMouseDown
-    if (onMouseUp) handlers.onMouseUp = onMouseUp
-    if (onTouchStart) handlers.onTouchStart = onTouchStart
-    if (onTouchEnd) handlers.onTouchEnd = onTouchEnd
-    return (
-      <button onClick={onClick} style={baseStyle} {...handlers}>
-        {iconMap[icon]}
-      </button>
-    )
-  }
 
   if (loading) {
     return (
@@ -1351,7 +1205,7 @@ export default function Chat({ session, profile, darkMode }) {
         menu={ctxMenu}
         dark={dark}
         onClose={() => setCtxMenu(null)}
-        onEdit={(id, text) => { setEditingId(id); setNewText(text) }}
+        onEdit={(id, text) => { setEditingId(id); setNewText(text); setReplyTo(null) }}
         onDelete={deleteMsg}
         onPin={pinMsg}
         onCopy={copyText}

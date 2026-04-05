@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, memo } from 'react'
+import { useState, useEffect, useRef, memo, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 
 const REACTIONS = ['❤️','🔥','😍','😂','👍','💔']
@@ -197,20 +197,23 @@ const VoiceMessage = memo(function VoiceMessage({ url, isMine, dark, duration, t
   )
 })
 
-const ReplyPreview = memo(({ replyMsg, isMine, dark }) => {
-  const text = replyMsg.text || 'Фото'
+const ReplyPreview = memo(function ReplyPreview({ msg, isMine, dark, uid, partnerName }) {
+  const MUTED_C = dark ? '#8A5060' : '#9A6070'
   return (
-    <div style={{
-      marginBottom: 4, padding: '4px 8px', borderRadius: 8,
-      background: isMine ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.05)',
-      borderLeft: `3px solid #C8334A`,
-      fontSize: 12,
-      color: isMine ? 'rgba(255,255,255,0.7)' : '#9A6070',
-    }}>
-      <div style={{ fontWeight: 600, marginBottom: 2 }}>Ответ:</div>
-      <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-        {text.length > 50 ? text.slice(0, 50) + '...' : text}
+    <div style={{ display: 'flex', gap: 6, marginBottom: 5,
+      borderLeft: '3px solid #C8334A', paddingLeft: 8, opacity: 0.82 }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 11, color: '#C8334A', fontWeight: 600, marginBottom: 1 }}>
+          {msg.user_id === uid ? 'Вы' : (partnerName || 'Партнёр')}
+        </div>
+        <div style={{ fontSize: 12, color: isMine ? 'rgba(255,255,255,0.72)' : MUTED_C,
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {msg.photo_url && !msg.text ? 'Фото' : (msg.text || '')}
+        </div>
       </div>
+      {msg.photo_url && (
+        <img src={msg.photo_url} style={{ width: 34, height: 34, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }}/>
+      )}
     </div>
   )
 })
@@ -300,7 +303,9 @@ const Message = memo(({
   const posRef = useRef({ x: 0, y: 0 })
   const lastTap = useRef(0)
 
-  const replyMsg = msg.reply_to_id ? messages?.find(m => m.id === msg.reply_to_id) : null
+  const replyData = useMemo(() =>
+    msg.reply_to_id ? (messages?.find(m => m.id === msg.reply_to_id) || null) : null
+  , [msg.reply_to_id, messages])
 
   const radius = isMine
     ? (isLast ? '18px 18px 4px 18px' : '18px 18px 8px 18px')
@@ -315,7 +320,7 @@ const Message = memo(({
     movedRef.current = false
     posRef.current = { x, y }
     timerRef.current = setTimeout(() => {
-      if (!movedRef.current) onLongPress(msg, x, y)
+      if (!movedRef.current) onLongPress(msg)
     }, 500)
   }
 
@@ -351,10 +356,10 @@ const Message = memo(({
       onMouseUp={endPress}
       onMouseLeave={endPress}
       onClick={handleTap}
-      onContextMenu={e => { e.preventDefault(); onLongPress(msg, e.clientX, e.clientY) }}
+      onContextMenu={e => { e.preventDefault(); onLongPress(msg) }}
       style={{ WebkitUserSelect: 'none', userSelect: 'none', position: 'relative' }}
     >
-      {replyMsg && <ReplyPreview replyMsg={replyMsg} isMine={isMine} dark={dark} />}
+      {replyData && <ReplyPreview msg={replyData} isMine={isMine} dark={dark} uid={uid} partnerName={partnerName} />}
 
       {msg.is_video_circle && msg.video_url ? (
         <VideoCircle url={msg.video_url} isMine={isMine} time={fmtTime(msg.created_at)} />
@@ -474,69 +479,78 @@ const ContextMenu = memo(({ menu, dark, onClose, onEdit, onDelete, onPin, onCopy
   )
 })
 
-const SearchOverlay = memo(({ messages, onClose }) => {
+const SearchOverlay = memo(function SearchOverlay({ messages, dark, onClose }) {
   const [query, setQuery] = useState('')
-  const [index, setIndex] = useState(0)
+  const [idx, setIdx]     = useState(0)
 
-  const results = messages.filter(m => m.text?.toLowerCase().includes(query.toLowerCase()))
+  const SURF_S  = dark ? '#1E0A10' : '#FFFFFF'
+  const INK_S   = dark ? '#F5E8EA' : '#1C0A0E'
+  const MUTED_S = dark ? '#8A5060' : '#9A6070'
+  const BDR_S   = dark ? 'rgba(232,85,106,0.18)' : 'rgba(200,51,74,0.13)'
+
+  const results = useMemo(() => {
+    if (!query.trim()) return []
+    const q = query.toLowerCase()
+    return messages.filter(m => m.text?.toLowerCase().includes(q))
+  }, [query, messages])
 
   function goTo(i) {
-    const msg = results[i]
-    if (!msg) return
-    const el = document.querySelector(`[data-msg-id="${msg.id}"]`)
-    el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    setIndex(i)
+    const msg = results[i]; if (!msg) return
+    setIdx(i)
+    document.querySelector(`[data-msg-id="${msg.id}"]`)
+      ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
+
+  useEffect(() => {
+    const fn = e => {
+      if (e.key === 'Escape') onClose()
+      if (e.key === 'ArrowUp')   { e.preventDefault(); goTo(Math.max(0, idx - 1)) }
+      if (e.key === 'ArrowDown') { e.preventDefault(); goTo(Math.min(results.length - 1, idx + 1)) }
+    }
+    window.addEventListener('keydown', fn)
+    return () => window.removeEventListener('keydown', fn)
+  }, [idx, results.length])
+
+  function highlight(text) {
+    if (!text || !query.trim()) return text || ''
+    const safe = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    return text.replace(new RegExp(`(${safe})`, 'gi'),
+      '<mark style="background:rgba(200,51,74,0.3);border-radius:2px;padding:0 1px">$1</mark>')
   }
 
   return (
-    <div style={{
-      position: 'absolute', inset: 0, zIndex: 50,
-      background: '#FFFFFF',
-      display: 'flex', flexDirection: 'column'
-    }}>
-      <div style={{
-        padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12,
-        borderBottom: '0.5px solid rgba(200,51,74,0.13)'
-      }}>
-        <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer' }}>←</button>
-        <input
-          autoFocus
-          value={query}
-          onChange={e => { setQuery(e.target.value); setIndex(0) }}
-          placeholder="Поиск..."
-          style={{
-            flex: 1, border: 'none', background: 'none',
-            fontSize: 16, outline: 'none', color: '#1C0A0E'
-          }}
-        />
+    <div style={{ position: 'absolute', inset: 0, zIndex: 50, background: SURF_S, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10,
+        borderBottom: `0.5px solid ${BDR_S}`, flexShrink: 0 }}>
+        <button onClick={onClose} style={{ background: 'none', border: 'none',
+          cursor: 'pointer', color: '#C8334A', fontSize: 22, lineHeight: 1, padding: '2px 4px' }}>←</button>
+        <input autoFocus value={query} onChange={e => { setQuery(e.target.value); setIdx(0) }}
+          placeholder="Поиск по сообщениям..."
+          style={{ flex: 1, border: 'none', background: 'none', fontSize: 15,
+            color: INK_S, outline: 'none', fontFamily: "'DM Sans',sans-serif" }}/>
         {results.length > 0 && (
-          <>
-            <span style={{ fontSize: 12, color: '#9A6070' }}>{index + 1}/{results.length}</span>
-            <button onClick={() => goTo(Math.max(0, index - 1))}>↑</button>
-            <button onClick={() => goTo(Math.min(results.length - 1, index + 1))}>↓</button>
-          </>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+            <span style={{ fontSize: 12, color: MUTED_S }}>{idx + 1}/{results.length}</span>
+            <button onClick={() => goTo(Math.max(0, idx - 1))}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#C8334A', fontSize: 18 }}>↑</button>
+            <button onClick={() => goTo(Math.min(results.length - 1, idx + 1))}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#C8334A', fontSize: 18 }}>↓</button>
+          </div>
         )}
       </div>
-      <div style={{ flex: 1, overflowY: 'auto' }}>
+      <div style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
+        {query && results.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '40px 20px', color: MUTED_S, fontSize: 14 }}>
+            Ничего не найдено
+          </div>
+        )}
         {results.map((msg, i) => (
-          <div
-            key={msg.id}
-            onClick={() => goTo(i)}
-            style={{
-              padding: '12px 16px', borderBottom: '0.5px solid rgba(200,51,74,0.08)',
-              background: i === index ? 'rgba(200,51,74,0.08)' : 'none', cursor: 'pointer'
-            }}
-          >
-            <div style={{ fontSize: 11, color: '#C8334A', marginBottom: 4 }}>{fmtDateSep(msg.created_at)}</div>
-            <div
-              style={{ fontSize: 14, color: '#1C0A0E' }}
-              dangerouslySetInnerHTML={{
-                __html: msg.text?.replace(
-                  new RegExp(`(${query})`, 'gi'),
-                  '<mark style="background:rgba(200,51,74,0.3);border-radius:2px">$1</mark>'
-                ) || ''
-              }}
-            />
+          <div key={msg.id} onClick={() => goTo(i)} style={{
+            padding: '10px 16px', borderBottom: `0.5px solid ${BDR_S}`,
+            background: i === idx ? 'rgba(200,51,74,0.08)' : 'none', cursor: 'pointer' }}>
+            <div style={{ fontSize: 11, color: '#C8334A', marginBottom: 3 }}>{fmtDateSep(msg.created_at)}</div>
+            <div style={{ fontSize: 14, color: INK_S }}
+              dangerouslySetInnerHTML={{ __html: highlight(msg.text) }}/>
           </div>
         ))}
       </div>
@@ -698,6 +712,8 @@ export default function Chat({ session, profile, darkMode }) {
 
   async function handleSend() {
     if (!newText.trim() && !photoFile) return
+    clearTimeout(typingTimer.current)
+    supabase.from('typing_status').upsert({ user_id: uid, is_typing: false, updated_at: new Date().toISOString() })
     setSending(true)
     try {
       let photoUrl = null
@@ -1056,14 +1072,8 @@ export default function Chat({ session, profile, darkMode }) {
       .eq('id', msgId)
   }
 
-  function onLongPress(msg, x, y) {
-    setCtxMenu({
-      msgId: msg.id,
-      text: msg.text || '',
-      x, y,
-      isMe: msg.user_id === uid,
-      isPinned: msg.is_pinned || false
-    })
+  function onLongPress(msg) {
+    setCtxMenu({ msgId: msg.id, text: msg.text || '', isMe: msg.user_id === uid, isPinned: !!msg.is_pinned })
   }
 
   function onDoubleTap(id) {
@@ -1072,7 +1082,7 @@ export default function Chat({ session, profile, darkMode }) {
 
   function onReply(msgId) {
     const msg = messages.find(m => m.id === msgId)
-    if (msg) setReplyTo({ id: msg.id, text: msg.text || 'Фото', user_id: msg.user_id })
+    if (msg) setReplyTo({ id: msg.id, text: msg.text, user_id: msg.user_id, photo_url: msg.photo_url })
   }
 
   function getReplyMessage(replyId) {
@@ -1170,15 +1180,14 @@ export default function Chat({ session, profile, darkMode }) {
           <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 17, fontWeight: 600, color: INK }}>
             {partnerName}
           </div>
-          <div style={{ fontSize: 11, color: partnerTyping ? '#4CAF50' : MUTED }}>
-            {partnerTyping ? 'печатает...' : 'наша история'}
+          <div style={{ fontSize: 11, color: partnerTyping ? '#4CAF50' : MUTED, transition: 'color .3s' }}>
+            {partnerTyping ? 'печатает...' : 'только для нас двоих'}
           </div>
         </div>
-        <button onClick={() => setShowSearch(true)} style={{
-          background: 'none', border: 'none', cursor: 'pointer', padding: 6,
-          display: 'flex', alignItems: 'center', justifyContent: 'center'
-        }}>
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke={MUTED} strokeWidth="2">
+        <button onClick={() => setShowSearch(true)} style={{ width: 36, height: 36, borderRadius: '50%',
+          background: 'rgba(200,51,74,0.09)', border: 'none', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="#C8334A" strokeWidth="2" strokeLinecap="round">
             <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
           </svg>
         </button>
@@ -1215,20 +1224,22 @@ export default function Chat({ session, profile, darkMode }) {
       )}
 
       {replyTo && (
-        <div style={{
-          flexShrink: 0, padding: '6px 14px', background: SURF,
-          borderTop: `0.5px solid ${BDR}`, display: 'flex', alignItems: 'center', gap: 8
-        }}>
-          <div style={{ width: 3, height: 32, background: ROSE, borderRadius: 3 }} />
-          <div style={{ flex: 1 }}>
+        <div style={{ flexShrink: 0, padding: '6px 14px', background: SURF,
+          borderTop: `0.5px solid ${BDR}`, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ width: 3, height: 34, background: ROSE, borderRadius: 3, flexShrink: 0 }} />
+          <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 11, color: ROSE, fontWeight: 500 }}>
-              {replyTo.user_id === uid ? 'Вы' : partnerName}
+              {replyTo.user_id === uid ? 'Вы' : (partner?.name || 'Партнёр')}
             </div>
-            <div style={{ fontSize: 13, color: MUTED, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {replyTo.text}
+            <div style={{ fontSize: 12, color: MUTED, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {replyTo.photo_url && !replyTo.text ? 'Фото' : (replyTo.text || '')}
             </div>
           </div>
-          <button onClick={() => setReplyTo(null)} style={{ background: 'none', border: 'none', fontSize: 16, cursor: 'pointer' }}>✕</button>
+          {replyTo.photo_url && (
+            <img src={replyTo.photo_url} style={{ width: 34, height: 34, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} />
+          )}
+          <button onClick={() => setReplyTo(null)} style={{
+            background: 'none', border: 'none', cursor: 'pointer', color: MUTED, fontSize: 20, lineHeight: 1, padding: '2px 4px' }}>×</button>
         </div>
       )}
 
@@ -1345,12 +1356,14 @@ export default function Chat({ session, profile, darkMode }) {
         onPin={pinMsg}
         onCopy={copyText}
         onReact={addReact}
-        onReply={onReply}
+        onReply={id => {
+          const m = messages.find(x => x.id === id)
+          if (m) setReplyTo({ id: m.id, text: m.text, user_id: m.user_id, photo_url: m.photo_url })
+          setCtxMenu(null)
+        }}
       />
 
-      {showSearch && (
-        <SearchOverlay messages={messages} onClose={() => setShowSearch(false)} />
-      )}
+      {showSearch && <SearchOverlay messages={messages} dark={dark} onClose={() => setShowSearch(false)} />}
 
       {photoPreview && (
         <div style={{

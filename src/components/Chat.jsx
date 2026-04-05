@@ -49,6 +49,22 @@ function isSameGroup(msg1, msg2) {
   return diff <= GROUP_DIFF_SECONDS
 }
 
+function isLastInGroup(msg, nextMsg) {
+  return !isSameGroup(msg, nextMsg)
+}
+
+function isFirstInGroup(msg, prevMsg) {
+  return !isSameGroup(prevMsg, msg)
+}
+
+function needAvatar(msg, nextMsg, uid) {
+  if (msg.user_id === uid) return false
+  if (!nextMsg) return true
+  if (nextMsg.user_id !== msg.user_id) return true
+  if (diffDate(msg.created_at, nextMsg.created_at)) return true
+  return false
+}
+
 function shouldShowAvatar(msg, nextMsg) {
   if (!nextMsg) return true
   if (nextMsg.user_id !== msg.user_id) return true
@@ -63,15 +79,19 @@ function hasValidReactions(reactions) {
 }
 
 function parseText(text) {
-  if (!text) return null
-  return text
+  if (!text) return ''
+  let s = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+  return s
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
     .replace(/__(.+?)__/g, '<u>$1</u>')
     .replace(/~~(.+?)~~/g, '<s>$1</s>')
     .replace(/`(.+?)`/g, '<code style="background:rgba(200,51,74,0.1);border-radius:4px;padding:1px 5px;font-family:monospace;font-size:13px">$1</code>')
-    .replace(/\[(.+?)\]\((https?:\/\/[^\)]+)\)/g, '<a href="$2" target="_blank" rel="noopener" style="color:#C8334A;text-decoration:underline">$1</a>')
-    .replace(/^> (.+)$/gm, '<blockquote style="border-left:3px solid #C8334A;margin:4px 0;padding:2px 8px;opacity:0.8">$1</blockquote>')
+    .replace(/\[(.+?)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener" style="color:#C8334A;text-decoration:underline">$1</a>')
+    .replace(/^&gt; (.+)$/gm, '<blockquote style="border-left:3px solid #C8334A;margin:4px 0;padding:2px 8px;opacity:0.8">$1</blockquote>')
     .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener" style="color:#C8334A;text-decoration:underline">$1</a>')
 }
 
@@ -298,14 +318,17 @@ const TextBubble = memo(({ msg, isMine, dark, radius, bg, color }) => {
 })
 
 const Message = memo(({
-  msg, isMine, dark, uid, partner, partnerAvatar,
-  onLongPress, onDoubleClick, onReact,
-  isLast, replyMsg,
+  msg, isMine, dark, uid, partnerName, partnerAvatar,
+  onLongPress, onReact,
+  isFirst, isLast, showAv,
+  messages,
 }) => {
   const timerRef = useRef(null)
   const movedRef = useRef(false)
   const posRef = useRef({ x: 0, y: 0 })
   const lastTap = useRef(0)
+
+  const replyMsg = msg.reply_to_id ? messages?.find(m => m.id === msg.reply_to_id) : null
 
   const radius = isMine
     ? (isLast ? '18px 18px 4px 18px' : '18px 18px 8px 18px')
@@ -341,7 +364,7 @@ const Message = memo(({
   function handleTap() {
     const now = Date.now()
     if (now - lastTap.current < 300) {
-      onDoubleClick(msg.id)
+      onReact(msg.id, '❤️')
     }
     lastTap.current = now
   }
@@ -376,8 +399,11 @@ const Message = memo(({
   )
 })
 
-const ContextMenu = memo(({ menu, onClose, onEdit, onDelete, onPin, onCopy, onReply, onReact }) => {
+const ContextMenu = memo(({ menu, dark, onClose, onEdit, onDelete, onPin, onCopy, onReply, onReact }) => {
   if (!menu) return null
+
+  const menuBg = dark ? '#1E0A10' : '#fff'
+  const menuColor = dark ? '#F5E8EA' : '#1C0A0E'
 
   const menuStyle = {
     position: 'fixed',
@@ -385,21 +411,21 @@ const ContextMenu = memo(({ menu, onClose, onEdit, onDelete, onPin, onCopy, onRe
     left: '50%',
     transform: 'translate(-50%, -50%)',
     zIndex: 301,
-    background: '#fff',
+    background: menuBg,
     borderRadius: 20,
     overflow: 'hidden',
     minWidth: 240,
     maxWidth: 'calc(100% - 40px)',
     boxShadow: '0 12px 48px rgba(0,0,0,0.25)',
-    border: '0.5px solid rgba(200,51,74,0.12)',
+    border: dark ? '0.5px solid rgba(232,85,106,0.18)' : '0.5px solid rgba(200,51,74,0.12)',
     animation: 'slideUp 0.2s ease both'
   }
 
   const btnStyle = {
     width: '100%', padding: '12px 18px', display: 'flex', alignItems: 'center', gap: 12,
     background: 'none', border: 'none', cursor: 'pointer', fontSize: 15,
-    color: '#1C0A0E', textAlign: 'left', fontFamily: 'inherit',
-    borderBottom: '0.5px solid rgba(200,51,74,0.07)'
+    color: menuColor, textAlign: 'left', fontFamily: 'inherit',
+    borderBottom: dark ? '0.5px solid rgba(232,85,106,0.1)' : '0.5px solid rgba(200,51,74,0.07)'
   }
 
   const Icon = ({ d }) => (
@@ -1041,9 +1067,10 @@ export default function Chat({ session, profile, darkMode }) {
 
       <div style={{
         flexShrink: 0, background: SURF, borderBottom: `0.5px solid ${BDR}`,
-        paddingTop: 'max(12px, env(safe-area-inset-top, 0px))',
-        paddingBottom: 12, paddingLeft: 16, paddingRight: 16,
-        display: 'flex', alignItems: 'center', gap: 12, zIndex: 20
+        paddingTop: 'max(10px, env(safe-area-inset-top, 0px))',
+        paddingBottom: 10, paddingLeft: 16, paddingRight: 16,
+        display: 'flex', alignItems: 'center', gap: 12, zIndex: 20,
+        transform: 'translateZ(0)'
       }}>
         <div style={{ position: 'relative', flexShrink: 0 }}>
           <div style={{
@@ -1067,7 +1094,22 @@ export default function Chat({ session, profile, darkMode }) {
             {partnerTyping ? 'печатает...' : 'наша история'}
           </div>
         </div>
-        <button onClick={() => setShowSearch(true)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer' }}>🔍</button>
+        <button onClick={() => setShowSearch(true)} style={{
+          background: 'none', border: 'none', cursor: 'pointer', padding: 6,
+          display: 'flex', alignItems: 'center', justifyContent: 'center'
+        }}>
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke={MUTED} strokeWidth="2">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+        </button>
+        <button style={{
+          background: 'none', border: 'none', cursor: 'pointer', padding: 6,
+          display: 'flex', alignItems: 'center', justifyContent: 'center'
+        }}>
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke={MUTED} strokeWidth="2">
+            <polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/>
+          </svg>
+        </button>
       </div>
 
       {pinnedMsg && (
@@ -1078,7 +1120,12 @@ export default function Chat({ session, profile, darkMode }) {
         }}>
           <div style={{ width: 3, height: 36, background: ROSE, borderRadius: 3, flexShrink: 0 }} />
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 11, color: ROSE, fontWeight: 600, marginBottom: 2 }}>📌 Закреплено</div>
+            <div style={{ fontSize: 11, color: ROSE, fontWeight: 600, marginBottom: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
+              <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke={ROSE} strokeWidth="2">
+                <path d="M12 17v5 M5 17h14v-1.76a2 2 0 00-1.11-1.79l-1.78-.9A2 2 0 0115 10.76V6h1a2 2 0 000-4H8a2 2 0 000 4h1v4.76a2 2 0 01-1.11 1.79l-1.78.9A2 2 0 005 15.24V17z"/>
+              </svg>
+              Закреплено
+            </div>
             <div style={{ fontSize: 13, color: INK, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {pinnedMsg.text || 'Фото'}
             </div>
@@ -1133,11 +1180,13 @@ export default function Chat({ session, profile, darkMode }) {
             <p style={{ fontSize: 14, color: MUTED }}>Напишите первое сообщение</p>
           </div>
         ) : messages.map((msg, i) => {
-          const isMine = msg.user_id === uid
+          const prevMsg = messages[i - 1]
           const nextMsg = messages[i + 1]
-          const showDate = i === 0 || diffDate(messages[i - 1]?.created_at, msg.created_at)
-          const showAvatar = !isMine && shouldShowAvatar(msg, nextMsg)
-          const isLastInGroup = !isSameGroup(msg, nextMsg)
+          const isMine = msg.user_id === uid
+          const showDate = i === 0 || diffDate(prevMsg?.created_at, msg.created_at)
+          const isFirst = isFirstInGroup(msg, prevMsg)
+          const isLast = isLastInGroup(msg, nextMsg)
+          const showAv = needAvatar(msg, nextMsg, uid)
           const replyMsg = msg.reply_to_id ? getReplyMessage(msg.reply_to_id) : null
 
           return (
@@ -1153,7 +1202,7 @@ export default function Chat({ session, profile, darkMode }) {
                 </div>
               )}
               <div style={{ display: 'flex', justifyContent: isMine ? 'flex-end' : 'flex-start', marginBottom: 2 }}>
-                {!isMine && showAvatar && (
+                {!isMine && showAv && (
                   <div style={{
                     width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
                     background: GRAD, overflow: 'hidden', marginRight: 8, marginTop: 4
@@ -1167,18 +1216,20 @@ export default function Chat({ session, profile, darkMode }) {
                     }
                   </div>
                 )}
+                {!isMine && !showAv && <div style={{ width: 40 }} />}
                 <Message
                   msg={msg}
                   isMine={isMine}
                   dark={dark}
                   uid={uid}
-                  partner={partner}
+                  partnerName={partnerName}
                   partnerAvatar={partnerAvatar}
                   onLongPress={onLongPress}
-                  onDoubleClick={onDoubleTap}
                   onReact={addReact}
-                  isLast={isLastInGroup}
-                  replyMsg={replyMsg}
+                  isFirst={isFirst}
+                  isLast={isLast}
+                  showAv={showAv}
+                  messages={messages}
                 />
               </div>
             </div>
@@ -1207,6 +1258,7 @@ export default function Chat({ session, profile, darkMode }) {
 
       <ContextMenu
         menu={ctxMenu}
+        dark={dark}
         onClose={() => setCtxMenu(null)}
         onEdit={(id, text) => { setEditingId(id); setNewText(text) }}
         onDelete={deleteMsg}
@@ -1350,7 +1402,8 @@ export default function Chat({ session, profile, darkMode }) {
       <div style={{
         flexShrink: 0, background: SURF, borderTop: `0.5px solid ${BDR}`,
         padding: '8px 10px', paddingBottom: 'calc(8px + env(safe-area-inset-bottom, 0px))',
-        display: 'flex', alignItems: 'flex-end', gap: 7
+        display: 'flex', alignItems: 'flex-end', gap: 7,
+        transform: 'translateZ(0)'
       }}>
         <IconBtn onClick={() => photoRef.current?.click()} icon="camera" />
         <input ref={photoRef} type="file" accept="image/*" onChange={onPhotoChange} style={{ display: 'none' }} />

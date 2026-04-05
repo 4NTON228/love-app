@@ -4,6 +4,8 @@ import { supabase } from '../lib/supabase'
 const REACTIONS = ['❤️','🔥','😍','😂','👍','💔']
 const VALID_REACTIONS = new Set(REACTIONS)
 const GROUP_DIFF_SECONDS = 121
+const GRAD = 'linear-gradient(135deg, #C8334A, #8B1A2C)'
+const WAVE_H = [3,5,8,12,16,20,14,8,5,10,18,14,9,6,12,16,8,5,3,6]
 
 /* ─────────────────────────────────────────────────────────────────────────────
  * UTILS
@@ -124,101 +126,71 @@ async function compressImage(file) {
  * COMPONENTS
  * ──────────────────────────────────────────────────────────────────────────── */
 
-const VideoCircle = memo(({ url, isMine, time }) => {
+const VideoCircle = memo(function VideoCircle({ url, isMine, time }) {
   return (
     <div style={{ position: 'relative', display: 'inline-block' }}>
-      <div style={{
-        width: 180, height: 180, borderRadius: '50%', overflow: 'hidden',
-        border: `2.5px solid ${isMine ? '#C8334A' : 'rgba(200,51,74,0.25)'}`,
-      }}>
-        <video
-          src={url}
-          playsInline
-          controls
-          preload="metadata"
-          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-        />
+      <div style={{ width: 180, height: 180, borderRadius: '50%', overflow: 'hidden',
+        border: `2.5px solid ${isMine ? '#C8334A' : 'rgba(200,51,74,0.25)'}` }}>
+        <video src={url} playsInline controls preload="metadata"
+          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}/>
       </div>
-      <div style={{
-        position: 'absolute', bottom: 8, right: 8,
+      <div style={{ position: 'absolute', bottom: 10, right: 10,
         background: 'rgba(0,0,0,0.55)', borderRadius: 6,
-        padding: '2px 6px', fontSize: 10, color: 'white'
-      }}>{time}</div>
+        padding: '2px 6px', fontSize: 10, color: 'white', pointerEvents: 'none' }}>
+        {time}
+      </div>
     </div>
   )
 })
 
-const VoiceMessage = memo(({ url, isMine, duration, time, dark }) => {
-  const [playing, setPlaying] = useState(false)
+const VoiceMessage = memo(function VoiceMessage({ url, isMine, dark, duration, time }) {
+  const [playing, setPlaying]   = useState(false)
   const [progress, setProgress] = useState(0)
   const audioRef = useRef(null)
-  const bars = [3,5,8,12,16,20,14,8,5,10,18,14,9,6,12,16,8,5,3,6]
+  const MUTED_C = dark ? '#8A5060' : '#9A6070'
 
-  useEffect(() => {
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause()
-        audioRef.current = null
-      }
-    }
-  }, [])
-
+  function getAudio() {
+    if (!audioRef.current) audioRef.current = new Audio(url)
+    return audioRef.current
+  }
   function toggle() {
-    if (!audioRef.current) {
-      audioRef.current = new Audio(url)
-      audioRef.current.ontimeupdate = () => {
-        setProgress(audioRef.current.currentTime / audioRef.current.duration)
-      }
-      audioRef.current.onended = () => {
-        setPlaying(false)
-        setProgress(0)
-      }
-    }
-    if (playing) {
-      audioRef.current.pause()
-      setPlaying(false)
-    } else {
-      audioRef.current.play()
-      setPlaying(true)
+    const a = getAudio()
+    if (playing) { a.pause(); setPlaying(false) }
+    else {
+      a.play().catch(console.error); setPlaying(true)
+      a.ontimeupdate = () => setProgress(a.currentTime / (a.duration || 1))
+      a.onended = () => { setPlaying(false); setProgress(0) }
     }
   }
-
-  const SURF = dark ? '#1E0A10' : '#fff'
-  const GRAD = 'linear-gradient(135deg, #C8334A, #8B1A2C)'
+  useEffect(() => () => audioRef.current?.pause(), [])
 
   return (
-    <div style={{
-      display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px',
-      background: isMine ? GRAD : SURF,
-      borderRadius: '18px', minWidth: 200,
-      border: isMine ? 'none' : `0.5px solid rgba(200,51,74,0.15)`,
-    }}>
-      <button onClick={toggle} style={{
-        width: 36, height: 36, borderRadius: '50%',
-        background: isMine ? 'rgba(255,255,255,0.2)' : 'rgba(200,51,74,0.1)',
-        border: 'none', cursor: 'pointer',
-        display: 'flex', alignItems: 'center', justifyContent: 'center'
-      }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10,
+      padding: '8px 14px 8px 10px', borderRadius: 18, minWidth: 180,
+      background: isMine ? GRAD : (dark ? '#1E0A10' : '#fff'),
+      border: isMine ? 'none' : '0.5px solid rgba(200,51,74,0.15)' }}>
+      <button onClick={toggle} style={{ width: 36, height: 36, borderRadius: '50%',
+        border: 'none', cursor: 'pointer', flexShrink: 0,
+        background: isMine ? 'rgba(255,255,255,0.22)' : 'rgba(200,51,74,0.1)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <svg viewBox="0 0 24 24" width="16" height="16" fill={isMine ? 'white' : '#C8334A'}>
           {playing
-            ? <><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></>
+            ? <><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></>
             : <polygon points="5,3 19,12 5,21"/>}
         </svg>
       </button>
       <div style={{ flex: 1 }}>
-        <svg viewBox="0 0 80 20" width="80" height="20">
-          {bars.map((h, i) => {
-            const active = progress * 20 > i
-            const fill = active
-              ? (isMine ? 'rgba(255,255,255,0.9)' : '#C8334A')
-              : (isMine ? 'rgba(255,255,255,0.4)' : 'rgba(200,51,74,0.3)')
-            return (
-              <rect key={i} x={i * 4} y={20 - h} width={3} height={h} rx={1} fill={fill} />
-            )
-          })}
+        <svg viewBox={`0 0 ${WAVE_H.length * 4} 22`} width="80" height="22" style={{ display: 'block' }}>
+          {WAVE_H.map((h, i) => (
+            <rect key={i} x={i * 4} y={22 - h} width={3} height={h} rx={1}
+              fill={progress * WAVE_H.length > i
+                ? (isMine ? 'rgba(255,255,255,0.9)' : '#C8334A')
+                : (isMine ? 'rgba(255,255,255,0.32)' : 'rgba(200,51,74,0.25)')}/>
+          ))}
         </svg>
-        <div style={{ fontSize: 10, color: isMine ? 'rgba(255,255,255,0.6)' : '#9A6070', marginTop: 2 }}>
-          {fmtDuration(duration)} · {time}
+        <div style={{ fontSize: 10, marginTop: 2,
+          color: isMine ? 'rgba(255,255,255,0.58)' : MUTED_C }}>
+          {Math.floor((duration || 0) / 60)}:{String((duration || 0) % 60).padStart(2, '0')} · {time}
         </div>
       </div>
     </div>
@@ -592,6 +564,7 @@ export default function Chat({ session, profile, darkMode }) {
   const [photoPreview, setPhotoPreview] = useState(null)
   const [recording, setRecording] = useState(false)
   const [voiceRecording, setVoiceRecording] = useState(false)
+  const [voiceRec, setVoiceRec] = useState(false)
   const [recordSeconds, setRecordSeconds] = useState(0)
 
   const [editingId, setEditingId] = useState(null)
@@ -603,11 +576,16 @@ export default function Chat({ session, profile, darkMode }) {
   const photoRef = useRef(null)
   const videoFileRef = useRef(null)
   const previewVideoRef = useRef(null)
+  const previewVidRef = useRef(null)
   const recorderRef = useRef(null)
   const chunksRef = useRef([])
   const streamRef = useRef(null)
   const typingTimer = useRef(null)
   const recordTimer = useRef(null)
+  const recTimer = useRef(null)
+  const voiceRecRef = useRef(null)
+  const voiceChunks = useRef([])
+  const voiceStream = useRef(null)
 
   const dark = darkMode
   const BG = dark ? '#200A10' : '#FBF0F2'
@@ -944,6 +922,108 @@ export default function Chat({ session, profile, darkMode }) {
     chunksRef.current = []
     setVoiceRecording(false)
     setRecordSeconds(0)
+  }
+
+  // ── spec-named video record wrappers ──────────────────────────────────────
+  async function startRecord() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: 300, height: 300 }, audio: true
+      })
+      streamRef.current = stream
+      if (previewVidRef.current) {
+        previewVidRef.current.srcObject = stream
+        previewVidRef.current.muted = true
+        previewVidRef.current.play().catch(() => {})
+      }
+      const mime = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+        ? 'video/webm;codecs=vp9' : 'video/webm'
+      const rec = new MediaRecorder(stream, { mimeType: mime })
+      recorderRef.current = rec
+      chunksRef.current = []
+      rec.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data) }
+      rec.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop())
+        if (previewVidRef.current) previewVidRef.current.srcObject = null
+        streamRef.current = null
+        clearInterval(recTimer.current)
+        const blob = new Blob(chunksRef.current, { type: 'video/webm' })
+        if (blob.size < 1000) { setRecording(false); setRecordSeconds(0); return }
+        const file = new File([blob], `circle-${Date.now()}.webm`, { type: 'video/webm' })
+        setSending(true)
+        try {
+          const url = await upload(file, 'circles')
+          await supabase.from('messages').insert({ user_id: uid, video_url: url, is_video_circle: true })
+          scrollToBottom()
+        } catch (e) { console.error(e) }
+        setSending(false)
+        setRecording(false)
+        setRecordSeconds(0)
+      }
+      rec.start()
+      setRecording(true)
+      setRecordSeconds(0)
+      clearInterval(recTimer.current)
+      recTimer.current = setInterval(() => setRecordSeconds(s => s + 1), 1000)
+      setTimeout(() => { if (recorderRef.current?.state === 'recording') recorderRef.current.stop() }, 60000)
+    } catch (e) { console.error(e); alert('Нет доступа к камере') }
+  }
+
+  function stopRecord() {
+    if (recorderRef.current?.state === 'recording') recorderRef.current.stop()
+    clearInterval(recTimer.current)
+  }
+
+  function cancelRecord() {
+    clearInterval(recTimer.current)
+    if (recorderRef.current?.state === 'recording') recorderRef.current.stop()
+    if (streamRef.current) { streamRef.current.getTracks().forEach(t => t.stop()); streamRef.current = null }
+    if (previewVidRef.current) previewVidRef.current.srcObject = null
+    chunksRef.current = []
+    setRecording(false)
+    setRecordSeconds(0)
+  }
+
+  // ── spec-named voice wrappers ──────────────────────────────────────────────
+  async function startVoice() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      voiceStream.current = stream
+      const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus' : 'audio/webm'
+      const rec = new MediaRecorder(stream, { mimeType: mime })
+      voiceRecRef.current = rec
+      voiceChunks.current = []
+      rec.ondataavailable = e => { if (e.data.size > 0) voiceChunks.current.push(e.data) }
+      rec.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop())
+        voiceStream.current = null
+        clearInterval(recTimer.current)
+        const sec = recordSeconds
+        const blob = new Blob(voiceChunks.current, { type: 'audio/webm' })
+        if (blob.size < 1000) { setVoiceRec(false); setRecordSeconds(0); return }
+        const file = new File([blob], `voice-${Date.now()}.webm`, { type: 'audio/webm' })
+        setSending(true)
+        try {
+          const url = await upload(file, 'voices')
+          await supabase.from('messages').insert({ user_id: uid, audio_url: url, is_voice: true, duration: sec })
+          scrollToBottom()
+        } catch (e) { console.error(e) }
+        setSending(false)
+        setVoiceRec(false)
+        setRecordSeconds(0)
+      }
+      rec.start()
+      setVoiceRec(true)
+      setRecordSeconds(0)
+      clearInterval(recTimer.current)
+      recTimer.current = setInterval(() => setRecordSeconds(s => s + 1), 1000)
+    } catch (e) { console.error(e); alert('Нет доступа к микрофону') }
+  }
+
+  function stopVoice() {
+    clearInterval(recTimer.current)
+    if (voiceRecRef.current?.state === 'recording') voiceRecRef.current.stop()
   }
 
   async function deleteMsg(id) {
@@ -1285,117 +1365,70 @@ export default function Chat({ session, profile, darkMode }) {
 
       {recording && (
         <div style={{
-          position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100,
-          background: 'rgba(0,0,0,0.95)', backdropFilter: 'blur(20px)',
-          display: 'flex', flexDirection: 'column', alignItems: 'center',
-          padding: '40px 20px', paddingBottom: 'calc(100px + env(safe-area-inset-bottom, 0px))',
-          animation: 'slideUp 0.3s ease'
+          flexShrink: 0, background: dark ? '#1A0810' : '#fff0f3',
+          borderBottom: `0.5px solid rgba(200,51,74,0.15)`,
+          padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 12
         }}>
-          <div style={{
-            width: 260, height: 260, borderRadius: '50%', overflow: 'hidden',
-            border: `4px solid ${ROSE}`, background: '#000', position: 'relative', marginBottom: 30
+          <div style={{ width: 64, height: 64, borderRadius: '50%', overflow: 'hidden',
+            border: `2px solid ${ROSE}`, flexShrink: 0, background: '#000', position: 'relative' }}>
+            <video ref={previewVidRef} autoPlay playsInline muted
+              style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)' }}/>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: ROSE, animation: 'pulse 1s infinite' }}/>
+              <span style={{ fontSize: 13, color: INK, fontFamily: 'monospace' }}>
+                {Math.floor(recordSeconds / 60)}:{String(recordSeconds % 60).padStart(2, '0')}
+              </span>
+            </div>
+            <div style={{ fontSize: 11, color: MUTED }}>Запись кружочка...</div>
+          </div>
+          <button onClick={cancelRecord} style={{ background: 'none', border: 'none', cursor: 'pointer',
+            padding: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke={MUTED} strokeWidth="2">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+          <button onClick={stopRecord} style={{
+            width: 40, height: 40, borderRadius: '50%', border: 'none', cursor: 'pointer',
+            background: GRAD, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 2px 10px rgba(200,51,74,0.4)'
           }}>
-            <video
-              ref={previewVideoRef}
-              autoPlay
-              playsInline
-              muted
-              style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover',
-                transform: 'scaleX(-1)'
-              }}
-            />
-            <div style={{
-              position: 'absolute', top: 16, right: 16,
-              background: 'rgba(0,0,0,0.6)', padding: '6px 12px', borderRadius: 20,
-              display: 'flex', alignItems: 'center', gap: 6
-            }}>
-              <div style={{ width: 8, height: 8, borderRadius: '50%', background: ROSE, animation: 'pulse 1s infinite' }} />
-              <span style={{ fontSize: 12, color: 'white' }}>ЗАПИСЬ</span>
-            </div>
-            <div style={{
-              position: 'absolute', bottom: 16, left: 16,
-              background: 'rgba(0,0,0,0.6)', padding: '4px 12px', borderRadius: 20,
-              fontSize: 14, color: 'white', fontFamily: 'monospace'
-            }}>
-              {fmtRecordTime(recordSeconds)}
-            </div>
-          </div>
-          <div style={{ display: 'flex', gap: 40 }}>
-            <button onClick={cancelVideoRecord} style={{
-              width: 60, height: 60, borderRadius: '50%',
-              background: 'rgba(255,255,255,0.15)', border: '2px solid rgba(255,255,255,0.3)',
-              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
-            }}>
-              <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="white" strokeWidth="2">
-                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            </button>
-            <button onClick={stopVideoRecord} style={{
-              width: 70, height: 70, borderRadius: '50%',
-              background: GRAD, border: 'none', cursor: 'pointer',
-              boxShadow: '0 4px 20px rgba(200,51,74,0.5)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center'
-            }}>
-              <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="white" strokeWidth="2">
-                <rect x="6" y="6" width="12" height="12" fill="white" stroke="none" />
-              </svg>
-            </button>
-          </div>
-          <div style={{ marginTop: 24, fontSize: 12, color: 'rgba(255,255,255,0.5)', textAlign: 'center' }}>
-            Нажмите «Отправить», чтобы отправить кружочек<br />или «✕», чтобы отменить
-          </div>
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="white" strokeWidth="2.5">
+              <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </svg>
+          </button>
         </div>
       )}
 
-      {voiceRecording && (
+      {voiceRec && (
         <div style={{
-          position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100,
-          background: 'rgba(0,0,0,0.95)', backdropFilter: 'blur(20px)',
-          display: 'flex', flexDirection: 'column', alignItems: 'center',
-          padding: '40px 20px', paddingBottom: 'calc(100px + env(safe-area-inset-bottom, 0px))',
-          animation: 'slideUp 0.3s ease'
+          flexShrink: 0, background: dark ? '#1A0810' : '#fff0f3',
+          borderBottom: `0.5px solid rgba(200,51,74,0.15)`,
+          padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 12
         }}>
-          <div style={{
-            width: 120, height: 120, borderRadius: '50%',
-            background: GRAD, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            marginBottom: 30, animation: 'pulse 1.5s infinite'
-          }}>
-            <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="white" strokeWidth="1.5">
-              <path d="M12 2a3 3 0 00-3 3v7a3 3 0 006 0V5a3 3 0 00-3-3z" />
-              <path d="M19 10v2a7 7 0 01-14 0v-2M12 19v3" />
+          <div style={{ width: 36, height: 36, borderRadius: '50%', background: GRAD, flexShrink: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'pulse 1.2s infinite' }}>
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="white" strokeWidth="2">
+              <path d="M12 2a3 3 0 00-3 3v7a3 3 0 006 0V5a3 3 0 00-3-3z"/>
+              <path d="M19 10v2a7 7 0 01-14 0v-2M12 19v3"/>
             </svg>
           </div>
-          <div style={{
-            fontSize: 28, fontWeight: 700, color: 'white', fontFamily: 'monospace', marginBottom: 20
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13, color: ROSE, fontWeight: 600 }}>Запись голосового...</div>
+            <div style={{ fontSize: 11, color: MUTED, fontFamily: 'monospace' }}>
+              {Math.floor(recordSeconds / 60)}:{String(recordSeconds % 60).padStart(2, '0')}
+            </div>
+          </div>
+          <button onClick={stopVoice} style={{
+            width: 40, height: 40, borderRadius: '50%', border: 'none', cursor: 'pointer',
+            background: GRAD, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 2px 10px rgba(200,51,74,0.4)'
           }}>
-            {fmtRecordTime(recordSeconds)}
-          </div>
-          <div style={{ display: 'flex', gap: 40 }}>
-            <button onClick={cancelVoiceRecord} style={{
-              width: 60, height: 60, borderRadius: '50%',
-              background: 'rgba(255,255,255,0.15)', border: '2px solid rgba(255,255,255,0.3)',
-              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
-            }}>
-              <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="white" strokeWidth="2">
-                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            </button>
-            <button onClick={stopVoiceRecord} style={{
-              width: 70, height: 70, borderRadius: '50%',
-              background: GRAD, border: 'none', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center'
-            }}>
-              <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="white" strokeWidth="2">
-                <rect x="6" y="6" width="12" height="12" fill="white" stroke="none" />
-              </svg>
-            </button>
-          </div>
-          <div style={{ marginTop: 24, fontSize: 12, color: 'rgba(255,255,255,0.5)', textAlign: 'center' }}>
-            Нажмите «Отправить», чтобы отправить голосовое<br />или «✕», чтобы отменить
-          </div>
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="white" strokeWidth="2.5">
+              <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </svg>
+          </button>
         </div>
       )}
 
@@ -1408,12 +1441,20 @@ export default function Chat({ session, profile, darkMode }) {
         <IconBtn onClick={() => photoRef.current?.click()} icon="camera" />
         <input ref={photoRef} type="file" accept="image/*" onChange={onPhotoChange} style={{ display: 'none' }} />
 
-        <IconBtn
-          onClick={recording ? stopVideoRecord : startVideoRecord}
-          active={recording}
-          glow={recording}
-          icon="video"
-        />
+        <button
+          onClick={recording ? stopRecord : startRecord}
+          style={{
+            width: 36, height: 36, borderRadius: '50%', border: 'none', cursor: 'pointer', flexShrink: 0,
+            background: recording ? GRAD : 'rgba(200,51,74,0.09)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            animation: recording ? 'glow 1.4s ease-in-out infinite' : 'none'
+          }}
+        >
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none"
+            stroke={recording ? 'white' : '#C8334A'} strokeWidth="2">
+            <polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/>
+          </svg>
+        </button>
         <input ref={videoFileRef} type="file" accept="video/*" onChange={onVideoFile} style={{ display: 'none' }} />
 
         <div style={{
@@ -1438,15 +1479,25 @@ export default function Chat({ session, profile, darkMode }) {
           />
         </div>
 
-        {!newText.trim() && !photoFile && !recording && !voiceRecording && (
-          <IconBtn
-            onMouseDown={startVoiceRecord}
-            onMouseUp={stopVoiceRecord}
-            onTouchStart={startVoiceRecord}
-            onTouchEnd={stopVoiceRecord}
-            icon="mic"
-            active={voiceRecording}
-          />
+        {!newText.trim() && !photoFile && !recording && !voiceRec && (
+          <button
+            onMouseDown={startVoice}
+            onMouseUp={stopVoice}
+            onTouchStart={e => { e.preventDefault(); startVoice() }}
+            onTouchEnd={e => { e.preventDefault(); stopVoice() }}
+            style={{
+              width: 36, height: 36, borderRadius: '50%', border: 'none', cursor: 'pointer', flexShrink: 0,
+              background: voiceRec ? GRAD : 'rgba(200,51,74,0.09)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              animation: voiceRec ? 'glow 0.8s ease-in-out infinite' : 'none'
+            }}
+          >
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none"
+              stroke={voiceRec ? 'white' : '#C8334A'} strokeWidth="2">
+              <path d="M12 2a3 3 0 00-3 3v7a3 3 0 006 0V5a3 3 0 00-3-3z"/>
+              <path d="M19 10v2a7 7 0 01-14 0v-2M12 19v3"/>
+            </svg>
+          </button>
         )}
 
         {(newText.trim() || photoFile) && (

@@ -279,21 +279,6 @@ const ReplyPreview = memo(function ReplyPreview({ msg, isMine, dark, uid, partne
   )
 })
 
-const ForwardedTag = memo(function ForwardedTag({ isMine }) {
-  const c = isMine ? 'rgba(255,255,255,0.6)' : '#C8334A'
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4,
-      fontSize: 11, color: c, fontStyle: 'italic' }}>
-      <svg viewBox="0 0 24 24" width="12" height="12" fill="none"
-        stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <polyline points="15 10 20 15 15 20"/>
-        <path d="M4 4v7a4 4 0 004 4h12"/>
-      </svg>
-      Пересланное
-    </div>
-  )
-})
-
 const Reactions = memo(({ reactions, uid, onReact, msgId, isMine, dark }) => {
   const valid = Object.entries(reactions).filter(([e]) => VALID_REACTIONS.has(e))
   if (valid.length === 0) return null
@@ -343,7 +328,6 @@ const TextBubble = memo(({ msg, isMine, dark, radius, bg, color, replyData, uid,
       wordBreak: 'break-word', whiteSpace: 'pre-wrap',
       maxWidth: '72vw',
     }}>
-      {msg.forwarded_from_id && <ForwardedTag isMine={isMine} />}
       {replyData && (
         <ReplyPreview msg={replyData} isMine={isMine} dark={dark} uid={uid} partnerName={partnerName} />
       )}
@@ -448,28 +432,26 @@ const Message = memo(({
     >
       {msg.is_video_circle && msg.video_url ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: isMine ? 'flex-end' : 'flex-start' }}>
-          {(msg.forwarded_from_id || replyData) && (
+          {replyData && (
             <div style={{
               padding: '7px 12px', borderRadius: 14, maxWidth: 220,
               background: isMine ? 'linear-gradient(135deg,#C8334A,#8B1A2C)' : (dark ? '#1E0A10' : '#fff'),
               border: isMine ? 'none' : '0.5px solid rgba(200,51,74,0.15)',
             }}>
-              {msg.forwarded_from_id && <ForwardedTag isMine={isMine} />}
-              {replyData && <ReplyPreview msg={replyData} isMine={isMine} dark={dark} uid={uid} partnerName={partnerName} />}
+              <ReplyPreview msg={replyData} isMine={isMine} dark={dark} uid={uid} partnerName={partnerName} />
             </div>
           )}
           <VideoCircle url={msg.video_url} isMine={isMine} time={fmtTime(msg.created_at)} />
         </div>
       ) : msg.is_voice && msg.audio_url ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          {(msg.forwarded_from_id || replyData) && (
+          {replyData && (
             <div style={{
               padding: '7px 12px', borderRadius: 14, maxWidth: 240,
               background: isMine ? 'linear-gradient(135deg,#C8334A,#8B1A2C)' : (dark ? '#1E0A10' : '#fff'),
               border: isMine ? 'none' : '0.5px solid rgba(200,51,74,0.15)',
             }}>
-              {msg.forwarded_from_id && <ForwardedTag isMine={isMine} />}
-              {replyData && <ReplyPreview msg={replyData} isMine={isMine} dark={dark} uid={uid} partnerName={partnerName} />}
+              <ReplyPreview msg={replyData} isMine={isMine} dark={dark} uid={uid} partnerName={partnerName} />
             </div>
           )}
           <VoiceMessage url={msg.audio_url} isMine={isMine} duration={msg.duration} time={fmtTime(msg.created_at)} dark={dark} />
@@ -488,7 +470,7 @@ const Message = memo(({
   )
 })
 
-const ContextMenu = memo(({ menu, dark, onClose, onEdit, onDelete, onPin, onCopy, onReply, onReact, onForward }) => {
+const ContextMenu = memo(({ menu, dark, onClose, onEdit, onDelete, onPin, onCopy, onReply, onReact }) => {
   if (!menu) return null
 
   const menuBg    = dark ? '#1E0A10' : '#fff'
@@ -550,14 +532,6 @@ const ContextMenu = memo(({ menu, dark, onClose, onEdit, onDelete, onPin, onCopy
         <button style={btnStyle} onClick={() => { onReply(menu.msgId); onClose() }}>
           <Icon d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
           Ответить
-        </button>
-
-        <button style={btnStyle} onClick={() => { onForward(menu.msg); onClose() }}>
-          <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="#C8334A" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="15 10 20 15 15 20"/>
-            <path d="M4 4v7a4 4 0 004 4h12"/>
-          </svg>
-          Переслать
         </button>
 
         {menu.isMe && menu.text && (
@@ -1067,7 +1041,7 @@ export default function Chat({ session, profile, darkMode }) {
   }
 
   function onLongPress(msg) {
-    setCtxMenu({ msgId: msg.id, text: msg.text || '', isMe: msg.user_id === uid, isPinned: !!msg.is_pinned, msg })
+    setCtxMenu({ msgId: msg.id, text: msg.text || '', isMe: msg.user_id === uid, isPinned: !!msg.is_pinned })
   }
 
   function onDoubleTap(id) {
@@ -1077,23 +1051,6 @@ export default function Chat({ session, profile, darkMode }) {
   function onReply(msgId) {
     const msg = messages.find(m => m.id === msgId)
     if (msg) setReplyTo({ id: msg.id, text: msg.text, user_id: msg.user_id, photo_url: msg.photo_url })
-  }
-
-  async function forwardMsg(origMsg) {
-    if (!origMsg) return
-    const payload = {
-      user_id: uid,
-      forwarded_from_id: origMsg.id,
-      text: origMsg.text || null,
-      photo_url: origMsg.photo_url || null,
-      audio_url: origMsg.audio_url || null,
-      video_url: origMsg.video_url || null,
-      is_voice: origMsg.is_voice || false,
-      is_video_circle: origMsg.is_video_circle || false,
-      duration: origMsg.duration || null,
-    }
-    await supabase.from('messages').insert(payload)
-    scrollToBottom()
   }
 
   function getReplyMessage(replyId) {
@@ -1294,7 +1251,6 @@ export default function Chat({ session, profile, darkMode }) {
           if (m) setReplyTo({ id: m.id, text: m.text, user_id: m.user_id, photo_url: m.photo_url })
           setCtxMenu(null)
         }}
-        onForward={forwardMsg}
       />
 
       {showSearch && <SearchOverlay messages={messages} dark={dark} onClose={() => setShowSearch(false)} />}

@@ -153,54 +153,90 @@ function Avatar({ url, size }) {
 
 const VideoCircle = memo(function VideoCircle({ url, isMine, time }) {
   const [playing, setPlaying] = useState(false)
+  const [ended, setEnded]     = useState(false)
   const videoRef = useRef(null)
 
   function toggle(e) {
     e.stopPropagation()
+    e.preventDefault()
     const v = videoRef.current
     if (!v) return
-    if (playing) { v.pause(); setPlaying(false) }
-    else { v.play().catch(() => {}); setPlaying(true) }
+    if (playing) {
+      v.pause()
+      setPlaying(false)
+    } else {
+      if (ended) { v.currentTime = 0; setEnded(false) }
+      v.play().catch(() => {})
+      setPlaying(true)
+    }
   }
 
   useEffect(() => () => videoRef.current?.pause(), [])
 
+  const showOverlay = !playing
+
   return (
     <div
+      onTouchStart={e => e.stopPropagation()}
+      onTouchEnd={e => { e.stopPropagation(); toggle(e) }}
+      onMouseDown={e => e.stopPropagation()}
       onClick={toggle}
-      style={{ position: 'relative', display: 'inline-block', cursor: 'pointer', userSelect: 'none', WebkitUserSelect: 'none' }}
+      style={{
+        position: 'relative', display: 'inline-block',
+        cursor: 'pointer', userSelect: 'none', WebkitUserSelect: 'none',
+        WebkitTapHighlightColor: 'transparent'
+      }}
     >
+      {/* круг */}
       <div style={{
         width: 180, height: 180, borderRadius: '50%', overflow: 'hidden',
-        border: `2.5px solid ${isMine ? '#C8334A' : 'rgba(200,51,74,0.3)'}`,
-        boxShadow: '0 2px 12px rgba(0,0,0,0.18)'
+        border: `2.5px solid ${isMine ? '#C8334A' : 'rgba(200,51,74,0.35)'}`,
+        boxShadow: '0 2px 16px rgba(0,0,0,0.22)'
       }}>
         <video
           ref={videoRef}
           src={url}
           playsInline
           preload="metadata"
-          onEnded={() => setPlaying(false)}
+          onEnded={() => { setPlaying(false); setEnded(true) }}
           style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
         />
       </div>
-      {!playing && (
+
+      {/* overlay: play / replay */}
+      {showOverlay && (
         <div style={{
-          position: 'absolute', top: '50%', left: '50%',
-          transform: 'translate(-50%, -50%)',
-          width: 48, height: 48, borderRadius: '50%',
-          background: 'rgba(0,0,0,0.48)', backdropFilter: 'blur(2px)',
+          position: 'absolute', inset: 0, borderRadius: '50%',
+          background: 'rgba(0,0,0,0.32)',
           display: 'flex', alignItems: 'center', justifyContent: 'center'
         }}>
-          <svg viewBox="0 0 24 24" width="22" height="22" fill="white">
-            <polygon points="6,3 20,12 6,21" />
-          </svg>
+          <div style={{
+            width: 56, height: 56, borderRadius: '50%',
+            background: 'rgba(0,0,0,0.55)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 0 0 2px rgba(255,255,255,0.18)'
+          }}>
+            {ended
+              ? /* replay icon */
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="1 4 1 10 7 10"/>
+                    <path d="M3.51 15a9 9 0 1 0 .49-4.65"/>
+                  </svg>
+              : /* play icon */
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="white">
+                    <polygon points="7,4 20,12 7,20"/>
+                  </svg>
+            }
+          </div>
         </div>
       )}
+
+      {/* время */}
       <div style={{
-        position: 'absolute', bottom: 12, right: 12,
-        background: 'rgba(0,0,0,0.52)', borderRadius: 6,
-        padding: '2px 7px', fontSize: 10, color: 'white', pointerEvents: 'none'
+        position: 'absolute', bottom: 12, right: 14,
+        background: 'rgba(0,0,0,0.55)', borderRadius: 6,
+        padding: '2px 7px', fontSize: 10, color: 'white', pointerEvents: 'none',
+        fontFamily: 'monospace'
       }}>
         {time}
       </div>

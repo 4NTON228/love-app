@@ -5,7 +5,11 @@ const REACTIONS = ['❤️','🔥','😍','😂','👍','💔']
 const VALID_REACTIONS = new Set(REACTIONS)
 const GROUP_DIFF_SECONDS = 121
 const GRAD = 'linear-gradient(135deg, #C8334A, #8B1A2C)'
-const WAVE_H = [3,5,8,12,16,20,14,8,5,10,18,14,9,6,12,16,8,5,3,6]
+const WAVE_H = [
+  3,5,8,6,4,7,11,15,19,22,17,13,8,5,7,12,18,24,28,24,19,14,9,
+  6,4,8,13,19,25,30,26,21,16,11,7,5,9,15,21,27,30,25,19,13,8,
+  5,8,13,18,22,26,22,17,12,7,4,6,10,14,18,13,8,5
+]
 
 /* ─────────────────────────────────────────────────────────────────────────────
  * UTILS
@@ -209,16 +213,15 @@ const VoiceMessage = memo(function VoiceMessage({ url, isMine, dark, duration, t
   const [progress, setProgress] = useState(0)
   const audioRef = useRef(null)
   const MUTED_C = dark ? '#8A5060' : '#9A6070'
+  const BAR_W = 2, BAR_GAP = 1, BAR_MAX_H = 28
+  const svgW = WAVE_H.length * (BAR_W + BAR_GAP)
 
-  function getAudio() {
-    if (!audioRef.current) audioRef.current = new Audio(url)
-    return audioRef.current
-  }
   function toggle() {
-    const a = getAudio()
+    if (!audioRef.current) audioRef.current = new Audio(url)
+    const a = audioRef.current
     if (playing) { a.pause(); setPlaying(false) }
     else {
-      a.play().catch(console.error); setPlaying(true)
+      a.play().catch(() => {}); setPlaying(true)
       a.ontimeupdate = () => setProgress(a.currentTime / (a.duration || 1))
       a.onended = () => { setPlaying(false); setProgress(0) }
     }
@@ -227,7 +230,7 @@ const VoiceMessage = memo(function VoiceMessage({ url, isMine, dark, duration, t
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10,
-      padding: '8px 14px 8px 10px', borderRadius: 18, minWidth: 180,
+      padding: '8px 14px 8px 10px', borderRadius: 18, minWidth: 220,
       background: isMine ? GRAD : (dark ? '#1E0A10' : '#fff'),
       border: isMine ? 'none' : '0.5px solid rgba(200,51,74,0.15)' }}>
       <button onClick={toggle} style={{ width: 36, height: 36, borderRadius: '50%',
@@ -240,18 +243,27 @@ const VoiceMessage = memo(function VoiceMessage({ url, isMine, dark, duration, t
             : <polygon points="5,3 19,12 5,21"/>}
         </svg>
       </button>
-      <div style={{ flex: 1 }}>
-        <svg viewBox={`0 0 ${WAVE_H.length * 4} 22`} width="80" height="22" style={{ display: 'block' }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <svg viewBox={`0 0 ${svgW} ${BAR_MAX_H}`} width={svgW} height={BAR_MAX_H} style={{ display: 'block', maxWidth: '100%' }}>
           {WAVE_H.map((h, i) => (
-            <rect key={i} x={i * 4} y={22 - h} width={3} height={h} rx={1}
-              fill={progress * WAVE_H.length > i
-                ? (isMine ? 'rgba(255,255,255,0.9)' : '#C8334A')
-                : (isMine ? 'rgba(255,255,255,0.32)' : 'rgba(200,51,74,0.25)')}/>
+            <rect
+              key={i}
+              x={i * (BAR_W + BAR_GAP)}
+              y={BAR_MAX_H - h}
+              width={BAR_W}
+              height={h}
+              rx={1}
+              fill={
+                progress * WAVE_H.length > i
+                  ? (isMine ? 'rgba(255,255,255,0.92)' : '#C8334A')
+                  : (isMine ? 'rgba(255,255,255,0.30)' : 'rgba(200,51,74,0.22)')
+              }
+            />
           ))}
         </svg>
-        <div style={{ fontSize: 10, marginTop: 2,
+        <div style={{ fontSize: 10, marginTop: 3,
           color: isMine ? 'rgba(255,255,255,0.58)' : MUTED_C }}>
-          {Math.floor((duration || 0) / 60)}:{String((duration || 0) % 60).padStart(2, '0')} · {time}
+          {fmtDuration(duration || 0)} · {time}
         </div>
       </div>
     </div>
@@ -313,7 +325,7 @@ const Reactions = memo(({ reactions, uid, onReact, msgId, isMine, dark }) => {
   )
 })
 
-const TextBubble = memo(({ msg, isMine, dark, radius, bg, color, replyData, uid, partnerName }) => {
+const TextBubble = memo(({ msg, isMine, dark, radius, bg, color, replyData, uid, partnerName, onPhotoOpen }) => {
   const onlyPhoto = msg.photo_url && !msg.text
   return (
     <div style={{
@@ -327,6 +339,7 @@ const TextBubble = memo(({ msg, isMine, dark, radius, bg, color, replyData, uid,
       fontSize: 15, lineHeight: 1.45,
       wordBreak: 'break-word', whiteSpace: 'pre-wrap',
       maxWidth: '72vw',
+      animation: 'msgIn 0.2s ease both',
     }}>
       {replyData && (
         <ReplyPreview msg={replyData} isMine={isMine} dark={dark} uid={uid} partnerName={partnerName} />
@@ -336,11 +349,14 @@ const TextBubble = memo(({ msg, isMine, dark, radius, bg, color, replyData, uid,
           src={msg.photo_url}
           alt=""
           loading="lazy"
+          onClick={e => { e.stopPropagation(); onPhotoOpen?.(msg.photo_url) }}
+          onError={e => { e.target.style.display = 'none' }}
           style={{
             maxWidth: '100%', maxHeight: 280,
             borderRadius: msg.text ? 10 : 14,
             display: 'block', marginBottom: msg.text ? 6 : 0,
             marginTop: replyData ? 6 : 0,
+            cursor: 'pointer',
           }}
         />
       )}
@@ -365,14 +381,18 @@ const TextBubble = memo(({ msg, isMine, dark, radius, bg, color, replyData, uid,
 
 const Message = memo(({
   msg, isMine, dark, uid, partnerName, partnerAvatar,
-  onLongPress, onReact,
+  onLongPress, onReact, onReply, onPhotoOpen,
   isFirst, isLast, showAv,
   messages,
 }) => {
-  const timerRef = useRef(null)
-  const movedRef = useRef(false)
-  const posRef = useRef({ x: 0, y: 0 })
-  const lastTap = useRef(0)
+  const timerRef    = useRef(null)
+  const movedRef    = useRef(false)
+  const posRef      = useRef({ x: 0, y: 0 })
+  const lastTap     = useRef(0)
+  const bubbleRef   = useRef(null)
+  const swipeStartX = useRef(0)
+  const swipingRef  = useRef(false)
+  const [swipeDx, setSwipeDx] = useState(0)
 
   const replyData = useMemo(() =>
     msg.reply_to_id ? (messages?.find(m => m.id === msg.reply_to_id) || null) : null
@@ -382,90 +402,161 @@ const Message = memo(({
     ? (isLast ? '18px 18px 4px 18px' : '18px 18px 8px 18px')
     : (isLast ? '18px 18px 18px 4px' : '18px 18px 18px 8px')
 
-  const bubbleBg = isMine
-    ? 'linear-gradient(135deg, #C8334A, #8B1A2C)'
-    : (dark ? '#1E0A10' : '#FFFFFF')
+  const bubbleBg    = isMine ? 'linear-gradient(135deg, #C8334A, #8B1A2C)' : (dark ? '#1E0A10' : '#FFFFFF')
   const bubbleColor = isMine ? 'white' : (dark ? '#F5E8EA' : '#1C0A0E')
 
   function startPress(x, y) {
     movedRef.current = false
     posRef.current = { x, y }
     timerRef.current = setTimeout(() => {
-      if (!movedRef.current) onLongPress(msg)
-    }, 500)
+      if (!movedRef.current) {
+        navigator.vibrate?.(8)
+        onLongPress(msg)
+      }
+    }, 490)
   }
-
-  function onMove(e) {
+  function onMovePress(e) {
     const t = e.touches?.[0] || e
-    const dx = Math.abs(t.clientX - posRef.current.x)
-    const dy = Math.abs(t.clientY - posRef.current.y)
-    if (dx > 10 || dy > 10) {
+    if (Math.abs(t.clientX - posRef.current.x) > 10 || Math.abs(t.clientY - posRef.current.y) > 10) {
       movedRef.current = true
       clearTimeout(timerRef.current)
     }
   }
-
-  function endPress() {
-    clearTimeout(timerRef.current)
-  }
-
+  function endPress() { clearTimeout(timerRef.current) }
   function handleTap() {
     const now = Date.now()
-    if (now - lastTap.current < 300) {
-      onReact(msg.id, '❤️')
-    }
+    if (now - lastTap.current < 300) onReact(msg.id, '❤️')
     lastTap.current = now
   }
 
+  // swipe to reply
+  function onSwipeStart(e) {
+    swipeStartX.current = e.touches[0].clientX
+    swipingRef.current = true
+  }
+  function onSwipeMove(e) {
+    if (!swipingRef.current) return
+    const dx = e.touches[0].clientX - swipeStartX.current
+    const rightDir = isMine ? dx < 0 : dx > 0
+    if (!rightDir) return
+    const clamped = Math.min(Math.abs(dx), 68) * (isMine ? -1 : 1)
+    setSwipeDx(clamped)
+    if (bubbleRef.current) bubbleRef.current.style.transform = `translateX(${clamped}px)`
+  }
+  function onSwipeEnd() {
+    if (!swipingRef.current) return
+    swipingRef.current = false
+    if (Math.abs(swipeDx) >= 55) {
+      navigator.vibrate?.(10)
+      onReply?.(msg.id)
+    }
+    setSwipeDx(0)
+    if (bubbleRef.current) {
+      bubbleRef.current.style.transition = 'transform 0.2s cubic-bezier(0.25,1,0.5,1)'
+      bubbleRef.current.style.transform  = 'translateX(0)'
+      setTimeout(() => { if (bubbleRef.current) bubbleRef.current.style.transition = '' }, 220)
+    }
+  }
+
   return (
-    <div
-      onTouchStart={e => { const t = e.touches[0]; startPress(t.clientX, t.clientY) }}
-      onTouchMove={onMove}
-      onTouchEnd={() => { endPress(); handleTap() }}
-      onTouchCancel={endPress}
-      onMouseDown={e => startPress(e.clientX, e.clientY)}
-      onMouseUp={endPress}
-      onMouseLeave={endPress}
-      onClick={handleTap}
-      onContextMenu={e => { e.preventDefault(); onLongPress(msg) }}
-      style={{ WebkitUserSelect: 'none', userSelect: 'none', position: 'relative' }}
-    >
-      {msg.is_video_circle && msg.video_url ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: isMine ? 'flex-end' : 'flex-start' }}>
-          {replyData && (
-            <div style={{
-              padding: '7px 12px', borderRadius: 14, maxWidth: 220,
-              background: isMine ? 'linear-gradient(135deg,#C8334A,#8B1A2C)' : (dark ? '#1E0A10' : '#fff'),
-              border: isMine ? 'none' : '0.5px solid rgba(200,51,74,0.15)',
-            }}>
-              <ReplyPreview msg={replyData} isMine={isMine} dark={dark} uid={uid} partnerName={partnerName} />
-            </div>
-          )}
-          <VideoCircle url={msg.video_url} isMine={isMine} time={fmtTime(msg.created_at)} />
+    <div style={{ position: 'relative', WebkitUserSelect: 'none', userSelect: 'none' }}>
+      {/* reply arrow hint */}
+      {Math.abs(swipeDx) > 18 && (
+        <div style={{
+          position: 'absolute', top: '50%', transform: 'translateY(-50%)',
+          [isMine ? 'right' : 'left']: Math.abs(swipeDx) + 6,
+          width: 26, height: 26, borderRadius: '50%',
+          background: 'rgba(200,51,74,0.18)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          opacity: Math.min(Math.abs(swipeDx) / 55, 1),
+          pointerEvents: 'none', zIndex: 1,
+        }}>
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#C8334A" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="9 17 4 12 9 7"/><line x1="20" y1="12" x2="4" y2="12"/>
+          </svg>
         </div>
-      ) : msg.is_voice && msg.audio_url ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          {replyData && (
-            <div style={{
-              padding: '7px 12px', borderRadius: 14, maxWidth: 240,
-              background: isMine ? 'linear-gradient(135deg,#C8334A,#8B1A2C)' : (dark ? '#1E0A10' : '#fff'),
-              border: isMine ? 'none' : '0.5px solid rgba(200,51,74,0.15)',
-            }}>
-              <ReplyPreview msg={replyData} isMine={isMine} dark={dark} uid={uid} partnerName={partnerName} />
-            </div>
-          )}
-          <VoiceMessage url={msg.audio_url} isMine={isMine} duration={msg.duration} time={fmtTime(msg.created_at)} dark={dark} />
-        </div>
-      ) : (
-        <TextBubble
-          msg={msg} isMine={isMine} dark={dark} radius={radius} bg={bubbleBg} color={bubbleColor}
-          replyData={replyData} uid={uid} partnerName={partnerName}
-        />
       )}
 
-      {hasValidReactions(msg.reactions) && (
-        <Reactions reactions={msg.reactions} uid={uid} onReact={onReact} msgId={msg.id} isMine={isMine} dark={dark} />
-      )}
+      <div
+        ref={bubbleRef}
+        onTouchStart={e => { const t = e.touches[0]; startPress(t.clientX, t.clientY); onSwipeStart(e) }}
+        onTouchMove={e => { onMovePress(e); onSwipeMove(e) }}
+        onTouchEnd={() => { endPress(); handleTap(); onSwipeEnd() }}
+        onTouchCancel={() => { endPress(); onSwipeEnd() }}
+        onMouseDown={e => startPress(e.clientX, e.clientY)}
+        onMouseMove={onMovePress}
+        onMouseUp={() => { endPress(); handleTap() }}
+        onMouseLeave={endPress}
+        onContextMenu={e => { e.preventDefault(); onLongPress(msg) }}
+      >
+        {msg.is_video_circle && msg.video_url ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: isMine ? 'flex-end' : 'flex-start' }}>
+            {replyData && (
+              <div style={{
+                padding: '7px 12px', borderRadius: 14, maxWidth: 220,
+                background: isMine ? 'linear-gradient(135deg,#C8334A,#8B1A2C)' : (dark ? '#1E0A10' : '#fff'),
+                border: isMine ? 'none' : '0.5px solid rgba(200,51,74,0.15)',
+              }}>
+                <ReplyPreview msg={replyData} isMine={isMine} dark={dark} uid={uid} partnerName={partnerName} />
+              </div>
+            )}
+            <VideoCircle url={msg.video_url} isMine={isMine} time={fmtTime(msg.created_at)} />
+          </div>
+        ) : msg.is_voice && msg.audio_url ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {replyData && (
+              <div style={{
+                padding: '7px 12px', borderRadius: 14, maxWidth: 240,
+                background: isMine ? 'linear-gradient(135deg,#C8334A,#8B1A2C)' : (dark ? '#1E0A10' : '#fff'),
+                border: isMine ? 'none' : '0.5px solid rgba(200,51,74,0.15)',
+              }}>
+                <ReplyPreview msg={replyData} isMine={isMine} dark={dark} uid={uid} partnerName={partnerName} />
+              </div>
+            )}
+            <VoiceMessage url={msg.audio_url} isMine={isMine} duration={msg.duration} time={fmtTime(msg.created_at)} dark={dark} />
+          </div>
+        ) : (
+          <TextBubble
+            msg={msg} isMine={isMine} dark={dark} radius={radius} bg={bubbleBg} color={bubbleColor}
+            replyData={replyData} uid={uid} partnerName={partnerName} onPhotoOpen={onPhotoOpen}
+          />
+        )}
+
+        {hasValidReactions(msg.reactions) && (
+          <Reactions reactions={msg.reactions} uid={uid} onReact={onReact} msgId={msg.id} isMine={isMine} dark={dark} />
+        )}
+      </div>
+    </div>
+  )
+})
+
+const PhotoLightbox = memo(function PhotoLightbox({ url, onClose }) {
+  useEffect(() => {
+    const fn = e => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', fn)
+    return () => window.removeEventListener('keydown', fn)
+  }, [])
+  return (
+    <div onClick={onClose} style={{
+      position: 'fixed', inset: 0, zIndex: 500,
+      background: 'rgba(0,0,0,0.93)', backdropFilter: 'blur(12px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center'
+    }}>
+      <img
+        src={url}
+        onClick={e => e.stopPropagation()}
+        style={{ maxWidth: '96vw', maxHeight: '88dvh', borderRadius: 12, objectFit: 'contain' }}
+      />
+      <button onClick={onClose} style={{
+        position: 'absolute', top: 'max(16px, env(safe-area-inset-top, 16px))', right: 16,
+        width: 36, height: 36, borderRadius: '50%',
+        background: 'rgba(255,255,255,0.14)', border: 'none', cursor: 'pointer',
+        display: 'flex', alignItems: 'center', justifyContent: 'center'
+      }}>
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="white" strokeWidth="2.2">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
     </div>
   )
 })
@@ -699,6 +790,7 @@ export default function Chat({ session, profile, darkMode }) {
   const [editingId, setEditingId] = useState(null)
   const [replyTo, setReplyTo] = useState(null)
   const [ctxMenu, setCtxMenu] = useState(null)
+  const [lightboxUrl, setLightboxUrl] = useState(null)
 
   const listRef = useRef(null)
   const endRef = useRef(null)
@@ -1207,6 +1299,8 @@ export default function Chat({ session, profile, darkMode }) {
                   partnerAvatar={partnerAvatar}
                   onLongPress={onLongPress}
                   onReact={addReact}
+                  onReply={onReply}
+                  onPhotoOpen={url => setLightboxUrl(url)}
                   isFirst={isFirst}
                   isLast={isLast}
                   showAv={showAv}
@@ -1236,6 +1330,8 @@ export default function Chat({ session, profile, darkMode }) {
           </svg>
         </button>
       )}
+
+      {lightboxUrl && <PhotoLightbox url={lightboxUrl} onClose={() => setLightboxUrl(null)} />}
 
       <ContextMenu
         menu={ctxMenu}
@@ -1458,9 +1554,9 @@ export default function Chat({ session, profile, darkMode }) {
       </div>
 
       <style>{`
-        @keyframes slideUp {
-          from { transform: translateY(100%); opacity: 0; }
-          to { transform: translateY(0); opacity: 1; }
+        @keyframes msgIn {
+          from { opacity: 0; transform: translateY(6px) scale(0.97); }
+          to   { opacity: 1; transform: translateY(0)  scale(1); }
         }
         @keyframes ctxIn {
           from { transform: translate(-50%, -50%) scale(0.88); opacity: 0; }

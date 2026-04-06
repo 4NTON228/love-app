@@ -807,6 +807,7 @@ export default function Chat({ session, profile, darkMode }) {
   const voiceChunks = useRef([])
   const voiceStream = useRef(null)
   const voiceSecRef = useRef(0)
+  const voiceCancelledRef = useRef(false)
 
   const dark = darkMode
   const BG = dark ? '#200A10' : '#FBF0F2'
@@ -896,6 +897,15 @@ export default function Chat({ session, profile, darkMode }) {
 
     return () => { supabase.removeChannel(typingChannel) }
   }, [partner?.id])
+
+  // подключаем стрим к превью-видео ПОСЛЕ того как recording=true и элемент отрендерился
+  useEffect(() => {
+    if (recording && streamRef.current && previewVidRef.current) {
+      previewVidRef.current.srcObject = streamRef.current
+      previewVidRef.current.muted = true
+      previewVidRef.current.play().catch(() => {})
+    }
+  }, [recording])
 
   function scrollToBottom() {
     endRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -1003,11 +1013,7 @@ export default function Chat({ session, profile, darkMode }) {
         video: { facingMode: 'user', width: 300, height: 300 }, audio: true
       })
       streamRef.current = stream
-      if (previewVidRef.current) {
-        previewVidRef.current.srcObject = stream
-        previewVidRef.current.muted = true
-        previewVidRef.current.play().catch(() => {})
-      }
+      // srcObject присваивается в useEffect после setRecording(true)
       const mime = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
         ? 'video/webm;codecs=vp9' : 'video/webm'
       const rec = new MediaRecorder(stream, { mimeType: mime })
@@ -1033,12 +1039,15 @@ export default function Chat({ session, profile, darkMode }) {
         setRecording(false)
         setRecordSeconds(0)
       }
-      rec.start()
       setRecording(true)
       setRecordSeconds(0)
       clearInterval(recTimer.current)
       recTimer.current = setInterval(() => setRecordSeconds(s => s + 1), 1000)
-      setTimeout(() => { if (recorderRef.current?.state === 'recording') recorderRef.current.stop() }, 60000)
+      // небольшая задержка — даём React отрендерить видео-элемент, потом стартуем
+      setTimeout(() => {
+        rec.start()
+        setTimeout(() => { if (recorderRef.current?.state === 'recording') recorderRef.current.stop() }, 60000)
+      }, 80)
     } catch (e) { console.error(e); alert('Нет доступа к камере') }
   }
 
@@ -1075,7 +1084,13 @@ export default function Chat({ session, profile, darkMode }) {
         clearInterval(recTimer.current)
         const sec = voiceSecRef.current
         voiceSecRef.current = 0
+        if (voiceCancelledRef.current) {
+          voiceCancelledRef.current = false
+          voiceChunks.current = []
+          setVoiceRec(false); setRecordSeconds(0); return
+        }
         const blob = new Blob(voiceChunks.current, { type: 'audio/webm' })
+        voiceChunks.current = []
         if (blob.size < 1000) { setVoiceRec(false); setRecordSeconds(0); return }
         const file = new File([blob], `voice-${Date.now()}.webm`, { type: 'audio/webm' })
         setSending(true)
@@ -1100,6 +1115,14 @@ export default function Chat({ session, profile, darkMode }) {
   function stopVoice() {
     clearInterval(recTimer.current)
     if (voiceRecRef.current?.state === 'recording') voiceRecRef.current.stop()
+  }
+
+  function cancelVoice() {
+    voiceCancelledRef.current = true
+    clearInterval(recTimer.current)
+    if (voiceStream.current) { voiceStream.current.getTracks().forEach(t => t.stop()); voiceStream.current = null }
+    if (voiceRecRef.current?.state === 'recording') voiceRecRef.current.stop()
+    else { setVoiceRec(false); setRecordSeconds(0) }
   }
 
   async function deleteMsg(id) {
@@ -1454,6 +1477,16 @@ export default function Chat({ session, profile, darkMode }) {
               {Math.floor(recordSeconds / 60)}:{String(recordSeconds % 60).padStart(2, '0')}
             </div>
           </div>
+          {/* Отмена */}
+          <button onClick={cancelVoice} style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            padding: 8, display: 'flex', alignItems: 'center', justifyContent: 'center'
+          }}>
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke={MUTED} strokeWidth="2">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+          {/* Отправить */}
           <button onClick={stopVoice} style={{
             width: 40, height: 40, borderRadius: '50%', border: 'none', cursor: 'pointer',
             background: GRAD, display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -1515,10 +1548,7 @@ export default function Chat({ session, profile, darkMode }) {
 
         {!newText.trim() && !photoFile && !recording && !voiceRec && (
           <button
-            onMouseDown={startVoice}
-            onMouseUp={stopVoice}
-            onTouchStart={e => { e.preventDefault(); startVoice() }}
-            onTouchEnd={e => { e.preventDefault(); stopVoice() }}
+            onClick={startVoice}
             style={{
               width: 36, height: 36, borderRadius: '50%', border: 'none', cursor: 'pointer', flexShrink: 0,
               background: voiceRec ? GRAD : 'rgba(200,51,74,0.09)',

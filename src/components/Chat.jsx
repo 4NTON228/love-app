@@ -153,54 +153,90 @@ function Avatar({ url, size }) {
 
 const VideoCircle = memo(function VideoCircle({ url, isMine, time }) {
   const [playing, setPlaying] = useState(false)
+  const [ended, setEnded]     = useState(false)
   const videoRef = useRef(null)
 
   function toggle(e) {
     e.stopPropagation()
+    e.preventDefault()
     const v = videoRef.current
     if (!v) return
-    if (playing) { v.pause(); setPlaying(false) }
-    else { v.play().catch(() => {}); setPlaying(true) }
+    if (playing) {
+      v.pause()
+      setPlaying(false)
+    } else {
+      if (ended) { v.currentTime = 0; setEnded(false) }
+      v.play().catch(() => {})
+      setPlaying(true)
+    }
   }
 
   useEffect(() => () => videoRef.current?.pause(), [])
 
+  const showOverlay = !playing
+
   return (
     <div
+      onTouchStart={e => e.stopPropagation()}
+      onTouchEnd={e => { e.stopPropagation(); toggle(e) }}
+      onMouseDown={e => e.stopPropagation()}
       onClick={toggle}
-      style={{ position: 'relative', display: 'inline-block', cursor: 'pointer', userSelect: 'none', WebkitUserSelect: 'none' }}
+      style={{
+        position: 'relative', display: 'inline-block',
+        cursor: 'pointer', userSelect: 'none', WebkitUserSelect: 'none',
+        WebkitTapHighlightColor: 'transparent'
+      }}
     >
+      {/* круг */}
       <div style={{
         width: 180, height: 180, borderRadius: '50%', overflow: 'hidden',
-        border: `2.5px solid ${isMine ? '#C8334A' : 'rgba(200,51,74,0.3)'}`,
-        boxShadow: '0 2px 12px rgba(0,0,0,0.18)'
+        border: `2.5px solid ${isMine ? '#C8334A' : 'rgba(200,51,74,0.35)'}`,
+        boxShadow: '0 2px 16px rgba(0,0,0,0.22)'
       }}>
         <video
           ref={videoRef}
           src={url}
           playsInline
           preload="metadata"
-          onEnded={() => setPlaying(false)}
+          onEnded={() => { setPlaying(false); setEnded(true) }}
           style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
         />
       </div>
-      {!playing && (
+
+      {/* overlay: play / replay */}
+      {showOverlay && (
         <div style={{
-          position: 'absolute', top: '50%', left: '50%',
-          transform: 'translate(-50%, -50%)',
-          width: 48, height: 48, borderRadius: '50%',
-          background: 'rgba(0,0,0,0.48)', backdropFilter: 'blur(2px)',
+          position: 'absolute', inset: 0, borderRadius: '50%',
+          background: 'rgba(0,0,0,0.32)',
           display: 'flex', alignItems: 'center', justifyContent: 'center'
         }}>
-          <svg viewBox="0 0 24 24" width="22" height="22" fill="white">
-            <polygon points="6,3 20,12 6,21" />
-          </svg>
+          <div style={{
+            width: 56, height: 56, borderRadius: '50%',
+            background: 'rgba(0,0,0,0.55)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 0 0 2px rgba(255,255,255,0.18)'
+          }}>
+            {ended
+              ? /* replay icon */
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="1 4 1 10 7 10"/>
+                    <path d="M3.51 15a9 9 0 1 0 .49-4.65"/>
+                  </svg>
+              : /* play icon */
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="white">
+                    <polygon points="7,4 20,12 7,20"/>
+                  </svg>
+            }
+          </div>
         </div>
       )}
+
+      {/* время */}
       <div style={{
-        position: 'absolute', bottom: 12, right: 12,
-        background: 'rgba(0,0,0,0.52)', borderRadius: 6,
-        padding: '2px 7px', fontSize: 10, color: 'white', pointerEvents: 'none'
+        position: 'absolute', bottom: 12, right: 14,
+        background: 'rgba(0,0,0,0.55)', borderRadius: 6,
+        padding: '2px 7px', fontSize: 10, color: 'white', pointerEvents: 'none',
+        fontFamily: 'monospace'
       }}>
         {time}
       </div>
@@ -807,6 +843,7 @@ export default function Chat({ session, profile, darkMode }) {
   const voiceChunks = useRef([])
   const voiceStream = useRef(null)
   const voiceSecRef = useRef(0)
+  const voiceCancelledRef = useRef(false)
 
   const dark = darkMode
   const BG = dark ? '#200A10' : '#FBF0F2'
@@ -896,6 +933,15 @@ export default function Chat({ session, profile, darkMode }) {
 
     return () => { supabase.removeChannel(typingChannel) }
   }, [partner?.id])
+
+  // подключаем стрим к превью-видео ПОСЛЕ того как recording=true и элемент отрендерился
+  useEffect(() => {
+    if (recording && streamRef.current && previewVidRef.current) {
+      previewVidRef.current.srcObject = streamRef.current
+      previewVidRef.current.muted = true
+      previewVidRef.current.play().catch(() => {})
+    }
+  }, [recording])
 
   function scrollToBottom() {
     endRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -1003,11 +1049,7 @@ export default function Chat({ session, profile, darkMode }) {
         video: { facingMode: 'user', width: 300, height: 300 }, audio: true
       })
       streamRef.current = stream
-      if (previewVidRef.current) {
-        previewVidRef.current.srcObject = stream
-        previewVidRef.current.muted = true
-        previewVidRef.current.play().catch(() => {})
-      }
+      // srcObject присваивается в useEffect после setRecording(true)
       const mime = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
         ? 'video/webm;codecs=vp9' : 'video/webm'
       const rec = new MediaRecorder(stream, { mimeType: mime })
@@ -1033,12 +1075,15 @@ export default function Chat({ session, profile, darkMode }) {
         setRecording(false)
         setRecordSeconds(0)
       }
-      rec.start()
       setRecording(true)
       setRecordSeconds(0)
       clearInterval(recTimer.current)
       recTimer.current = setInterval(() => setRecordSeconds(s => s + 1), 1000)
-      setTimeout(() => { if (recorderRef.current?.state === 'recording') recorderRef.current.stop() }, 60000)
+      // небольшая задержка — даём React отрендерить видео-элемент, потом стартуем
+      setTimeout(() => {
+        rec.start()
+        setTimeout(() => { if (recorderRef.current?.state === 'recording') recorderRef.current.stop() }, 60000)
+      }, 80)
     } catch (e) { console.error(e); alert('Нет доступа к камере') }
   }
 
@@ -1075,7 +1120,13 @@ export default function Chat({ session, profile, darkMode }) {
         clearInterval(recTimer.current)
         const sec = voiceSecRef.current
         voiceSecRef.current = 0
+        if (voiceCancelledRef.current) {
+          voiceCancelledRef.current = false
+          voiceChunks.current = []
+          setVoiceRec(false); setRecordSeconds(0); return
+        }
         const blob = new Blob(voiceChunks.current, { type: 'audio/webm' })
+        voiceChunks.current = []
         if (blob.size < 1000) { setVoiceRec(false); setRecordSeconds(0); return }
         const file = new File([blob], `voice-${Date.now()}.webm`, { type: 'audio/webm' })
         setSending(true)
@@ -1100,6 +1151,14 @@ export default function Chat({ session, profile, darkMode }) {
   function stopVoice() {
     clearInterval(recTimer.current)
     if (voiceRecRef.current?.state === 'recording') voiceRecRef.current.stop()
+  }
+
+  function cancelVoice() {
+    voiceCancelledRef.current = true
+    clearInterval(recTimer.current)
+    if (voiceStream.current) { voiceStream.current.getTracks().forEach(t => t.stop()); voiceStream.current = null }
+    if (voiceRecRef.current?.state === 'recording') voiceRecRef.current.stop()
+    else { setVoiceRec(false); setRecordSeconds(0) }
   }
 
   async function deleteMsg(id) {
@@ -1454,6 +1513,16 @@ export default function Chat({ session, profile, darkMode }) {
               {Math.floor(recordSeconds / 60)}:{String(recordSeconds % 60).padStart(2, '0')}
             </div>
           </div>
+          {/* Отмена */}
+          <button onClick={cancelVoice} style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            padding: 8, display: 'flex', alignItems: 'center', justifyContent: 'center'
+          }}>
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke={MUTED} strokeWidth="2">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+          {/* Отправить */}
           <button onClick={stopVoice} style={{
             width: 40, height: 40, borderRadius: '50%', border: 'none', cursor: 'pointer',
             background: GRAD, display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -1515,10 +1584,7 @@ export default function Chat({ session, profile, darkMode }) {
 
         {!newText.trim() && !photoFile && !recording && !voiceRec && (
           <button
-            onMouseDown={startVoice}
-            onMouseUp={stopVoice}
-            onTouchStart={e => { e.preventDefault(); startVoice() }}
-            onTouchEnd={e => { e.preventDefault(); stopVoice() }}
+            onClick={startVoice}
             style={{
               width: 36, height: 36, borderRadius: '50%', border: 'none', cursor: 'pointer', flexShrink: 0,
               background: voiceRec ? GRAD : 'rgba(200,51,74,0.09)',

@@ -92,7 +92,10 @@ export default function App() {
   async function loadProfile(userId) {
     const { data } = await supabase.from('profiles').select('*').eq('id', userId).single()
     setProfile(data)
-    subscribeToPush(userId)
+    // Обновляем подписку только если разрешение уже выдано (не спрашиваем заново)
+    if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+      subscribeToPush(userId)
+    }
   }
 
   const reloadProfile = useCallback(() => {

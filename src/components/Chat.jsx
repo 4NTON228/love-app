@@ -154,11 +154,10 @@ function Avatar({ url, size }) {
 const VideoCircle = memo(function VideoCircle({ url, isMine, time }) {
   const [playing, setPlaying] = useState(false)
   const [ended, setEnded]     = useState(false)
-  const videoRef = useRef(null)
+  const videoRef      = useRef(null)
+  const touchStart    = useRef(0)
 
-  function toggle(e) {
-    e.stopPropagation()
-    e.preventDefault()
+  function toggle() {
     const v = videoRef.current
     if (!v) return
     if (playing) {
@@ -177,10 +176,14 @@ const VideoCircle = memo(function VideoCircle({ url, isMine, time }) {
 
   return (
     <div
-      onTouchStart={e => e.stopPropagation()}
-      onTouchEnd={e => { e.stopPropagation(); toggle(e) }}
+      onTouchStart={e => { touchStart.current = Date.now() }}
+      onTouchEnd={e => {
+        const dur = Date.now() - touchStart.current
+        if (dur < 400) { e.stopPropagation(); toggle() }
+        // долгое нажатие — не перехватываем, родитель откроет контекстное меню
+      }}
       onMouseDown={e => e.stopPropagation()}
-      onClick={toggle}
+      onClick={e => { e.stopPropagation(); toggle() }}
       style={{
         position: 'relative', display: 'inline-block',
         cursor: 'pointer', userSelect: 'none', WebkitUserSelect: 'none',
@@ -1127,7 +1130,7 @@ export default function Chat({ session, profile, darkMode }) {
         }
         const blob = new Blob(voiceChunks.current, { type: 'audio/webm' })
         voiceChunks.current = []
-        if (blob.size < 1000) { setVoiceRec(false); setRecordSeconds(0); return }
+        if (blob.size < 300) { setVoiceRec(false); setRecordSeconds(0); return }
         const file = new File([blob], `voice-${Date.now()}.webm`, { type: 'audio/webm' })
         setSending(true)
         try {
@@ -1139,7 +1142,7 @@ export default function Chat({ session, profile, darkMode }) {
         setVoiceRec(false)
         setRecordSeconds(0)
       }
-      rec.start()
+      rec.start(100)   // чанк каждые 100ms — не потеряем данные при быстром стопе
       setVoiceRec(true)
       setRecordSeconds(0)
       voiceSecRef.current = 0
@@ -1150,7 +1153,12 @@ export default function Chat({ session, profile, darkMode }) {
 
   function stopVoice() {
     clearInterval(recTimer.current)
-    if (voiceRecRef.current?.state === 'recording') voiceRecRef.current.stop()
+    const rec = voiceRecRef.current
+    if (!rec) return
+    if (rec.state === 'recording') {
+      rec.requestData()  // принудительно сбрасываем текущий чанк
+      rec.stop()
+    }
   }
 
   function cancelVoice() {

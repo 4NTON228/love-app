@@ -2,8 +2,8 @@ self.addEventListener('install', () => self.skipWaiting())
 self.addEventListener('activate', () => self.clients.claim())
 
 self.addEventListener('push', (event) => {
-  const data = event.data ? event.data.json() : { title: 'Love App', body: 'Новое сообщение 💕' }
-  
+  const data = event.data ? event.data.json() : { title: 'Love App', body: 'Новое сообщение' }
+
   event.waitUntil(
     self.registration.showNotification(data.title, {
       body: data.body,
@@ -12,25 +12,26 @@ self.addEventListener('push', (event) => {
       vibrate: [200, 100, 200],
       tag: 'love-app-notification',
       renotify: true,
-      data: { url: '/' }  // ← ДОБАВЛЕНО: передаём URL для клика
+      data: { url: '/?tab=chat' }
     })
   )
 })
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
-  
-  const urlToOpen = event.notification.data?.url || '/'
-  
+
+  const urlToOpen = event.notification.data?.url || '/?tab=chat'
+
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      // Сначала пробуем найти уже открытое окно
+      // Если приложение уже открыто — фокусируем и переключаем на чат
       for (const client of clientList) {
-        if (client.url === urlToOpen && 'focus' in client) {
+        if ('focus' in client) {
+          client.postMessage({ type: 'OPEN_CHAT' })
           return client.focus()
         }
       }
-      // Если нет — открываем новое
+      // Иначе открываем новое окно
       return clients.openWindow(urlToOpen)
     })
   )

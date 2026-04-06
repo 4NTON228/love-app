@@ -51,7 +51,10 @@ import Navigation from './components/Navigation'
 export default function App() {
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState('home')
+  const [activeTab, setActiveTab] = useState(() => {
+    const params = new URLSearchParams(window.location.search)
+    return params.get('tab') || 'home'
+  })
   const [profile, setProfile] = useState(null)
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('appDarkMode') === 'true')
 
@@ -74,7 +77,16 @@ export default function App() {
       if (session) loadProfile(session.user.id)
     })
 
-    return () => subscription.unsubscribe()
+    // Переключаем на чат по сообщению от service worker (тап по уведомлению)
+    function onSwMessage(e) {
+      if (e.data?.type === 'OPEN_CHAT') setActiveTab('chat')
+    }
+    navigator.serviceWorker?.addEventListener('message', onSwMessage)
+
+    return () => {
+      subscription.unsubscribe()
+      navigator.serviceWorker?.removeEventListener('message', onSwMessage)
+    }
   }, [])
 
   async function loadProfile(userId) {

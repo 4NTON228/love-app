@@ -128,17 +128,76 @@ async function compressImage(file) {
  * COMPONENTS
  * ──────────────────────────────────────────────────────────────────────────── */
 
-const VideoCircle = memo(function VideoCircle({ url, isMine, time }) {
+function Avatar({ url, size }) {
+  const [err, setErr] = useState(false)
+  const s = size || 40
   return (
-    <div style={{ position: 'relative', display: 'inline-block' }}>
-      <div style={{ width: 180, height: 180, borderRadius: '50%', overflow: 'hidden',
-        border: `2.5px solid ${isMine ? '#C8334A' : 'rgba(200,51,74,0.25)'}` }}>
-        <video src={url} playsInline controls preload="metadata"
-          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}/>
+    <div style={{
+      width: s, height: s, borderRadius: '50%', overflow: 'hidden', flexShrink: 0,
+      background: GRAD, display: 'flex', alignItems: 'center', justifyContent: 'center'
+    }}>
+      {url && !err
+        ? <img src={url} onError={() => setErr(true)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        : <svg viewBox="0 0 40 40" width={s} height={s} fill="none">
+            <circle cx="20" cy="15" r="7" fill="rgba(255,255,255,.85)" />
+            <path d="M5 37c0-8.3 6.7-15 15-15s15 6.7 15 15" fill="rgba(255,255,255,.65)" />
+          </svg>
+      }
+    </div>
+  )
+}
+
+const VideoCircle = memo(function VideoCircle({ url, isMine, time }) {
+  const [playing, setPlaying] = useState(false)
+  const videoRef = useRef(null)
+
+  function toggle(e) {
+    e.stopPropagation()
+    const v = videoRef.current
+    if (!v) return
+    if (playing) { v.pause(); setPlaying(false) }
+    else { v.play().catch(() => {}); setPlaying(true) }
+  }
+
+  useEffect(() => () => videoRef.current?.pause(), [])
+
+  return (
+    <div
+      onClick={toggle}
+      style={{ position: 'relative', display: 'inline-block', cursor: 'pointer', userSelect: 'none', WebkitUserSelect: 'none' }}
+    >
+      <div style={{
+        width: 180, height: 180, borderRadius: '50%', overflow: 'hidden',
+        border: `2.5px solid ${isMine ? '#C8334A' : 'rgba(200,51,74,0.3)'}`,
+        boxShadow: '0 2px 12px rgba(0,0,0,0.18)'
+      }}>
+        <video
+          ref={videoRef}
+          src={url}
+          playsInline
+          preload="metadata"
+          onEnded={() => setPlaying(false)}
+          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+        />
       </div>
-      <div style={{ position: 'absolute', bottom: 10, right: 10,
-        background: 'rgba(0,0,0,0.55)', borderRadius: 6,
-        padding: '2px 6px', fontSize: 10, color: 'white', pointerEvents: 'none' }}>
+      {!playing && (
+        <div style={{
+          position: 'absolute', top: '50%', left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: 48, height: 48, borderRadius: '50%',
+          background: 'rgba(0,0,0,0.48)', backdropFilter: 'blur(2px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center'
+        }}>
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="white">
+            <polygon points="6,3 20,12 6,21" />
+          </svg>
+        </div>
+      )}
+      <div style={{
+        position: 'absolute', bottom: 12, right: 12,
+        background: 'rgba(0,0,0,0.52)', borderRadius: 6,
+        padding: '2px 7px', fontSize: 10, color: 'white', pointerEvents: 'none'
+      }}>
         {time}
       </div>
     </div>
@@ -254,19 +313,24 @@ const Reactions = memo(({ reactions, uid, onReact, msgId, isMine, dark }) => {
   )
 })
 
-const TextBubble = memo(({ msg, isMine, dark, radius, bg, color }) => {
+const TextBubble = memo(({ msg, isMine, dark, radius, bg, color, replyData, uid, partnerName }) => {
+  const onlyPhoto = msg.photo_url && !msg.text
   return (
     <div style={{
       display: 'inline-block',
-      padding: msg.photo_url && !msg.text ? 3 : '10px 14px 8px',
+      padding: onlyPhoto && !replyData ? 3 : '10px 14px 8px',
       background: bg,
       color: color,
       borderRadius: radius,
       border: isMine ? 'none' : `0.5px solid rgba(200,51,74,0.15)`,
-      boxShadow: dark ? '0 1px 2px rgba(0,0,0,0.1)' : '0 1px 2px rgba(0,0,0,0.05)',
+      boxShadow: dark ? '0 1px 4px rgba(0,0,0,0.18)' : '0 1px 4px rgba(0,0,0,0.08)',
       fontSize: 15, lineHeight: 1.45,
       wordBreak: 'break-word', whiteSpace: 'pre-wrap',
+      maxWidth: '72vw',
     }}>
+      {replyData && (
+        <ReplyPreview msg={replyData} isMine={isMine} dark={dark} uid={uid} partnerName={partnerName} />
+      )}
       {msg.photo_url && (
         <img
           src={msg.photo_url}
@@ -275,7 +339,8 @@ const TextBubble = memo(({ msg, isMine, dark, radius, bg, color }) => {
           style={{
             maxWidth: '100%', maxHeight: 280,
             borderRadius: msg.text ? 10 : 14,
-            display: 'block', marginBottom: msg.text ? 6 : 0
+            display: 'block', marginBottom: msg.text ? 6 : 0,
+            marginTop: replyData ? 6 : 0,
           }}
         />
       )}
@@ -283,12 +348,16 @@ const TextBubble = memo(({ msg, isMine, dark, radius, bg, color }) => {
         <span dangerouslySetInnerHTML={{ __html: parseText(msg.text) }} />
       )}
       <div style={{
-        fontSize: 10, opacity: 0.55, textAlign: 'right', marginTop: 2,
-        display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 2
+        fontSize: 10, opacity: 0.55, textAlign: 'right', marginTop: 3,
+        display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 3
       }}>
         {fmtTime(msg.created_at)}
-        {isMine && <span style={{ fontSize: 11 }}>✓</span>}
-        {msg.edited_at && <span style={{ fontSize: 10, marginLeft: 4 }}>ред.</span>}
+        {isMine && (
+          <svg viewBox="0 0 16 10" width="14" height="9" fill="none">
+            <path d="M1 5l4 4L15 1" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        )}
+        {msg.edited_at && <span style={{ fontSize: 10, marginLeft: 2 }}>ред.</span>}
       </div>
     </div>
   )
@@ -361,14 +430,37 @@ const Message = memo(({
       onContextMenu={e => { e.preventDefault(); onLongPress(msg) }}
       style={{ WebkitUserSelect: 'none', userSelect: 'none', position: 'relative' }}
     >
-      {replyData && <ReplyPreview msg={replyData} isMine={isMine} dark={dark} uid={uid} partnerName={partnerName} />}
-
       {msg.is_video_circle && msg.video_url ? (
-        <VideoCircle url={msg.video_url} isMine={isMine} time={fmtTime(msg.created_at)} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: isMine ? 'flex-end' : 'flex-start' }}>
+          {replyData && (
+            <div style={{
+              padding: '7px 12px', borderRadius: 14, maxWidth: 220,
+              background: isMine ? 'linear-gradient(135deg,#C8334A,#8B1A2C)' : (dark ? '#1E0A10' : '#fff'),
+              border: isMine ? 'none' : '0.5px solid rgba(200,51,74,0.15)',
+            }}>
+              <ReplyPreview msg={replyData} isMine={isMine} dark={dark} uid={uid} partnerName={partnerName} />
+            </div>
+          )}
+          <VideoCircle url={msg.video_url} isMine={isMine} time={fmtTime(msg.created_at)} />
+        </div>
       ) : msg.is_voice && msg.audio_url ? (
-        <VoiceMessage url={msg.audio_url} isMine={isMine} duration={msg.duration} time={fmtTime(msg.created_at)} dark={dark} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {replyData && (
+            <div style={{
+              padding: '7px 12px', borderRadius: 14, maxWidth: 240,
+              background: isMine ? 'linear-gradient(135deg,#C8334A,#8B1A2C)' : (dark ? '#1E0A10' : '#fff'),
+              border: isMine ? 'none' : '0.5px solid rgba(200,51,74,0.15)',
+            }}>
+              <ReplyPreview msg={replyData} isMine={isMine} dark={dark} uid={uid} partnerName={partnerName} />
+            </div>
+          )}
+          <VoiceMessage url={msg.audio_url} isMine={isMine} duration={msg.duration} time={fmtTime(msg.created_at)} dark={dark} />
+        </div>
       ) : (
-        <TextBubble msg={msg} isMine={isMine} dark={dark} radius={radius} bg={bubbleBg} color={bubbleColor} />
+        <TextBubble
+          msg={msg} isMine={isMine} dark={dark} radius={radius} bg={bubbleBg} color={bubbleColor}
+          replyData={replyData} uid={uid} partnerName={partnerName}
+        />
       )}
 
       {hasValidReactions(msg.reactions) && (
@@ -381,34 +473,20 @@ const Message = memo(({
 const ContextMenu = memo(({ menu, dark, onClose, onEdit, onDelete, onPin, onCopy, onReply, onReact }) => {
   if (!menu) return null
 
-  const menuBg = dark ? '#1E0A10' : '#fff'
+  const menuBg    = dark ? '#1E0A10' : '#fff'
   const menuColor = dark ? '#F5E8EA' : '#1C0A0E'
-
-  const menuStyle = {
-    position: 'fixed',
-    top: '50%',
-    left: '50%',
-    transform: 'translate(-50%, -50%)',
-    zIndex: 301,
-    background: menuBg,
-    borderRadius: 20,
-    overflow: 'hidden',
-    minWidth: 240,
-    maxWidth: 'calc(100% - 40px)',
-    boxShadow: '0 12px 48px rgba(0,0,0,0.25)',
-    border: dark ? '0.5px solid rgba(232,85,106,0.18)' : '0.5px solid rgba(200,51,74,0.12)',
-    animation: 'slideUp 0.2s ease both'
-  }
+  const divColor  = dark ? 'rgba(232,85,106,0.1)' : 'rgba(200,51,74,0.08)'
 
   const btnStyle = {
-    width: '100%', padding: '12px 18px', display: 'flex', alignItems: 'center', gap: 12,
-    background: 'none', border: 'none', cursor: 'pointer', fontSize: 15,
-    color: menuColor, textAlign: 'left', fontFamily: 'inherit',
-    borderBottom: dark ? '0.5px solid rgba(232,85,106,0.1)' : '0.5px solid rgba(200,51,74,0.07)'
+    width: '100%', padding: '13px 18px',
+    display: 'flex', alignItems: 'center', gap: 13,
+    background: 'none', border: 'none', borderBottom: `0.5px solid ${divColor}`,
+    cursor: 'pointer', fontSize: 15, color: menuColor,
+    textAlign: 'left', fontFamily: 'inherit',
   }
 
-  const Icon = ({ d }) => (
-    <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="#C8334A" strokeWidth={1.8}>
+  const Icon = ({ d, stroke }) => (
+    <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke={stroke || '#C8334A'} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
       <path d={d} />
     </svg>
   )
@@ -417,62 +495,73 @@ const ContextMenu = memo(({ menu, dark, onClose, onEdit, onDelete, onPin, onCopy
     <>
       <div
         onClick={onClose}
-        style={{
-          position: 'fixed', inset: 0, zIndex: 300,
-          background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(6px)'
-        }}
+        style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(8px)' }}
       />
-      <div style={menuStyle}>
+      <div style={{
+        position: 'fixed', top: '50%', left: '50%',
+        transform: 'translate(-50%, -50%)',
+        zIndex: 301,
+        background: menuBg,
+        borderRadius: 22,
+        overflow: 'hidden',
+        minWidth: 252,
+        maxWidth: 'calc(100vw - 48px)',
+        boxShadow: dark
+          ? '0 16px 56px rgba(0,0,0,0.6), 0 0 0 0.5px rgba(232,85,106,0.18)'
+          : '0 16px 56px rgba(0,0,0,0.18), 0 0 0 0.5px rgba(200,51,74,0.12)',
+        animation: 'ctxIn 0.18s cubic-bezier(0.34,1.56,0.64,1) both'
+      }}>
+        {/* Реакции */}
         <div style={{
-          display: 'flex', gap: 4, padding: '10px 14px',
-          borderBottom: '0.5px solid rgba(200,51,74,0.08)', justifyContent: 'center'
+          display: 'flex', justifyContent: 'space-around',
+          padding: '12px 8px 10px',
+          borderBottom: `0.5px solid ${divColor}`,
         }}>
           {REACTIONS.map(r => (
             <button
               key={r}
               onClick={() => { onReact(menu.msgId, r); onClose() }}
-              style={{
-                fontSize: 26, padding: '4px 8px', background: 'none', border: 'none',
-                cursor: 'pointer', borderRadius: 10, transition: 'transform 0.15s'
-              }}
-              onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.3)'}
-              onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+              style={{ fontSize: 24, padding: '4px 6px', background: 'none', border: 'none', cursor: 'pointer', borderRadius: 10, transition: 'transform 0.12s' }}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.35)' }}
+              onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)' }}
             >{r}</button>
           ))}
         </div>
 
+        {/* Действия */}
         <button style={btnStyle} onClick={() => { onReply(menu.msgId); onClose() }}>
           <Icon d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
           Ответить
         </button>
 
-        {menu.isMe && (
+        {menu.isMe && menu.text && (
           <button style={btnStyle} onClick={() => { onEdit(menu.msgId, menu.text); onClose() }}>
-            <Icon d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7 M18.5 2.5a2.1 2.1 0 013 3L12 15l-4 1 1-4z" />
+            <Icon d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.1 2.1 0 013 3L12 15l-4 1 1-4z" />
             Редактировать
           </button>
         )}
 
         {menu.text && (
           <button style={btnStyle} onClick={() => { navigator.clipboard?.writeText(menu.text); onClose() }}>
-            <Icon d="M8 4H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-2 M16 2H8a2 2 0 00-2 2v0a2 2 0 002 2h8a2 2 0 002-2v0a2 2 0 00-2-2z" />
+            <Icon d="M8 4H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-2M16 2H8a2 2 0 00-2 2v0a2 2 0 002 2h8a2 2 0 002-2v0a2 2 0 00-2-2z" />
             Копировать
           </button>
         )}
 
-        <button style={btnStyle} onClick={() => { onPin(menu.msgId); onClose() }}>
-          <Icon d="M12 17v5 M5 17h14v-1.76a2 2 0 00-1.11-1.79l-1.78-.9A2 2 0 0115 10.76V6h1a2 2 0 000-4H8a2 2 0 000 4h1v4.76a2 2 0 01-1.11 1.79l-1.78.9A2 2 0 005 15.24V17z" />
+        <button
+          style={{ ...btnStyle, borderBottom: menu.isMe ? `0.5px solid ${divColor}` : 'none' }}
+          onClick={() => { onPin(menu.msgId); onClose() }}
+        >
+          <Icon d="M12 17v5M5 17h14v-1.76a2 2 0 00-1.11-1.79l-1.78-.9A2 2 0 0115 10.76V6h1a2 2 0 000-4H8a2 2 0 000 4h1v4.76a2 2 0 01-1.11 1.79l-1.78.9A2 2 0 005 15.24V17z" />
           {menu.isPinned ? 'Открепить' : 'Закрепить'}
         </button>
 
         {menu.isMe && (
           <button
-            style={{ ...btnStyle, color: '#E24B4A', borderBottom: 'none' }}
+            style={{ ...btnStyle, color: '#E0404A', borderBottom: 'none' }}
             onClick={() => { onDelete(menu.msgId); onClose() }}
           >
-            <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="#E24B4A" strokeWidth={1.8}>
-              <path d="M3 6h18 M19 6l-1 14H6L5 6 M10 11v6 M14 11v6 M9 6V4h6v2" />
-            </svg>
+            <Icon d="M3 6h18M19 6l-1 14H6L5 6M10 11v6M14 11v6M9 6V4h6v2" stroke="#E0404A" />
             Удалить
           </button>
         )}
@@ -1016,20 +1105,7 @@ export default function Chat({ session, profile, darkMode }) {
         display: 'flex', alignItems: 'center', gap: 12, zIndex: 20,
         transform: 'translateZ(0)'
       }}>
-        <div style={{ position: 'relative', flexShrink: 0 }}>
-          <div style={{
-            width: 44, height: 44, borderRadius: '50%', overflow: 'hidden',
-            background: GRAD, display: 'flex', alignItems: 'center', justifyContent: 'center'
-          }}>
-            {partnerAvatar
-              ? <img src={partnerAvatar} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              : <svg viewBox="0 0 40 40" width="40" height="40" fill="none">
-                  <circle cx="20" cy="15" r="7" fill="rgba(255,255,255,.85)" />
-                  <path d="M5 37c0-8.3 6.7-15 15-15s15 6.7 15 15" fill="rgba(255,255,255,.65)" />
-                </svg>
-            }
-          </div>
-        </div>
+        <Avatar url={partnerAvatar} size={44} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 17, fontWeight: 600, color: INK }}>
             {partnerName}
@@ -1077,37 +1153,6 @@ export default function Chat({ session, profile, darkMode }) {
         </div>
       )}
 
-      {replyTo && (
-        <div style={{ flexShrink: 0, padding: '6px 14px', background: SURF,
-          borderTop: `0.5px solid ${BDR}`, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{ width: 3, height: 34, background: ROSE, borderRadius: 3, flexShrink: 0 }} />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 11, color: ROSE, fontWeight: 500 }}>
-              {replyTo.user_id === uid ? 'Вы' : (partner?.name || 'Партнёр')}
-            </div>
-            <div style={{ fontSize: 12, color: MUTED, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {replyTo.photo_url && !replyTo.text ? 'Фото' : (replyTo.text || '')}
-            </div>
-          </div>
-          {replyTo.photo_url && (
-            <img src={replyTo.photo_url} style={{ width: 34, height: 34, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} />
-          )}
-          <button onClick={() => setReplyTo(null)} style={{
-            background: 'none', border: 'none', cursor: 'pointer', color: MUTED, fontSize: 20, lineHeight: 1, padding: '2px 4px' }}>×</button>
-        </div>
-      )}
-
-      {editingId && (
-        <div style={{
-          flexShrink: 0, padding: '6px 14px', background: 'rgba(200,51,74,0.07)',
-          borderTop: `0.5px solid rgba(200,51,74,0.15)`, display: 'flex', alignItems: 'center', gap: 8
-        }}>
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke={ROSE}><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.1 2.1 0 013 3L12 15l-4 1 1-4z"/></svg>
-          <span style={{ flex: 1, fontSize: 12, color: ROSE }}>Редактирование</span>
-          <button onClick={() => { setEditingId(null); setNewText('') }} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>✕</button>
-        </div>
-      )}
-
       <div
         ref={listRef}
         onScroll={handleScroll}
@@ -1148,17 +1193,8 @@ export default function Chat({ session, profile, darkMode }) {
               )}
               <div style={{ display: 'flex', justifyContent: isMine ? 'flex-end' : 'flex-start', marginBottom: 2 }}>
                 {!isMine && showAv && (
-                  <div style={{
-                    width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
-                    background: GRAD, overflow: 'hidden', marginRight: 8, marginTop: 4
-                  }}>
-                    {partnerAvatar
-                      ? <img src={partnerAvatar} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      : <svg viewBox="0 0 40 40" width="32" height="32" fill="none">
-                          <circle cx="20" cy="15" r="7" fill="rgba(255,255,255,0.8)" />
-                          <path d="M5 37c0-8.3 6.7-15 15-15s15 6.7 15 15" fill="rgba(255,255,255,0.6)" />
-                        </svg>
-                    }
+                  <div style={{ marginRight: 8, marginTop: 4 }}>
+                    <Avatar url={partnerAvatar} size={32} />
                   </div>
                 )}
                 {!isMine && !showAv && <div style={{ width: 40 }} />}
@@ -1218,6 +1254,41 @@ export default function Chat({ session, profile, darkMode }) {
       />
 
       {showSearch && <SearchOverlay messages={messages} dark={dark} onClose={() => setShowSearch(false)} />}
+
+      {replyTo && (
+        <div style={{
+          flexShrink: 0, padding: '6px 14px', background: SURF,
+          borderTop: `0.5px solid ${BDR}`, display: 'flex', alignItems: 'center', gap: 8
+        }}>
+          <div style={{ width: 3, height: 34, background: ROSE, borderRadius: 3, flexShrink: 0 }} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 11, color: ROSE, fontWeight: 600 }}>
+              {replyTo.user_id === uid ? 'Вы' : (partner?.name || 'Партнёр')}
+            </div>
+            <div style={{ fontSize: 12, color: MUTED, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {replyTo.photo_url && !replyTo.text ? 'Фото' : (replyTo.text || '')}
+            </div>
+          </div>
+          {replyTo.photo_url && (
+            <img src={replyTo.photo_url} style={{ width: 34, height: 34, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} />
+          )}
+          <button onClick={() => setReplyTo(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: MUTED, fontSize: 20, lineHeight: 1, padding: '2px 6px' }}>×</button>
+        </div>
+      )}
+
+      {editingId && (
+        <div style={{
+          flexShrink: 0, padding: '8px 14px', background: dark ? 'rgba(200,51,74,0.1)' : 'rgba(200,51,74,0.06)',
+          borderTop: `0.5px solid rgba(200,51,74,0.15)`, display: 'flex', alignItems: 'center', gap: 10
+        }}>
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke={ROSE} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+            <path d="M18.5 2.5a2.1 2.1 0 013 3L12 15l-4 1 1-4z"/>
+          </svg>
+          <span style={{ flex: 1, fontSize: 12, color: ROSE, fontWeight: 500 }}>Редактирование сообщения</span>
+          <button onClick={() => { setEditingId(null); setNewText('') }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: MUTED, fontSize: 18, lineHeight: 1, padding: '2px 6px' }}>×</button>
+        </div>
+      )}
 
       {photoPreview && (
         <div style={{
@@ -1390,6 +1461,10 @@ export default function Chat({ session, profile, darkMode }) {
         @keyframes slideUp {
           from { transform: translateY(100%); opacity: 0; }
           to { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes ctxIn {
+          from { transform: translate(-50%, -50%) scale(0.88); opacity: 0; }
+          to   { transform: translate(-50%, -50%) scale(1);    opacity: 1; }
         }
         @keyframes pulse {
           0%, 100% { opacity: 1; transform: scale(1); }

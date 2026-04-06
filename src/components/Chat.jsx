@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, memo, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
+import { sendPushNotification } from '../lib/push'
 
 const REACTIONS = ['❤️','🔥','😍','😂','👍','💔']
 const VALID_REACTIONS = new Set(REACTIONS)
@@ -995,6 +996,10 @@ export default function Chat({ session, profile, darkMode }) {
         }
         await supabase.from('messages').insert(msgData)
         setReplyTo(null)
+        if (partner?.id) {
+          const body = photoUrl && !newText.trim() ? 'Фото' : newText.trim()
+          sendPushNotification(profile?.name || 'Сообщение', body, partner.id, uid).catch(() => {})
+        }
       }
       setNewText('')
       cancelPhoto()
@@ -1073,6 +1078,7 @@ export default function Chat({ session, profile, darkMode }) {
           const url = await upload(file, 'circles')
           await supabase.from('messages').insert({ user_id: uid, video_url: url, is_video_circle: true })
           scrollToBottom()
+          if (partner?.id) sendPushNotification(profile?.name || 'Сообщение', 'Видео-кружочек', partner.id, uid).catch(() => {})
         } catch (e) { console.error(e) }
         setSending(false)
         setRecording(false)
@@ -1137,6 +1143,7 @@ export default function Chat({ session, profile, darkMode }) {
           const url = await upload(file, 'voices')
           await supabase.from('messages').insert({ user_id: uid, audio_url: url, is_voice: true, duration: sec })
           scrollToBottom()
+          if (partner?.id) sendPushNotification(profile?.name || 'Сообщение', 'Голосовое сообщение', partner.id, uid).catch(() => {})
         } catch (e) { console.error(e) }
         setSending(false)
         setVoiceRec(false)

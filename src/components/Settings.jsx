@@ -1,5 +1,6 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { subscribeToPush } from '../lib/push'
 
 /* ── Small SVG icons for settings rows ── */
 function IcoUser() {
@@ -57,6 +58,14 @@ function IcoSpinner() {
     </svg>
   )
 }
+function IcoBell() {
+  return (
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+      <path d="M13.73 21a2 2 0 01-3.46 0"/>
+    </svg>
+  )
+}
 function IcoPersonFill() {
   return (
     <svg viewBox="0 0 40 40" width="44" height="44" fill="none">
@@ -90,7 +99,36 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
   const [saved, setSaved] = useState(false)
   const [avatarPreview, setAvatarPreview] = useState(profile?.avatar_url || null)
   const [activeTheme, setActiveTheme] = useState(localStorage.getItem('loveTheme') || 'rose')
+  const [pushEnabled, setPushEnabled] = useState(() => Notification?.permission === 'granted')
+  const [pushLoading, setPushLoading] = useState(false)
   const fileRef = useRef(null)
+
+  useEffect(() => {
+    setPushEnabled(Notification?.permission === 'granted')
+  }, [])
+
+  async function togglePush() {
+    if (pushLoading) return
+    setPushLoading(true)
+    try {
+      if (pushEnabled) {
+        // Отписаться
+        const reg = await navigator.serviceWorker.ready
+        const sub = await reg.pushManager.getSubscription()
+        if (sub) {
+          await sub.unsubscribe()
+          await supabase.from('push_subscriptions').delete().eq('user_id', session.user.id)
+        }
+        setPushEnabled(false)
+      } else {
+        // Подписаться
+        const result = await subscribeToPush(session.user.id)
+        if (result) setPushEnabled(true)
+        else if (Notification?.permission === 'denied') alert('Разрешение на уведомления заблокировано. Включи в настройках браузера.')
+      }
+    } catch (e) { console.error(e) }
+    setPushLoading(false)
+  }
 
   async function loadLoveMessage() {
     if (!session?.user?.id) return
@@ -467,6 +505,18 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
             <button
               className={`settings-toggle${darkMode ? '' : ' off'}`}
               onClick={toggleDarkMode}
+            >
+              <div className="settings-toggle-thumb" />
+            </button>
+          </div>
+          <div className="settings-row">
+            <span className="settings-row-icon" style={{ color: 'var(--rose, #C8334A)' }}><IcoBell /></span>
+            <span className="settings-row-label">Уведомления</span>
+            <button
+              className={`settings-toggle${pushEnabled ? '' : ' off'}`}
+              onClick={togglePush}
+              disabled={pushLoading}
+              style={{ opacity: pushLoading ? 0.6 : 1 }}
             >
               <div className="settings-toggle-thumb" />
             </button>

@@ -1095,8 +1095,10 @@ export default function Chat({ session, profile, darkMode }) {
         if (replyTo) {
           msgData.reply_to_id = replyTo.id
         }
-        const { data: sent } = await supabase.from('messages').insert(msgData).select().single()
-        if (sent) setMessages(prev => prev.find(m => m.id === sent.id) ? prev : [...prev, sent])
+        const { error: insErr } = await supabase.from('messages').insert(msgData)
+        if (insErr) throw insErr
+        const { data: latest } = await supabase.from('messages').select('*').eq('user_id', uid).order('created_at', { ascending: false }).limit(1)
+        if (latest?.[0]) setMessages(prev => prev.find(m => m.id === latest[0].id) ? prev : [...prev, latest[0]])
         setReplyTo(null)
         scrollToBottom()
         if (partner?.id) {
@@ -1179,8 +1181,10 @@ export default function Chat({ session, profile, darkMode }) {
         setSending(true)
         try {
           const url = await upload(file, 'circles')
-          const { data: sent } = await supabase.from('messages').insert({ user_id: uid, video_url: url, is_video_circle: true }).select().single()
-          if (sent) setMessages(prev => prev.find(m => m.id === sent.id) ? prev : [...prev, sent])
+          const { error: insErr } = await supabase.from('messages').insert({ user_id: uid, video_url: url, is_video_circle: true })
+          if (insErr) throw insErr
+          const { data: latest } = await supabase.from('messages').select('*').eq('user_id', uid).eq('video_url', url).limit(1)
+          if (latest?.[0]) setMessages(prev => prev.find(m => m.id === latest[0].id) ? prev : [...prev, latest[0]])
           scrollToBottom()
           if (partner?.id) sendPushNotification(profile?.name || 'Сообщение', 'Видео-кружочек', partner.id, uid).catch(() => {})
         } catch (e) { console.error(e) }
@@ -1247,8 +1251,10 @@ export default function Chat({ session, profile, darkMode }) {
         setSending(true)
         try {
           const url = await upload(file, 'voices')
-          const { data: sent } = await supabase.from('messages').insert({ user_id: uid, audio_url: url, is_voice: true, duration: sec }).select().single()
-          if (sent) setMessages(prev => prev.find(m => m.id === sent.id) ? prev : [...prev, sent])
+          const { error: insErr } = await supabase.from('messages').insert({ user_id: uid, audio_url: url, is_voice: true, duration: sec })
+          if (insErr) throw insErr
+          const { data: latest } = await supabase.from('messages').select('*').eq('user_id', uid).eq('audio_url', url).limit(1)
+          if (latest?.[0]) setMessages(prev => prev.find(m => m.id === latest[0].id) ? prev : [...prev, latest[0]])
           scrollToBottom()
           if (partner?.id) sendPushNotification(profile?.name || 'Сообщение', 'Голосовое сообщение', partner.id, uid).catch(() => {})
         } catch (e) { console.error(e) }

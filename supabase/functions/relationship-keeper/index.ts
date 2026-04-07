@@ -7,9 +7,10 @@
 //      — рассчитывает метрики теплоты
 //      — проверяет триггеры капсул времени
 //      — находит незавершённые диалоги
-//   2. API-прокси (OpenAI-совместимый формат): тело { messages, model, ... }
-//      — перенаправляет запрос к Grok (или другому AI)
-//      — возвращает ответ в формате OpenAI Chat Completions
+//   2. AI-прокси: тело { messages: [{role, content}], model?, ... }
+//      — использует xAI /v1/responses (модель: grok-4.20-reasoning)
+//      — принимает OpenAI-формат, возвращает OpenAI-формат
+//      — секрет AI_API_KEY задаётся в Supabase Dashboard → Secrets
 // ══════════════════════════════════════════════════════════════
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
@@ -439,10 +440,19 @@ async function findUnfinishedDialogs(supabase: ReturnType<typeof createClient>) 
 }
 
 // ══════════════════════════════════════════════════════════════
-// 5. OpenAI-совместимый прокси к AI-провайдеру (Grok / GPT-4 / etc.)
+// 5. Прокси к xAI Grok через нативный эндпоинт /v1/responses
+//
+//    Формат запроса (от клиента — OpenAI-совместимый):
+//      { messages: [{role, content}, ...], model?, ... }
+//
+//    Формат к xAI API:
+//      POST https://api.x.ai/v1/responses
+//      { model, input, system, ... }
+//
+//    Ответ возвращается в OpenAI-совместимом формате,
+//    чтобы клиентский код не пришлось менять.
 // ══════════════════════════════════════════════════════════════
 async function handleAIProxy(body: Record<string, unknown>): Promise<Response> {
-  const aiUrl = Deno.env.get('AI_API_URL') ?? 'https://api.x.ai/v1/chat/completions'
   const aiKey = Deno.env.get('AI_API_KEY') ?? ''
 
   if (!aiKey) {
@@ -452,37 +462,94 @@ async function handleAIProxy(body: Record<string, unknown>): Promise<Response> {
     )
   }
 
-  // Добавляем системный промпт советчика по отношениям
-  const messages = body.messages as Array<{ role: string; content: string }>
-  const withSystem = [
-    {
-      role: 'system',
-      content:
-        'Ты тактичный советчик по отношениям. ' +
-        'Отвечай по-русски, кратко и тепло. ' +
-        'Не навязывай советы — предлагай мягко. ' +
-        'Избегай клише. Фокусируйся на конкретной ситуации пары.',
-    },
-    ...messages,
-  ]
+  const messages = (body.messages ?? []) as Array<{ role: string; content: string }>
+  const model    = (body.model as string) ?? 'grok-4.20-reasoning'
 
-  const upstream = await fetch(aiUrl, {
+  // Системный промпт советчика по отношениям
+  const systemPrompt =
+    'Ты тактичный советчик по отношениям. ' +
+    'Отвечай по-русски, кратко и тепло. ' +
+    'Не навязывай советы — предлагай мягко. ' +
+    'Избегай клише. Фокусируйся на конкретной ситуации пары. ' +
+    'Максимум 2-3 предложения.'
+
+  // Собираем input: объединяем все user/assistant сообщения в строку
+  // (кроме system — он идёт отдельным полем)
+  const conversationParts = messages
+    .filter(m => m.role !== 'system')
+    .map(m => {
+      const who = m.role === 'user' ? 'Пользователь' : 'Ассистент'
+      return `${who}: ${m.content}`
+    })
+    .join('\n')
+
+  // Если клиент прислал свой system-промпт — добавляем к нашему
+  const clientSystem = messages.find(m => m.role === 'system')?.content ?? ''
+  const fullSystem   = clientSystem ? `${systemPrompt}\n\n${clientSystem}` : systemPrompt
+
+  // Вызов xAI /v1/responses
+  const xaiBody: Record<string, unknown> = {
+    model,
+    input: conversationParts || 'Привет',
+    system: fullSystem,
+  }
+
+  // Передаём reasoning effort если явно указан
+  if (body.reasoning_effort) xaiBody.reasoning_effort = body.reasoning_effort
+
+  const upstream = await fetch('https://api.x.ai/v1/responses', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${aiKey}`,
+      'Authorization': `Bearer ${aiKey}`,
     },
-    body: JSON.stringify({
-      ...body,
-      messages: withSystem,
-      model: body.model ?? 'grok-beta',
-      max_tokens: body.max_tokens ?? 300,
-    }),
+    body: JSON.stringify(xaiBody),
   })
 
-  const data = await upstream.json()
-  return new Response(JSON.stringify(data), {
-    status: upstream.status,
+  const xaiData = await upstream.json()
+
+  if (!upstream.ok) {
+    return new Response(JSON.stringify(xaiData), {
+      status: upstream.status,
+      headers: cors,
+    })
+  }
+
+  // Конвертируем ответ xAI в OpenAI-совместимый формат
+  // xAI /v1/responses возвращает: { output: [{type:"message", content:[{type:"output_text",text:"..."}]}], ... }
+  let assistantText = ''
+  try {
+    const outputItem = (xaiData.output ?? []).find(
+      (o: Record<string, unknown>) => o.type === 'message',
+    )
+    const contentItem = (outputItem?.content ?? []).find(
+      (c: Record<string, unknown>) => c.type === 'output_text',
+    )
+    assistantText = contentItem?.text ?? ''
+  } catch (_) {
+    // Fallback: пробуем вытащить текст напрямую
+    assistantText = xaiData.text ?? xaiData.content ?? JSON.stringify(xaiData)
+  }
+
+  // Оборачиваем в OpenAI Chat Completions формат
+  const openaiCompat = {
+    id:      xaiData.id ?? `chatcmpl-${Date.now()}`,
+    object:  'chat.completion',
+    model,
+    choices: [{
+      index:         0,
+      message:       { role: 'assistant', content: assistantText },
+      finish_reason: 'stop',
+    }],
+    usage: xaiData.usage ?? {},
+    // Поле для reasoning-моделей (если есть)
+    ...(xaiData.usage?.reasoning_tokens
+      ? { reasoning_tokens: xaiData.usage.reasoning_tokens }
+      : {}),
+  }
+
+  return new Response(JSON.stringify(openaiCompat), {
+    status: 200,
     headers: cors,
   })
 }

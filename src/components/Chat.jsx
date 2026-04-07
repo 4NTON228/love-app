@@ -1227,9 +1227,20 @@ export default function Chat({ session, profile, darkMode }) {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       voiceStream.current = stream
+
+      // iOS Safari поддерживает только audio/mp4, Android/Chrome — webm/opus
       const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-        ? 'audio/webm;codecs=opus' : 'audio/webm'
-      const rec = new MediaRecorder(stream, { mimeType: mime })
+        ? 'audio/webm;codecs=opus'
+        : MediaRecorder.isTypeSupported('audio/webm')
+          ? 'audio/webm'
+          : MediaRecorder.isTypeSupported('audio/mp4')
+            ? 'audio/mp4'
+            : ''
+
+      const rec = mime
+        ? new MediaRecorder(stream, { mimeType: mime })
+        : new MediaRecorder(stream)
+
       voiceRecRef.current = rec
       voiceChunks.current = []
       rec.ondataavailable = e => { if (e.data.size > 0) voiceChunks.current.push(e.data) }
@@ -1244,10 +1255,12 @@ export default function Chat({ session, profile, darkMode }) {
           voiceChunks.current = []
           setVoiceRec(false); setRecordSeconds(0); return
         }
-        const blob = new Blob(voiceChunks.current, { type: 'audio/webm' })
+        const mimeType = rec.mimeType || mime || 'audio/webm'
+        const blob = new Blob(voiceChunks.current, { type: mimeType })
         voiceChunks.current = []
         if (blob.size < 100) { setVoiceRec(false); setRecordSeconds(0); return }
-        const file = new File([blob], `voice-${Date.now()}.webm`, { type: 'audio/webm' })
+        const ext = mimeType.includes('mp4') ? 'mp4' : 'webm'
+        const file = new File([blob], `voice-${Date.now()}.${ext}`, { type: mimeType })
         setSending(true)
         try {
           const url = await upload(file, 'voices')
@@ -1257,20 +1270,20 @@ export default function Chat({ session, profile, darkMode }) {
           if (latest?.[0]) setMessages(prev => prev.find(m => m.id === latest[0].id) ? prev : [...prev, latest[0]])
           scrollToBottom()
           if (partner?.id) sendPushNotification(profile?.name || 'Сообщение', 'Голосовое сообщение', partner.id, uid).catch(() => {})
-        } catch (e) { console.error(e) }
+        } catch (e) { console.error('voice send error:', e); alert('Ошибка отправки: ' + e.message) }
         broadcastRef.current?.send({ type: 'broadcast', event: 'recording', payload: { userId: uid, kind: null } })
         setSending(false)
         setVoiceRec(false)
         setRecordSeconds(0)
       }
-      rec.start(100)   // чанк каждые 100ms — не потеряем данные при быстром стопе
+      rec.start(100)
       broadcastRef.current?.send({ type: 'broadcast', event: 'recording', payload: { userId: uid, kind: 'voice' } })
       setVoiceRec(true)
       setRecordSeconds(0)
       voiceSecRef.current = 0
       clearInterval(recTimer.current)
       recTimer.current = setInterval(() => { voiceSecRef.current++; setRecordSeconds(s => s + 1) }, 1000)
-    } catch (e) { console.error(e); alert('Нет доступа к микрофону') }
+    } catch (e) { console.error(e); alert('Нет доступа к микрофону: ' + e.message) }
   }
 
   function stopVoice() {

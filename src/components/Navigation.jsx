@@ -129,6 +129,17 @@ function IconPlans({ active }) {
   )
 }
 
+function IconAdvisor({ active }) {
+  const s = active ? 'url(#nav-g)' : 'currentColor'
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke={s} strokeWidth="1.8"
+      strokeLinecap="round" strokeLinejoin="round" filter={active ? 'url(#nav-glow)' : 'none'}>
+      <path d="M12 2c-1.5 2-3 4-3 7 0 2.5 1.3 4.7 3 6 1.7-1.3 3-3.5 3-6 0-3-1.5-5-3-7z" />
+      <path d="M12 15c-2.8 1-5 3.2-5 5.5 0 3 2.2 5.5 5 5.5s5-2.5 5-5.5c0-2.3-2.2-4.5-5-5.5z" />
+    </svg>
+  )
+}
+
 function IconPerson({ active }) {
   const s = active ? 'url(#nav-g)' : 'currentColor'
   return (
@@ -151,6 +162,7 @@ const MAIN_TABS = [
 
 // Items inside the "More" drawer
 const MORE_ITEMS = [
+  { id: 'advisor',  label: 'Советник',  Icon: IconAdvisor  },
   { id: 'moments',  label: 'Фото',      Icon: IconCamera   },
   { id: 'calendar', label: 'Дни',       Icon: IconCalendar },
   { id: 'plans',    label: 'Планы',     Icon: IconPlans    },

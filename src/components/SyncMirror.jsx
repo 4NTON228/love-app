@@ -8,7 +8,6 @@
 // ══════════════════════════════════════════════════════════════
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { createPortal } from 'react-dom'
 import { supabase } from '../lib/supabase'
 
 // Резервный банк вопросов (если edge function ещё не сработал)
@@ -214,8 +213,8 @@ export default function SyncMirror({ session, profile, darkMode, onClose }) {
   const iAnswered    = !!myStoredAns
   const sticker      = streak >= 7  // разблокирован стикер
 
-  return createPortal(
-    <>
+  return (
+    <div className="mirror-container" style={{ padding: '20px', paddingBottom: 'calc(20px + env(safe-area-inset-bottom, 0px))' }}>
       <style>{`
         .mirror-overlay {
           position: fixed; inset: 0; z-index: 300;
@@ -542,7 +541,6 @@ export default function SyncMirror({ session, profile, darkMode, onClose }) {
           )}
         </div>
       </div>
-    </>,
-    document.body
+    </div>
   )
 }

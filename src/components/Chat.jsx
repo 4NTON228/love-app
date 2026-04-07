@@ -1014,9 +1014,9 @@ export default function Chat({ session, profile, darkMode }) {
 
     const typingChannel = supabase.channel(`typing-${partner.id}`)
       .on('postgres_changes', {
-        event: 'UPDATE', schema: 'public', table: 'typing_status',
+        event: '*', schema: 'public', table: 'typing_status',
         filter: `user_id=eq.${partner.id}`
-      }, p => setPartnerTyping(p.new.is_typing))
+      }, p => setPartnerTyping(p.new?.is_typing ?? false))
       .on('postgres_changes', {
         event: 'UPDATE', schema: 'public', table: 'profiles',
         filter: `id=eq.${partner.id}`
@@ -1237,7 +1237,7 @@ export default function Chat({ session, profile, darkMode }) {
         }
         const blob = new Blob(voiceChunks.current, { type: 'audio/webm' })
         voiceChunks.current = []
-        if (blob.size < 300) { setVoiceRec(false); setRecordSeconds(0); return }
+        if (blob.size < 100) { setVoiceRec(false); setRecordSeconds(0); return }
         const file = new File([blob], `voice-${Date.now()}.webm`, { type: 'audio/webm' })
         setSending(true)
         try {
@@ -1265,10 +1265,10 @@ export default function Chat({ session, profile, darkMode }) {
     clearInterval(recTimer.current)
     const rec = voiceRecRef.current
     if (!rec) return
-    if (rec.state === 'recording') {
-      rec.requestData()  // принудительно сбрасываем текущий чанк
-      rec.stop()
-    }
+    try {
+      if (rec.state === 'recording') rec.requestData()
+      if (rec.state !== 'inactive') rec.stop()
+    } catch (e) { console.error('stopVoice error:', e) }
   }
 
   function cancelVoice() {

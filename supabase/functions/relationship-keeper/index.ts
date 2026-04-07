@@ -453,11 +453,14 @@ async function findUnfinishedDialogs(supabase: ReturnType<typeof createClient>) 
 //    чтобы клиентский код не пришлось менять.
 // ══════════════════════════════════════════════════════════════
 async function handleAIProxy(body: Record<string, unknown>): Promise<Response> {
+  // Ключ добавляется через:
+  //   supabase secrets set AI_API_KEY=xai-...
+  // или Dashboard → Edge Functions → Secrets
   const aiKey = Deno.env.get('AI_API_KEY') ?? ''
 
   if (!aiKey) {
     return new Response(
-      JSON.stringify({ error: 'AI_API_KEY не настроен' }),
+      JSON.stringify({ error: 'AI_API_KEY не задан. Добавь через: supabase secrets set AI_API_KEY=xai-...' }),
       { status: 503, headers: cors },
     )
   }

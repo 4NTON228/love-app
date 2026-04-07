@@ -73,71 +73,67 @@ function warmthLevel(idx) {
 }
 
 // ── SVG полукруговой барометр ─────────────────────────────────
+// Центр внизу по середине, дуга открывается ВВЕРХ.
+// Для точки на дуге при доле t (0…1):
+//   angle = 180° + t * 180°  (идём от 180° до 360° через верх)
+//   x = CX + R * cos(angle_rad)
+//   y = CY + R * sin(angle_rad)  ← sin отрицателен в диапазоне 180°–360°, т.е. точки выше центра
+// sweep-flag = 1 (по часовой) рисует дугу через верх.
 function Gauge({ index }) {
-  // Полукруг: arc от 180° до 0° (слева направо)
-  // index 0→0°, index 1→180°
-  const R = 56
-  const CX = 70, CY = 70
-  const startAngle = Math.PI   // 180° — левая точка
-  const endAngle   = 0          // 0°   — правая точка
+  const W = 160, H = 90
+  const CX = 80, CY = 84   // центр у нижнего края
+  const R  = 68
 
-  // Описываем arc для фона (полный полукруг)
-  function arcPath(from, to, r) {
-    const x1 = CX + r * Math.cos(from)
-    const y1 = CY + r * Math.sin(from)
-    const x2 = CX + r * Math.cos(to)
-    const y2 = CY + r * Math.sin(to)
-    return `M ${x1} ${y1} A ${r} ${r} 0 0 1 ${x2} ${y2}`
+  // Координаты точки на дуге по доле t
+  function pt(t) {
+    const rad = ((180 + t * 180) * Math.PI) / 180
+    return [CX + R * Math.cos(rad), CY + R * Math.sin(rad)]
   }
 
-  // Угол стрелки: от π до 0 в зависимости от index
-  const needleAngle = Math.PI - index * Math.PI
-  const needleX = CX + (R - 8) * Math.cos(needleAngle)
-  const needleY = CY + (R - 8) * Math.sin(needleAngle)
+  // SVG-путь дуги от t1 до t2 (по часовой = через верх)
+  function seg(t1, t2) {
+    const [x1, y1] = pt(t1)
+    const [x2, y2] = pt(t2)
+    // large-arc-flag = 1 только если дуга > 180° (здесь всегда ≤ 180°, поэтому 0)
+    return `M ${x1.toFixed(2)} ${y1.toFixed(2)} A ${R} ${R} 0 0 1 ${x2.toFixed(2)} ${y2.toFixed(2)}`
+  }
 
-  const level = warmthLevel(index)
+  const level  = warmthLevel(index)
+  const [nx, ny] = pt(index)   // конец стрелки
 
   return (
-    <svg viewBox="0 0 140 80" width="140" height="80" aria-hidden="true">
-      {/* Фоновый трек (серый) */}
-      <path
-        d={arcPath(startAngle, endAngle, R)}
-        fill="none"
-        stroke="var(--blush-2)"
-        strokeWidth="10"
-        strokeLinecap="round"
-      />
-      {/* Сегмент «внимание» (0 – 0.35) — красный */}
-      <path
-        d={arcPath(Math.PI, Math.PI * (1 - 0.35), R)}
-        fill="none" stroke="#E8556A" strokeWidth="10" strokeLinecap="butt" opacity="0.5"
-      />
-      {/* Сегмент «нейтрально» (0.35 – 0.65) — жёлтый */}
-      <path
-        d={arcPath(Math.PI * (1 - 0.35), Math.PI * (1 - 0.65), R)}
-        fill="none" stroke="#C8A84B" strokeWidth="10" strokeLinecap="butt" opacity="0.5"
-      />
-      {/* Сегмент «тепло» (0.65 – 1.0) — зелёный */}
-      <path
-        d={arcPath(Math.PI * (1 - 0.65), endAngle, R)}
-        fill="none" stroke="#4CAF50" strokeWidth="10" strokeLinecap="butt" opacity="0.5"
-      />
+    <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} aria-hidden="true">
+      {/* Фоновый трек */}
+      <path d={seg(0, 1)} fill="none" stroke="var(--blush-2)"
+        strokeWidth="11" strokeLinecap="round" />
+      {/* Зона «внимание» 0–0.35 */}
+      <path d={seg(0, 0.35)} fill="none" stroke="#E8556A"
+        strokeWidth="11" strokeLinecap="butt" opacity="0.55" />
+      {/* Зона «нейтрально» 0.35–0.65 */}
+      <path d={seg(0.35, 0.65)} fill="none" stroke="#C8A84B"
+        strokeWidth="11" strokeLinecap="butt" opacity="0.55" />
+      {/* Зона «тепло» 0.65–1.0 */}
+      <path d={seg(0.65, 1)} fill="none" stroke="#4CAF50"
+        strokeWidth="11" strokeLinecap="butt" opacity="0.55" />
       {/* Активный прогресс */}
-      <path
-        d={arcPath(startAngle, Math.PI - index * Math.PI, R)}
-        fill="none" stroke={level.color} strokeWidth="10" strokeLinecap="round"
-        style={{ transition: 'all 0.6s ease' }}
-      />
+      {index > 0 && (
+        <path d={seg(0, index)} fill="none" stroke={level.color}
+          strokeWidth="11" strokeLinecap="round"
+          style={{ transition: 'd 0.6s ease, stroke 0.5s ease' }} />
+      )}
       {/* Стрелка */}
       <line
-        x1={CX} y1={CY}
-        x2={needleX} y2={needleY}
+        x1={CX} y1={CY} x2={nx.toFixed(2)} y2={ny.toFixed(2)}
         stroke={level.color} strokeWidth="2.5" strokeLinecap="round"
         style={{ transition: 'all 0.6s ease' }}
       />
-      {/* Центр стрелки */}
-      <circle cx={CX} cy={CY} r="4" fill={level.color}
-        style={{ transition: 'fill 0.6s ease' }} />
+      {/* Точка в центре */}
+      <circle cx={CX} cy={CY} r="5" fill={level.color}
+        style={{ transition: 'fill 0.5s ease' }} />
+      {/* Метки зон */}
+      <text x="8"  y={H - 4} fontSize="9" fill="#E8556A" opacity="0.8" fontFamily="sans-serif"></text>
+      <text x={W - 8} y={H - 4} fontSize="9" fill="#4CAF50" opacity="0.8"
+        textAnchor="end" fontFamily="sans-serif"></text>
     </svg>
   )
 }
@@ -291,9 +287,9 @@ export default function WarmthBarometer({ session, profile, darkMode }) {
           animation: pulse 2s ease-in-out infinite;
         }
         .wb-main {
-          display: flex; align-items: center; gap: 12px;
+          display: flex; align-items: flex-end; gap: 8px;
         }
-        .wb-gauge { flex-shrink: 0; margin-left: -8px; }
+        .wb-gauge { flex-shrink: 0; margin: 0 auto; display: block; }
         .wb-info { flex: 1; }
         .wb-level {
           font-family: var(--font-display);
@@ -387,36 +383,30 @@ export default function WarmthBarometer({ session, profile, darkMode }) {
           </div>
         ) : (
           <>
-            <div className="wb-main">
-              {/* SVG-барометр */}
+            {/* SVG-барометр по центру */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
               <div className="wb-gauge">
                 <Gauge index={warmth.index} />
               </div>
-              <div className="wb-info">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <div className="wb-level" style={{ color: level.color }}>
                   {level.label}
                 </div>
-                <div className="wb-sub">
-                  По последним 20 сообщениям
-                  {delta !== null && (
-                    <>
-                      {' '}·{' '}
-                      <span
-                        className="wb-delta"
-                        style={{ color: delta >= 0 ? '#4CAF50' : '#E8556A' }}
-                      >
-                        {/* Стрелка вверх/вниз */}
-                        <svg viewBox="0 0 10 10" width="10" height="10" fill="currentColor">
-                          {delta >= 0
-                            ? <polygon points="5,1 9,9 1,9" />
-                            : <polygon points="5,9 9,1 1,1" />}
-                        </svg>
-                        {Math.round(Math.abs(delta) * 100)}%
-                      </span>
-                    </>
-                  )}
-                </div>
+                {delta !== null && (
+                  <span
+                    className="wb-delta"
+                    style={{ color: delta >= 0 ? '#4CAF50' : '#E8556A' }}
+                  >
+                    <svg viewBox="0 0 10 10" width="10" height="10" fill="currentColor">
+                      {delta >= 0
+                        ? <polygon points="5,1 9,9 1,9" />
+                        : <polygon points="5,9 9,1 1,1" />}
+                    </svg>
+                    {Math.round(Math.abs(delta) * 100)}%
+                  </span>
+                )}
               </div>
+              <div className="wb-sub">По последним 20 сообщениям</div>
             </div>
 
             {/* Иконка раскрытия */}

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
+import { sendPushNotification } from '../lib/push'
 
 /* ── SVG icons ── */
 function IcoTrash() {
@@ -302,7 +303,7 @@ function StoriesViewer({ stories, startIdx, onClose }) {
   )
 }
 
-export default function Moments({ session }) {
+export default function Moments({ session, profile }) {
   const [moments, setMoments] = useState([])
   const [showModal, setShowModal] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -348,7 +349,17 @@ export default function Moments({ session }) {
       let photoUrl = null
       if (photo) photoUrl = await uploadPhoto(photo)
       const { error } = await supabase.from('moments').insert({ user_id: session.user.id, title, description, mood, photo_url: photoUrl })
-      if (!error) { resetForm(); setShowModal(false); loadMoments() }
+      if (!error) {
+        resetForm(); setShowModal(false); loadMoments()
+        if (profile?.partner_id) {
+          sendPushNotification(
+            profile?.name || 'Новый момент',
+            photo ? `📸 ${title}` : `💝 ${title}`,
+            profile.partner_id,
+            session.user.id
+          ).catch(() => {})
+        }
+      }
     } catch (err) { console.error(err) }
     setSaving(false)
   }

@@ -10,6 +10,7 @@ import Plans from './components/Plans'
 import LoveClock from './components/LoveClock'
 import LoveLetter from './components/LoveLetter'
 import Settings from './components/Settings'
+import AIAdvisor from './components/AIAdvisor'
 import Navigation from './components/Navigation'
 
 // Apply saved theme on load
@@ -175,6 +176,8 @@ export default function App() {
         return <Moments session={session} profile={profile} />
       case 'plans':
         return <Plans session={session} profile={profile} />
+      case 'advisor':
+        return <AIAdvisor session={session} profile={profile} darkMode={darkMode} />
       case 'settings':
         return (
           <Settings

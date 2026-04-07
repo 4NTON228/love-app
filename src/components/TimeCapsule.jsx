@@ -9,7 +9,6 @@
 // ══════════════════════════════════════════════════════════════
 
 import { useState, useEffect, useCallback } from 'react'
-import { createPortal } from 'react-dom'
 import { supabase } from '../lib/supabase'
 
 // ── SVG-иконки ─────────────────────────────────────────────
@@ -171,8 +170,8 @@ export default function TimeCapsule({ session, profile, darkMode, onClose }) {
     return 'Ожидает'
   }
 
-  return createPortal(
-    <>
+  return (
+    <div className="capsule-container" style={{ padding: '20px', paddingBottom: 'calc(20px + env(safe-area-inset-bottom, 0px))' }}>
       <style>{`
         .caps-overlay {
           position: fixed; inset: 0; z-index: 300;
@@ -565,7 +564,6 @@ export default function TimeCapsule({ session, profile, darkMode, onClose }) {
           </div>
         </div>
       )}
-    </>,
-    document.body
+    </div>
   )
 }

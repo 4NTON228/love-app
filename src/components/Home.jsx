@@ -1,5 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
+// ИИ-советчик: четыре новых компонента
+import WarmthBarometer from './WarmthBarometer'
+import InsightsWidget  from './InsightsWidget'
+import SyncMirror      from './SyncMirror'
+import TimeCapsule     from './TimeCapsule'
 
 const COUPLE_START = new Date('2025-10-17T00:00:00')
 
@@ -640,6 +645,9 @@ export default function Home({ session, profile, onNavigate }) {
   const [newMeet,        setNewMeet]        = useState('')
   const [saving,         setSaving]         = useState(false)
   const [showPartnerCard, setShowPartnerCard] = useState(false)
+  // Состояние модальных окон ИИ-советчика
+  const [showMirror,      setShowMirror]      = useState(false)
+  const [showCapsule,     setShowCapsule]     = useState(false)
 
   const loveMsg   = settings?.love_message || 'Ты — лучшее, что случилось в моей жизни'
   const { out, done } = useTypewriter(loveMsg, 55)
@@ -1349,7 +1357,44 @@ export default function Home({ session, profile, onNavigate }) {
                 <span className="action-btn-label" style={{ whiteSpace: 'pre-line' }}>{a.label}</span>
               </button>
             ))}
+
+            {/* Кнопка «Зеркало» — игра синхронности */}
+            <button className="action-btn" onClick={() => setShowMirror(true)}>
+              <div className="action-btn-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
+                  strokeLinecap="round" strokeLinejoin="round" width="22" height="22">
+                  <ellipse cx="12" cy="10" rx="7" ry="9" />
+                  <path d="M9 21h6" />
+                  <path d="M12 19v2" />
+                </svg>
+              </div>
+              <span className="action-btn-label">Зеркало</span>
+            </button>
+
+            {/* Кнопка «Капсула» — письма будущему */}
+            <button className="action-btn" onClick={() => setShowCapsule(true)}>
+              <div className="action-btn-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
+                  strokeLinecap="round" strokeLinejoin="round" width="22" height="22">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
+                  <circle cx="12" cy="10" r="3" />
+                </svg>
+              </div>
+              <span className="action-btn-label">Капсула</span>
+            </button>
           </div>
+
+          {/* ИИ-инсайт — ненавязчивый виджет (max 1 в день) */}
+          <InsightsWidget
+            session={session}
+            profile={profile}
+            onOpenMirror={() => setShowMirror(true)}
+            onOpenCapsule={() => setShowCapsule(true)}
+            onNavigateChat={onNavigate}
+          />
+
+          {/* Барометр теплоты — всегда виден */}
+          <WarmthBarometer session={session} profile={profile} />
 
           {/* Next event */}
           {nextEvent && (
@@ -1424,6 +1469,24 @@ export default function Home({ session, profile, onNavigate }) {
 
         </div>
       </div>
+
+      {/* Модальное окно игры «Зеркало» */}
+      {showMirror && (
+        <SyncMirror
+          session={session}
+          profile={profile}
+          onClose={() => setShowMirror(false)}
+        />
+      )}
+
+      {/* Модальное окно «Капсулы времени» */}
+      {showCapsule && (
+        <TimeCapsule
+          session={session}
+          profile={profile}
+          onClose={() => setShowCapsule(false)}
+        />
+      )}
     </>
   )
 }

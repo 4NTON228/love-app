@@ -9,6 +9,7 @@
 // ══════════════════════════════════════════════════════════════
 
 import { useState, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { supabase } from '../lib/supabase'
 
 // ── SVG-иконки ─────────────────────────────────────────────
@@ -89,7 +90,7 @@ function formatDate(iso) {
   })
 }
 
-export default function TimeCapsule({ session, profile, onClose }) {
+export default function TimeCapsule({ session, profile, darkMode, onClose }) {
   const userId    = session?.user?.id
   const partnerId = profile?.partner_id
 
@@ -170,7 +171,7 @@ export default function TimeCapsule({ session, profile, onClose }) {
     return 'Ожидает'
   }
 
-  return (
+  return createPortal(
     <>
       <style>{`
         .caps-overlay {
@@ -187,7 +188,18 @@ export default function TimeCapsule({ session, profile, onClose }) {
           padding: 20px 20px calc(var(--safe-bottom, 0px) + 28px);
           animation: slideUp 0.35s cubic-bezier(0.34,1.56,0.64,1) both;
         }
-        .app.dark .caps-sheet { background: #1E0A10; }
+        .caps-sheet-dark { background: #1E0A10 !important; }
+        .caps-sheet-dark .caps-handle { background: #3D1520; }
+        .caps-sheet-dark .caps-close { background: #3D1520; }
+        .caps-sheet-dark .caps-title { color: #F5E8EA; }
+        .caps-sheet-dark .caps-item { background: #3D1520; }
+        .caps-sheet-dark .caps-item-msg { color: #F5E8EA; }
+        .caps-sheet-dark .caps-textarea { background: #3D1520; border-color: rgba(232,85,106,0.2); color: #F5E8EA; }
+        .caps-sheet-dark .caps-date-input { background: #3D1520; border-color: rgba(232,85,106,0.2); color: #F5E8EA; }
+        .caps-sheet-dark .caps-days-input { background: #3D1520; border-color: rgba(232,85,106,0.2); color: #F5E8EA; }
+        .caps-sheet-dark .caps-back-btn { border-color: rgba(232,85,106,0.2); color: #8A5060; }
+        .caps-sheet-dark .caps-confirm-box { background: #1E0A10; }
+        .caps-sheet-dark .caps-del-cancel { background: #3D1520; }
         .caps-handle {
           width: 36px; height: 4px; background: var(--blush-2);
           border-radius: 99px; margin: 0 auto 20px;
@@ -371,7 +383,7 @@ export default function TimeCapsule({ session, profile, onClose }) {
       `}</style>
 
       <div className="caps-overlay" onClick={onClose}>
-        <div className="caps-sheet" onClick={e => e.stopPropagation()}>
+        <div className={`caps-sheet${darkMode ? ' caps-sheet-dark' : ''}`} onClick={e => e.stopPropagation()}>
           <div className="caps-handle" />
 
           <div className="caps-header">
@@ -553,6 +565,7 @@ export default function TimeCapsule({ session, profile, onClose }) {
           </div>
         </div>
       )}
-    </>
+    </>,
+    document.body
   )
 }

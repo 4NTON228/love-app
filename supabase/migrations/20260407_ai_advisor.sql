@@ -22,12 +22,10 @@ CREATE TABLE IF NOT EXISTS public.sync_mirror (
   is_matched      BOOLEAN      NOT NULL DEFAULT false,
   -- начислено ли «искру» за синхронизацию
   spark_earned    BOOLEAN      NOT NULL DEFAULT false,
-  created_at      TIMESTAMPTZ  NOT NULL DEFAULT now()
+  mirror_date     DATE         NOT NULL DEFAULT CURRENT_DATE,
+  created_at      TIMESTAMPTZ  NOT NULL DEFAULT now(),
+  UNIQUE (user_id, partner_id, mirror_date)
 );
-
--- Одна запись на пару в день (через уникальный индекс, не inline constraint)
-CREATE UNIQUE INDEX IF NOT EXISTS idx_sync_mirror_pair_day
-  ON public.sync_mirror(user_id, partner_id, (created_at::date));
 
 CREATE INDEX IF NOT EXISTS idx_sync_mirror_user_date
   ON public.sync_mirror(user_id, created_at DESC);

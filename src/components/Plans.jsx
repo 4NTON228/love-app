@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { sendPushNotification } from '../lib/push'
 
 /* ── SVG icons ── */
 function IcoTrash() {
@@ -119,7 +120,7 @@ function Confetti({ active }) {
   )
 }
 
-export default function Plans({ session }) {
+export default function Plans({ session, profile }) {
   const [plans, setPlans] = useState([])
   const [showModal, setShowModal] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -145,7 +146,17 @@ export default function Plans({ session }) {
     if (!title) return
     setSaving(true)
     const { error } = await supabase.from('plans').insert({ user_id: session.user.id, title, category })
-    if (!error) { setTitle(''); setCategory('dream'); setShowModal(false); loadPlans() }
+    if (!error) {
+      setTitle(''); setCategory('dream'); setShowModal(false); loadPlans()
+      if (profile?.partner_id) {
+        sendPushNotification(
+          profile?.name || 'Новый план',
+          `🗺️ ${title}`,
+          profile.partner_id,
+          session.user.id
+        ).catch(() => {})
+      }
+    }
     setSaving(false)
   }
 

@@ -49,6 +49,20 @@ function fmtRecordTime(sec) {
   return `${mins}:${secs.toString().padStart(2, '0')}`
 }
 
+function fmtLastSeen(ts) {
+  if (!ts) return 'не в сети'
+  const diff = Math.floor((Date.now() - new Date(ts).getTime()) / 1000)
+  if (diff < 60) return 'в сети'
+  if (diff < 3600) return `был(а) ${Math.floor(diff / 60)} мин. назад`
+  if (diff < 86400) return `был(а) ${Math.floor(diff / 3600)} ч. назад`
+  return 'был(а) давно'
+}
+
+function isOnline(ts) {
+  if (!ts) return false
+  return (Date.now() - new Date(ts).getTime()) < 60000
+}
+
 function isSameGroup(msg1, msg2) {
   if (!msg1 || !msg2) return false
   if (msg1.user_id !== msg2.user_id) return false
@@ -152,7 +166,7 @@ function Avatar({ url, size }) {
   )
 }
 
-const VideoCircle = memo(function VideoCircle({ url, isMine, time }) {
+const VideoCircle = memo(function VideoCircle({ url, isMine, time, readAt }) {
   const [playing, setPlaying] = useState(false)
   const [ended, setEnded]     = useState(false)
   const videoRef      = useRef(null)
@@ -235,20 +249,31 @@ const VideoCircle = memo(function VideoCircle({ url, isMine, time }) {
         </div>
       )}
 
-      {/* время */}
+      {/* время + галочки */}
       <div style={{
         position: 'absolute', bottom: 12, right: 14,
         background: 'rgba(0,0,0,0.55)', borderRadius: 6,
         padding: '2px 7px', fontSize: 10, color: 'white', pointerEvents: 'none',
-        fontFamily: 'monospace'
+        fontFamily: 'monospace', display: 'flex', alignItems: 'center', gap: 4
       }}>
         {time}
+        {isMine && (
+          readAt
+            ? <svg viewBox="0 0 20 9" width="18" height="8" fill="none">
+                <path d="M1 4.5l3 3L11 1" stroke="#4FC3F7" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M7 4.5l3 3L17 1" stroke="#4FC3F7" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            : <svg viewBox="0 0 20 9" width="18" height="8" fill="none">
+                <path d="M1 4.5l3 3L11 1" stroke="rgba(255,255,255,0.8)" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M7 4.5l3 3L17 1" stroke="rgba(255,255,255,0.4)" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+        )}
       </div>
     </div>
   )
 })
 
-const VoiceMessage = memo(function VoiceMessage({ url, isMine, dark, duration, time }) {
+const VoiceMessage = memo(function VoiceMessage({ url, isMine, dark, duration, time, readAt }) {
   const [playing, setPlaying]   = useState(false)
   const [progress, setProgress] = useState(0)
   const audioRef = useRef(null)
@@ -301,9 +326,20 @@ const VoiceMessage = memo(function VoiceMessage({ url, isMine, dark, duration, t
             />
           ))}
         </svg>
-        <div style={{ fontSize: 10, marginTop: 3,
-          color: isMine ? 'rgba(255,255,255,0.58)' : MUTED_C }}>
-          {fmtDuration(duration || 0)} · {time}
+        <div style={{ fontSize: 10, marginTop: 3, display: 'flex', alignItems: 'center', gap: 4,
+          color: isMine ? 'rgba(255,255,255,0.65)' : MUTED_C }}>
+          <span>{fmtDuration(duration || 0)} · {time}</span>
+          {isMine && (
+            readAt
+              ? <svg viewBox="0 0 20 9" width="18" height="8" fill="none">
+                  <path d="M1 4.5l3 3L11 1" stroke="#4FC3F7" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M7 4.5l3 3L17 1" stroke="#4FC3F7" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              : <svg viewBox="0 0 20 9" width="18" height="8" fill="none">
+                  <path d="M1 4.5l3 3L11 1" stroke="rgba(255,255,255,0.7)" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M7 4.5l3 3L17 1" stroke="rgba(255,255,255,0.35)" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+          )}
         </div>
       </div>
     </div>
@@ -404,16 +440,22 @@ const TextBubble = memo(({ msg, isMine, dark, radius, bg, color, replyData, uid,
         <span dangerouslySetInnerHTML={{ __html: parseText(msg.text) }} />
       )}
       <div style={{
-        fontSize: 10, opacity: 0.55, textAlign: 'right', marginTop: 3,
+        fontSize: 10, opacity: 0.65, textAlign: 'right', marginTop: 3,
         display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 3
       }}>
+        {msg.edited_at && <span style={{ fontSize: 10 }}>ред.</span>}
         {fmtTime(msg.created_at)}
         {isMine && (
-          <svg viewBox="0 0 16 10" width="14" height="9" fill="none">
-            <path d="M1 5l4 4L15 1" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
+          msg.read_at
+            ? <svg viewBox="0 0 20 9" width="20" height="9" fill="none">
+                <path d="M1 4.5l3 3L11 1" stroke="#4FC3F7" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M7 4.5l3 3L17 1" stroke="#4FC3F7" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            : <svg viewBox="0 0 20 9" width="20" height="9" fill="none">
+                <path d="M1 4.5l3 3L11 1" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M7 4.5l3 3L17 1" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" opacity="0.4"/>
+              </svg>
         )}
-        {msg.edited_at && <span style={{ fontSize: 10, marginLeft: 2 }}>ред.</span>}
       </div>
     </div>
   )
@@ -425,6 +467,7 @@ const Message = memo(({
   isFirst, isLast, showAv,
   messages,
 }) => {
+  const readAt = msg.read_at || null
   const timerRef    = useRef(null)
   const movedRef    = useRef(false)
   const posRef      = useRef({ x: 0, y: 0 })
@@ -540,7 +583,7 @@ const Message = memo(({
                 <ReplyPreview msg={replyData} isMine={isMine} dark={dark} uid={uid} partnerName={partnerName} />
               </div>
             )}
-            <VideoCircle url={msg.video_url} isMine={isMine} time={fmtTime(msg.created_at)} />
+            <VideoCircle url={msg.video_url} isMine={isMine} time={fmtTime(msg.created_at)} readAt={readAt} />
           </div>
         ) : msg.is_voice && msg.audio_url ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -553,7 +596,7 @@ const Message = memo(({
                 <ReplyPreview msg={replyData} isMine={isMine} dark={dark} uid={uid} partnerName={partnerName} />
               </div>
             )}
-            <VoiceMessage url={msg.audio_url} isMine={isMine} duration={msg.duration} time={fmtTime(msg.created_at)} dark={dark} />
+            <VoiceMessage url={msg.audio_url} isMine={isMine} duration={msg.duration} time={fmtTime(msg.created_at)} dark={dark} readAt={readAt} />
           </div>
         ) : (
           <TextBubble
@@ -831,6 +874,7 @@ export default function Chat({ session, profile, darkMode }) {
   const [replyTo, setReplyTo] = useState(null)
   const [ctxMenu, setCtxMenu] = useState(null)
   const [lightboxUrl, setLightboxUrl] = useState(null)
+  const [partnerLastSeen, setPartnerLastSeen] = useState(null)
 
   const listRef = useRef(null)
   const endRef = useRef(null)
@@ -900,18 +944,43 @@ export default function Chat({ session, profile, darkMode }) {
       .eq('id', profile.partner_id)
       .single()
     setPartner(data)
+    setPartnerLastSeen(data?.last_seen || null)
+  }
+
+  async function updateLastSeen() {
+    if (!uid) return
+    await supabase.from('profiles').update({ last_seen: new Date().toISOString() }).eq('id', uid)
+  }
+
+  async function markMessagesRead(msgs, partnerId) {
+    if (!partnerId) return
+    const unread = msgs.filter(m => m.user_id === partnerId && !m.read_at)
+    if (!unread.length) return
+    await supabase.from('messages')
+      .update({ read_at: new Date().toISOString() })
+      .in('id', unread.map(m => m.id))
   }
 
   useEffect(() => {
     if (!uid) return
     loadMessages()
     loadPartner()
+    updateLastSeen()
+
+    const lastSeenTimer = setInterval(updateLastSeen, 30000)
+    const onFocus = () => updateLastSeen()
+    window.addEventListener('focus', onFocus)
 
     const channel = supabase.channel('chat')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, p => {
         setMessages(prev => {
           if (prev.find(m => m.id === p.new.id)) return prev
-          return [...prev, p.new]
+          const next = [...prev, p.new]
+          // если новое сообщение от партнёра — сразу помечаем прочитанным
+          if (p.new.user_id !== uid) {
+            supabase.from('messages').update({ read_at: new Date().toISOString() }).eq('id', p.new.id)
+          }
+          return next
         })
         setTimeout(scrollToBottom, 60)
       })
@@ -923,16 +992,28 @@ export default function Chat({ session, profile, darkMode }) {
       })
       .subscribe()
 
-    return () => { supabase.removeChannel(channel) }
+    return () => {
+      supabase.removeChannel(channel)
+      clearInterval(lastSeenTimer)
+      window.removeEventListener('focus', onFocus)
+    }
   }, [uid])
 
   useEffect(() => {
     if (!partner?.id) return
+
+    // Помечаем уже загруженные сообщения как прочитанные
+    markMessagesRead(messages, partner.id)
+
     const typingChannel = supabase.channel(`typing-${partner.id}`)
       .on('postgres_changes', {
         event: 'UPDATE', schema: 'public', table: 'typing_status',
         filter: `user_id=eq.${partner.id}`
       }, p => setPartnerTyping(p.new.is_typing))
+      .on('postgres_changes', {
+        event: 'UPDATE', schema: 'public', table: 'profiles',
+        filter: `id=eq.${partner.id}`
+      }, p => setPartnerLastSeen(p.new.last_seen))
       .subscribe()
 
     return () => { supabase.removeChannel(typingChannel) }
@@ -1276,8 +1357,9 @@ export default function Chat({ session, profile, darkMode }) {
           <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 17, fontWeight: 600, color: INK }}>
             {partnerName}
           </div>
-          <div style={{ fontSize: 11, color: partnerTyping ? '#4CAF50' : MUTED, transition: 'color .3s' }}>
-            {partnerTyping ? 'печатает...' : 'только для нас двоих'}
+          <div style={{ fontSize: 11, transition: 'color .3s',
+            color: partnerTyping ? '#4CAF50' : isOnline(partnerLastSeen) ? '#4CAF50' : MUTED }}>
+            {partnerTyping ? 'печатает...' : fmtLastSeen(partnerLastSeen)}
           </div>
         </div>
         <button onClick={() => setShowSearch(true)} style={{ width: 36, height: 36, borderRadius: '50%',

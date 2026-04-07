@@ -1475,6 +1475,7 @@ export default function Home({ session, profile, onNavigate }) {
         <SyncMirror
           session={session}
           profile={profile}
+          darkMode={darkMode}
           onClose={() => setShowMirror(false)}
         />
       )}
@@ -1484,6 +1485,7 @@ export default function Home({ session, profile, onNavigate }) {
         <TimeCapsule
           session={session}
           profile={profile}
+          darkMode={darkMode}
           onClose={() => setShowCapsule(false)}
         />
       )}

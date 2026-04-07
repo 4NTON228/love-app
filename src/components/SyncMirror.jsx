@@ -8,6 +8,7 @@
 // ══════════════════════════════════════════════════════════════
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { supabase } from '../lib/supabase'
 
 // Резервный банк вопросов (если edge function ещё не сработал)
@@ -67,7 +68,7 @@ function UnlockIcon({ size = 20, color = 'currentColor' }) {
   )
 }
 
-export default function SyncMirror({ session, profile, onClose }) {
+export default function SyncMirror({ session, profile, darkMode, onClose }) {
   const userId    = session?.user?.id
   const partnerId = profile?.partner_id
 
@@ -213,7 +214,7 @@ export default function SyncMirror({ session, profile, onClose }) {
   const iAnswered    = !!myStoredAns
   const sticker      = streak >= 7  // разблокирован стикер
 
-  return (
+  return createPortal(
     <>
       <style>{`
         .mirror-overlay {
@@ -230,7 +231,14 @@ export default function SyncMirror({ session, profile, onClose }) {
           padding: 20px 20px calc(var(--safe-bottom, 0px) + 24px);
           animation: slideUp 0.35s cubic-bezier(0.34,1.56,0.64,1) both;
         }
-        .app.dark .mirror-sheet { background: #1E0A10; }
+        .mirror-sheet-dark { background: #1E0A10 !important; }
+        .mirror-sheet-dark .mirror-handle { background: #3D1520; }
+        .mirror-sheet-dark .mirror-close { background: #3D1520; }
+        .mirror-sheet-dark .mirror-textarea { background: #3D1520; border-color: rgba(232,85,106,0.2); color: #F5E8EA; }
+        .mirror-sheet-dark .mirror-answer-card { background: #3D1520; }
+        .mirror-sheet-dark .mirror-streak-row { background: #3D1520; }
+        .mirror-sheet-dark .mirror-title { color: #F5E8EA; }
+        .mirror-sheet-dark .mirror-answer-text { color: #F5E8EA; }
         .mirror-handle {
           width: 36px; height: 4px;
           background: var(--blush-2); border-radius: 99px;
@@ -380,7 +388,7 @@ export default function SyncMirror({ session, profile, onClose }) {
       `}</style>
 
       <div className="mirror-overlay" onClick={onClose}>
-        <div className="mirror-sheet" onClick={e => e.stopPropagation()}>
+        <div className={`mirror-sheet${darkMode ? ' mirror-sheet-dark' : ''}`} onClick={e => e.stopPropagation()}>
           <div className="mirror-handle" />
 
           <div className="mirror-header">
@@ -534,6 +542,7 @@ export default function SyncMirror({ session, profile, onClose }) {
           )}
         </div>
       </div>
-    </>
+    </>,
+    document.body
   )
 }

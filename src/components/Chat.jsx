@@ -282,22 +282,40 @@ const VoiceMessage = memo(function VoiceMessage({ url, isMine, dark, duration, t
   const svgW = WAVE_H.length * (BAR_W + BAR_GAP)
 
   function toggle() {
-    if (!audioRef.current) audioRef.current = new Audio(url)
     const a = audioRef.current
+    if (!a) return
     if (playing) { a.pause(); setPlaying(false) }
     else {
-      a.play().catch(() => {}); setPlaying(true)
-      a.ontimeupdate = () => setProgress(a.currentTime / (a.duration || 1))
-      a.onended = () => { setPlaying(false); setProgress(0) }
+      a.play().catch(err => console.error('audio play error:', err))
     }
   }
-  useEffect(() => () => audioRef.current?.pause(), [])
+  useEffect(() => {
+    const a = audioRef.current
+    if (!a) return
+    const onPlay    = () => setPlaying(true)
+    const onPause   = () => setPlaying(false)
+    const onEnded   = () => { setPlaying(false); setProgress(0) }
+    const onTimeUpd = () => setProgress(a.currentTime / (a.duration || 1))
+    a.addEventListener('play',       onPlay)
+    a.addEventListener('pause',      onPause)
+    a.addEventListener('ended',      onEnded)
+    a.addEventListener('timeupdate', onTimeUpd)
+    return () => {
+      a.pause()
+      a.removeEventListener('play',       onPlay)
+      a.removeEventListener('pause',      onPause)
+      a.removeEventListener('ended',      onEnded)
+      a.removeEventListener('timeupdate', onTimeUpd)
+    }
+  }, [])
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10,
       padding: '8px 14px 8px 10px', borderRadius: 18, minWidth: 220,
       background: isMine ? GRAD : (dark ? '#1E0A10' : '#fff'),
       border: isMine ? 'none' : '0.5px solid rgba(200,51,74,0.15)' }}>
+      {/* скрытый audio элемент — нужен для надёжного воспроизведения на iOS */}
+      <audio ref={audioRef} src={url} preload="none" playsInline style={{ display: 'none' }} />
       <button onClick={toggle} style={{ width: 36, height: 36, borderRadius: '50%',
         border: 'none', cursor: 'pointer', flexShrink: 0,
         background: isMine ? 'rgba(255,255,255,0.22)' : 'rgba(200,51,74,0.1)',
@@ -475,6 +493,7 @@ const Message = memo(({
   const bubbleRef   = useRef(null)
   const swipeStartX = useRef(0)
   const swipingRef  = useRef(false)
+  const isTouchRef  = useRef(false)
   const [swipeDx, setSwipeDx] = useState(0)
 
   const replyData = useMemo(() =>
@@ -562,13 +581,13 @@ const Message = memo(({
 
       <div
         ref={bubbleRef}
-        onTouchStart={e => { const t = e.touches[0]; startPress(t.clientX, t.clientY); onSwipeStart(e) }}
+        onTouchStart={e => { isTouchRef.current = true; const t = e.touches[0]; startPress(t.clientX, t.clientY); onSwipeStart(e) }}
         onTouchMove={e => { onMovePress(e); onSwipeMove(e) }}
-        onTouchEnd={() => { endPress(); handleTap(); onSwipeEnd() }}
-        onTouchCancel={() => { endPress(); onSwipeEnd() }}
-        onMouseDown={e => startPress(e.clientX, e.clientY)}
-        onMouseMove={onMovePress}
-        onMouseUp={() => { endPress(); handleTap() }}
+        onTouchEnd={() => { endPress(); handleTap(); onSwipeEnd(); setTimeout(() => { isTouchRef.current = false }, 500) }}
+        onTouchCancel={() => { endPress(); onSwipeEnd(); setTimeout(() => { isTouchRef.current = false }, 500) }}
+        onMouseDown={e => { if (!isTouchRef.current) startPress(e.clientX, e.clientY) }}
+        onMouseMove={e => { if (!isTouchRef.current) onMovePress(e) }}
+        onMouseUp={() => { if (!isTouchRef.current) { endPress(); handleTap() } }}
         onMouseLeave={endPress}
         onContextMenu={e => { e.preventDefault(); onLongPress(msg) }}
       >

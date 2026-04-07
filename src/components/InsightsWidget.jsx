@@ -1,534 +1,506 @@
 // ══════════════════════════════════════════════════════════════
-// InsightsWidget — Ненавязчивый ИИ-советчик
-//
-// Правила ненавязчивости:
-//   • Не чаще 1 совета в день
-//   • Сначала виджет, не пуш
-//   • «Не сейчас»: после 3 игноров тип советов замолкает на 7 дней
-//   • Ползунок проактивности 0–100% в настройках
-//   • Один тихий день в неделю без советов
+// InsightsWidget — Страница советов ИИ
+// Показывает персональный анализ и советы по отношениям
 // ══════════════════════════════════════════════════════════════
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 
-// ── SVG-иконки ─────────────────────────────────────────────
+// ── SVG-иконки ──────────────────────────────────────────────
 
-function BrainIcon({ size = 20, color = 'currentColor' }) {
+function SparkleIcon({ size = 20, color = 'currentColor' }) {
   return (
-    <svg viewBox="0 0 24 24" width={size} height={size} fill="none"
-      stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M9.5 2A2.5 2.5 0 017 4.5v0A2.5 2.5 0 014.5 7v0A2.5 2.5 0 012 9.5v5A2.5 2.5 0 004.5 17v0A2.5 2.5 0 007 19.5v0A2.5 2.5 0 009.5 22h5a2.5 2.5 0 002.5-2.5v0a2.5 2.5 0 002.5-2.5v0a2.5 2.5 0 002.5-2.5v-5A2.5 2.5 0 0019.5 7v0A2.5 2.5 0 0017 4.5v0A2.5 2.5 0 0014.5 2z"/>
-      <path d="M9.5 7v0a2 2 0 012-2v0M12 5v14M9.5 17v0a2 2 0 012 2v0"/>
+    <svg viewBox="0 0 24 24" width={size} height={size} fill={color} stroke="none">
+      <path d="M12 2l1.5 5.5L19 9l-5.5 1.5L12 16l-1.5-5.5L5 9l5.5-1.5L12 2z" />
+      <path d="M19 15l.8 2.7 2.7.8-2.7.8L19 22l-.8-2.7-2.7-.8 2.7-.8L19 15z" opacity=".6"/>
+      <path d="M5 3l.5 1.7 1.7.5-1.7.5L5 7l-.5-1.7L2.8 4.7l1.7-.5L5 3z" opacity=".5"/>
     </svg>
   )
 }
 
-function BubbleIcon({ size = 20, color = 'currentColor' }) {
+function HeartIcon({ size = 16, color = 'currentColor' }) {
   return (
-    <svg viewBox="0 0 24 24" width={size} height={size} fill="none"
-      stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg viewBox="0 0 24 24" width={size} height={size} fill={color} stroke="none">
+      <path d="M12 21C12 21 3 14.5 3 8.5 3 5.4 5.4 3 8.5 3c1.7 0 3.3.8 4.4 2 1.1-1.2 2.7-2 4.4-2C20.6 3 23 5.4 23 8.5c0 6-9 12.5-9 12.5H12z" />
+    </svg>
+  )
+}
+
+function ChatIcon({ size = 16, color = 'currentColor' }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke={color}
+      strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
     </svg>
   )
 }
 
-function CapsuleSmIcon({ size = 18, color = 'currentColor' }) {
+function MirrorIcon({ size = 16, color = 'currentColor' }) {
   return (
-    <svg viewBox="0 0 24 24" width={size} height={size} fill="none"
-      stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
-      <circle cx="12" cy="10" r="3" />
-    </svg>
-  )
-}
-
-function MirrorSmIcon({ size = 18, color = 'currentColor' }) {
-  return (
-    <svg viewBox="0 0 24 24" width={size} height={size} fill="none"
-      stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke={color}
+      strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <ellipse cx="12" cy="10" rx="7" ry="9" />
-      <path d="M9 21h6" />
-      <path d="M12 19v2" />
+      <path d="M9 21h6M12 19v2" />
     </svg>
   )
 }
 
-function CloseIcon({ size = 14 }) {
+function ThermIcon({ size = 16, color = 'currentColor' }) {
   return (
-    <svg viewBox="0 0 24 24" width={size} height={size} fill="none"
-      stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-      <line x1="18" y1="6" x2="6" y2="18" />
-      <line x1="6" y1="6" x2="18" y2="18" />
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke={color}
+      strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 14.76V3.5a2.5 2.5 0 00-5 0v11.26a4.5 4.5 0 105 0z" />
     </svg>
   )
 }
 
-// ── Типы инсайтов ─────────────────────────────────────────
-const INSIGHT_TYPES = {
-  dialog:  { label: 'Диалог',       icon: BubbleIcon,   muteField: 'dialog_muted_until',  ignoreField: 'dialog_ignored' },
-  mirror:  { label: 'Зеркало',      icon: MirrorSmIcon, muteField: 'mirror_muted_until',  ignoreField: 'mirror_ignored' },
-  capsule: { label: 'Капсула',      icon: CapsuleSmIcon, muteField: 'capsule_muted_until', ignoreField: 'capsule_ignored' },
-  warmth:  { label: 'Барометр',     icon: BrainIcon,    muteField: 'dialog_muted_until',  ignoreField: 'dialog_ignored' },
+function RefreshIcon({ size = 18, color = 'currentColor' }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke={color}
+      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="23,4 23,10 17,10" />
+      <path d="M20.5 15a9 9 0 11-2.5-9L23 10" />
+    </svg>
+  )
 }
 
-// ── Проверка: тихий день ──────────────────────────────────
-function isQuietDay(quietDay) {
-  if (quietDay === -1) return false
-  return new Date().getDay() === quietDay
+// ── Типы советов ─────────────────────────────────────────────
+const TYPE_META = {
+  dialog:  { label: 'Диалог',   Icon: ChatIcon,   color: '#C8334A', bg: 'rgba(200,51,74,0.1)' },
+  mirror:  { label: 'Зеркало',  Icon: MirrorIcon, color: '#7B3FBE', bg: 'rgba(123,63,190,0.1)' },
+  warmth:  { label: 'Теплота',  Icon: ThermIcon,  color: '#E8753A', bg: 'rgba(232,117,58,0.1)' },
+  ai:      { label: 'ИИ-совет', Icon: SparkleIcon, color: '#2B8FD8', bg: 'rgba(43,143,216,0.1)' },
 }
 
-// ── Основной компонент ────────────────────────────────────
-export default function InsightsWidget({
-  session, profile, onOpenMirror, onOpenCapsule, onNavigateChat,
-}) {
+// Готовые советы для демонстрации без AI
+const PRESET_TIPS = [
+  { type: 'ai', title: 'Маленькие жесты', text: 'Отношения поддерживаются не большими событиями, а мелочами: утреннее сообщение, неожиданная похвала, совместный ритуал. Выберите одну небольшую привычку на эту неделю.' },
+  { type: 'ai', title: 'Активное слушание', text: 'Когда партнёр говорит о чём-то важном — уберите телефон. Полное внимание на 5 минут дороже часа разговора вполуха.' },
+  { type: 'ai', title: 'Благодарность вслух', text: 'Скажите партнёру за что вы ему/ей благодарны прямо сегодня. Конкретно, не абстрактно — «спасибо, что помог с...» работает лучше чем «ты хороший».' },
+  { type: 'mirror', title: 'Синхронность мыслей', text: 'Ответьте на вопрос дня в зеркале — это помогает понять как вы оба смотрите на одно и то же событие. Нередко ответы удивляют.' },
+  { type: 'dialog', title: 'Незавершённые темы', text: 'Если в чате оборвался разговор — вернитесь к нему. «Мы так и не договорили про...» — часто лучшее начало для важного разговора.' },
+  { type: 'warmth', title: 'Качество VS количество', text: 'Дело не в том сколько сообщений в день — а в том насколько они содержательные. Один вдумчивый ответ лучше десяти «ок».' },
+]
+
+export default function InsightsWidget({ session, profile, darkMode }) {
   const userId    = session?.user?.id
   const partnerId = profile?.partner_id
 
-  const [insight,   setInsight]   = useState(null)   // текущий показываемый инсайт
-  const [settings,  setSettings]  = useState(null)
-  const [dismissed, setDismissed] = useState(false)   // скрыт до следующего монтирования
-  const [animOut,   setAnimOut]   = useState(false)   // анимация ухода
-  const timerRef = useRef(null)
+  const [dataInsights, setDataInsights] = useState([])
+  const [aiText, setAiText]             = useState(null)
+  const [generating, setGenerating]     = useState(false)
+  const [loadingData, setLoadingData]   = useState(true)
+  const [error, setError]               = useState(null)
+  const [tipIdx, setTipIdx]             = useState(() => Math.floor(Math.random() * PRESET_TIPS.length))
 
-  // ── Загрузка настроек и генерация инсайта ────────────────
-  const loadInsight = useCallback(async () => {
-    if (!userId) return
-
-    // Получаем настройки ИИ
-    let { data: s } = await supabase
-      .from('ai_advisor_settings')
-      .select('*')
-      .eq('user_id', userId)
-      .maybeSingle()
-
-    // Инициализируем настройки, если их нет
-    if (!s) {
-      const { data: created } = await supabase
-        .from('ai_advisor_settings')
-        .insert({ user_id: userId })
-        .select()
-        .single()
-      s = created
-    }
-
-    setSettings(s)
-    if (!s) return
-
-    // Проверки ненавязчивости
+  // ── Загрузка данных и генерация статичных инсайтов ───────
+  const loadDataInsights = useCallback(async () => {
+    if (!userId) { setLoadingData(false); return }
+    setLoadingData(true)
+    const insights = []
     const now = new Date()
 
-    // Тихий день
-    if (isQuietDay(s.quiet_day)) return
-
-    // Проактивность: если 0% — никогда не показываем
-    if (s.proactivity === 0) return
-
-    // Не чаще 1 совета в день
-    if (s.last_advice_at) {
-      const lastDate = new Date(s.last_advice_at).toDateString()
-      if (lastDate === now.toDateString()) return
-    }
-
-    // Рандомизация по уровню проактивности (выше % → более частые советы)
-    if (Math.random() * 100 > s.proactivity) return
-
-    // ── Проверяем каждый тип инсайта ─────────────────────
-
-    // 1. Диалог без ответа 12+ часов
-    if (!isMuted(s, 'dialog_muted_until')) {
-      const cutoff = new Date(now.getTime() - 12 * 3600000).toISOString()
-      const { data: questions } = await supabase
-        .from('messages')
-        .select('id, text, created_at')
-        .eq('user_id', userId)
-        .like('text', '%?%')
-        .lte('created_at', cutoff)
-        .order('created_at', { ascending: false })
-        .limit(1)
-
-      if (questions?.[0]) {
-        const q = questions[0]
-        // Нет ответа партнёра после вопроса?
-        const { data: reply } = await supabase
-          .from('messages')
-          .select('id')
-          .eq('user_id', partnerId)
-          .gt('created_at', q.created_at)
+    try {
+      // 1. Проверяем зеркало сегодня
+      if (partnerId) {
+        const today = now.toISOString().slice(0, 10)
+        const { data: mirror } = await supabase
+          .from('sync_mirror')
+          .select('*')
+          .or(`user_id.eq.${userId},partner_id.eq.${userId}`)
+          .gte('created_at', `${today}T00:00:00Z`)
           .limit(1)
           .maybeSingle()
 
-        if (!reply) {
-          const topic = (q.text ?? '').slice(0, 55).replace(/\n/g, ' ').trim()
-          setInsight({
-            type: 'dialog',
-            title: 'Незавершённый разговор',
-            text: `Вы обсуждали «${topic}...» — диалог оборвался. Напомнить партнёру?`,
-            actions: ['remind', 'later', 'never'],
-            messageId: q.id,
+        if (mirror) {
+          const isOwner = mirror.user_id === userId
+          const myAns   = isOwner ? mirror.answer : mirror.partner_answer
+          const theirAns = isOwner ? mirror.partner_answer : mirror.answer
+          if (!myAns) {
+            insights.push({
+              id: 'mirror_unanswered',
+              type: 'mirror',
+              title: 'Вопрос дня ждёт ответа',
+              text: `«${(mirror.question || '').slice(0, 80)}» — ты ещё не ответил(а).`,
+              priority: 2,
+            })
+          } else if (myAns && !theirAns) {
+            insights.push({
+              id: 'mirror_waiting',
+              type: 'mirror',
+              title: 'Ждём партнёра',
+              text: 'Ты ответил(а) на вопрос дня. Партнёр ещё не ответил — ответы откроются когда оба напишут.',
+              priority: 1,
+            })
+          } else if (myAns && theirAns) {
+            insights.push({
+              id: 'mirror_done',
+              type: 'mirror',
+              title: mirror.is_matched ? '✨ Ответы совпали!' : 'Зеркало заполнено',
+              text: mirror.is_matched
+                ? 'Сегодня ваши ответы на вопрос дня оказались похожими. Это +1 к синхронности.'
+                : 'Оба ответили на вопрос дня — хорошо! Разные взгляды тоже ценны.',
+              priority: 0,
+            })
+          }
+        } else {
+          insights.push({
+            id: 'mirror_missing',
+            type: 'mirror',
+            title: 'Зеркало сегодня не открыто',
+            text: 'Вопрос дня ещё не появился. Зайди в раздел «Зеркало» — там будет вопрос для вас обоих.',
+            priority: 1,
           })
-          return
         }
       }
-    }
 
-    // 2. Зеркало: вопрос дня ещё не отвечен
-    if (!isMuted(s, 'mirror_muted_until') && partnerId) {
-      const today = new Date().toISOString().slice(0, 10)
-      const { data: mirror } = await supabase
-        .from('sync_mirror')
-        .select('*')
-        .or(`user_id.eq.${userId},partner_id.eq.${userId}`)
-        .gte('created_at', `${today}T00:00:00Z`)
-        .lt('created_at', `${today}T23:59:59Z`)
+      // 2. Проверяем барометр теплоты
+      const { data: metric } = await supabase
+        .from('warmth_metrics')
+        .select('warmth_index, avg_length, emoji_density, avg_response_time')
+        .eq('user_id', userId)
+        .order('date', { ascending: false })
         .limit(1)
         .maybeSingle()
 
-      const isOwner = mirror?.user_id === userId
-      const myAns   = mirror ? (isOwner ? mirror.answer : mirror.partner_answer) : null
-
-      if (mirror && !myAns) {
-        setInsight({
-          type: 'mirror',
-          title: 'Вопрос дня ждёт',
-          text: `«${mirror.question.slice(0, 70)}...» — твой ответ ещё не записан.`,
-          actions: ['open_mirror', 'later'],
+      if (metric) {
+        const wi = metric.warmth_index ?? 0
+        let warmthText = ''
+        if (wi >= 0.7) warmthText = 'Ваш барометр в зелёной зоне — общение живое и тёплое. Так держать!'
+        else if (wi >= 0.4) warmthText = 'Общение в норме. Небольшой жест — эмодзи, вопрос или воспоминание — сделает его теплее.'
+        else {
+          const parts = []
+          if (metric.avg_length < 15) parts.push('короткие ответы')
+          if (metric.emoji_density < 0.05) parts.push('мало эмодзи')
+          if (metric.avg_response_time > 7200) parts.push('долгие паузы')
+          warmthText = `Барометр показывает охлаждение${parts.length ? ': ' + parts.join(', ') : ''}. Напиши партнёру что-то тёплое?`
+        }
+        insights.push({
+          id: 'warmth_status',
+          type: 'warmth',
+          title: wi >= 0.7 ? 'Тепло в отношениях' : wi >= 0.4 ? 'Общение в норме' : 'Барометр в зоне внимания',
+          text: warmthText,
+          priority: wi < 0.4 ? 2 : 0,
         })
-        return
       }
+
+      // 3. Незавершённый диалог
+      if (partnerId) {
+        const cutoff = new Date(now.getTime() - 8 * 3600000).toISOString()
+        const { data: questions } = await supabase
+          .from('messages')
+          .select('id, text, created_at')
+          .eq('user_id', userId)
+          .ilike('text', '%?%')
+          .lte('created_at', cutoff)
+          .order('created_at', { ascending: false })
+          .limit(1)
+
+        if (questions?.[0]) {
+          const { data: reply } = await supabase
+            .from('messages')
+            .select('id')
+            .eq('user_id', partnerId)
+            .gt('created_at', questions[0].created_at)
+            .limit(1)
+            .maybeSingle()
+
+          if (!reply) {
+            insights.push({
+              id: 'dialog_unanswered',
+              type: 'dialog',
+              title: 'Вопрос без ответа',
+              text: `«${(questions[0].text || '').slice(0, 70).replace(/\n/g, ' ')}...» — партнёр ещё не ответил. Может напомнить?`,
+              priority: 2,
+            })
+          }
+        }
+      }
+
+      // Сортируем по приоритету
+      insights.sort((a, b) => b.priority - a.priority)
+      setDataInsights(insights)
+    } catch (e) {
+      console.error('InsightsWidget load error:', e)
+    } finally {
+      setLoadingData(false)
     }
-
-    // 3. Барометр в «красной зоне» — нет инсайта о барометре
-    const today2 = new Date().toISOString().slice(0, 10)
-    const { data: metric } = await supabase
-      .from('warmth_metrics')
-      .select('warmth_index, avg_length, emoji_density, avg_response_time')
-      .eq('user_id', userId)
-      .eq('date', today2)
-      .maybeSingle()
-
-    if (metric && metric.warmth_index < 0.35 && !isMuted(s, 'dialog_muted_until')) {
-      setInsight({
-        type: 'warmth',
-        title: 'Барометр в зоне внимания',
-        text: buildWarmthHint(metric),
-        actions: ['open_chat', 'later'],
-      })
-      return
-    }
-
-    // Нет инсайтов — ничего не показываем
   }, [userId, partnerId])
 
-  useEffect(() => { loadInsight() }, [loadInsight])
+  useEffect(() => { loadDataInsights() }, [loadDataInsights])
 
-  // Автоскрытие через 12 секунд (ненавязчивость)
-  useEffect(() => {
-    if (!insight) return
-    timerRef.current = setTimeout(() => hide('auto'), 12000)
-    return () => clearTimeout(timerRef.current)
-  }, [insight])
-
-  // ── Проверка: заглушён ли тип ─────────────────────────
-  function isMuted(s, muteField) {
-    if (!s?.[muteField]) return false
-    return new Date(s[muteField]) > new Date()
-  }
-
-  // ── Скрыть виджет ────────────────────────────────────
-  function hide(reason) {
-    clearTimeout(timerRef.current)
-    setAnimOut(true)
-    setTimeout(() => {
-      setInsight(null)
-      setDismissed(true)
-      setAnimOut(false)
-    }, 250)
-
-    if (reason === 'auto' || reason === 'later') {
-      // Обновляем метку последнего совета
-      if (userId) {
-        supabase.from('ai_advisor_settings')
-          .upsert(
-            { user_id: userId, last_advice_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-            { onConflict: 'user_id' },
-          )
-          .then(() => {})
-      }
-    }
-  }
-
-  // ── «Не сейчас» — с подсчётом игнорирований ──────────
-  async function handleLater() {
-    if (!userId || !insight) { hide('later'); return }
-    const type = INSIGHT_TYPES[insight.type]
-    if (!type || !settings) { hide('later'); return }
-
-    const newCount = (settings[type.ignoreField] ?? 0) + 1
-    const update = {
-      [type.ignoreField]: newCount,
-      last_advice_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    }
-
-    // После 3 игноров — заглушить на 7 дней
-    if (newCount >= 3) {
-      const muteUntil = new Date(Date.now() + 7 * 86400000).toISOString()
-      update[type.muteField]   = muteUntil
-      update[type.ignoreField] = 0
-    }
-
-    await supabase.from('ai_advisor_settings').upsert(
-      { user_id: userId, ...update },
-      { onConflict: 'user_id' },
-    )
-
-    hide('later')
-  }
-
-  // ── «Больше не показывать» (тип) ─────────────────────
-  async function handleNever() {
-    if (!userId || !insight) { hide('never'); return }
-    const type = INSIGHT_TYPES[insight.type]
-    if (!type) { hide('never'); return }
-
-    // Заглушить навсегда (на год)
-    const muteUntil = new Date(Date.now() + 365 * 86400000).toISOString()
-    await supabase.from('ai_advisor_settings').upsert(
-      {
-        user_id: userId,
-        [type.muteField]: muteUntil,
-        [type.ignoreField]: 0,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'user_id' },
-    )
-    hide('never')
-  }
-
-  // ── «Напомнить» партнёру (для диалогов) ──────────────
-  async function handleRemind() {
-    if (!userId || !partnerId || !insight?.messageId) {
-      hide('auto'); return
-    }
-    // Отправляем мягкое напоминание в чат
-    const { data: origMsg } = await supabase
-      .from('messages')
-      .select('text')
-      .eq('id', insight.messageId)
-      .maybeSingle()
-
-    if (origMsg) {
-      await supabase.from('messages').insert({
-        user_id: userId,
-        text: `Кстати, я ещё жду твоего ответа — «${(origMsg.text ?? '').slice(0, 60).trim()}»`,
-        created_at: new Date().toISOString(),
+  // ── Генерация AI-совета через edge function ───────────────
+  async function generateAIAdvice() {
+    if (!userId) return
+    setGenerating(true)
+    setError(null)
+    try {
+      const { data, error: fnErr } = await supabase.functions.invoke('relationship-keeper', {
+        body: {
+          action: 'ai_advice',
+          userId,
+          partnerId,
+          context: {
+            hasPartner: !!partnerId,
+            insights: dataInsights.map(i => i.title).join(', '),
+          },
+        },
       })
-      if (onNavigateChat) onNavigateChat('chat')
+
+      if (fnErr) throw fnErr
+      if (data?.advice) {
+        setAiText(data.advice)
+      } else {
+        // Фолбэк — полезный готовый совет
+        const next = (tipIdx + 1) % PRESET_TIPS.length
+        setTipIdx(next)
+        setAiText(PRESET_TIPS[next].text)
+      }
+    } catch {
+      // Показываем следующий готовый совет
+      const next = (tipIdx + 1) % PRESET_TIPS.length
+      setTipIdx(next)
+      setAiText(PRESET_TIPS[next].text)
+    } finally {
+      setGenerating(false)
     }
-
-    await supabase.from('ai_advisor_settings').upsert(
-      { user_id: userId, last_advice_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-      { onConflict: 'user_id' },
-    )
-    hide('remind')
   }
 
-  // ── Подсказка барометра ───────────────────────────────
-  function buildWarmthHint(m) {
-    const parts = []
-    if (m.avg_length < 15) parts.push('ответы стали короче')
-    if (m.emoji_density < 0.1) parts.push('исчезли эмодзи')
-    if (m.avg_response_time > 3600) parts.push('долгое молчание между сообщениями')
-    if (parts.length === 0) return 'Качество общения снизилось. Напиши партнёру что-нибудь тёплое?'
-    return `Заметно: ${parts.join(', ')}. Написать партнёру?`
-  }
-
-  if (!insight || dismissed) return null
-
-  const TypeIcon = INSIGHT_TYPES[insight.type]?.icon ?? BrainIcon
+  const tip = PRESET_TIPS[tipIdx]
 
   return (
-    <>
+    <div className={`insights-page${darkMode ? ' insights-dark' : ''}`}>
       <style>{`
-        .iw-card {
-          background: var(--surface);
-          border-radius: var(--radius-lg, 20px);
-          border: 0.5px solid var(--border);
-          box-shadow: var(--shadow-md);
-          overflow: hidden; position: relative;
-          animation: ${animOut ? 'iwOut' : 'iwIn'} 0.25s ease both;
+        .insights-page {
+          padding: 20px 16px;
+          padding-bottom: 32px;
         }
-        @keyframes iwIn {
-          from { opacity: 0; transform: translateY(10px) scale(0.98); }
-          to   { opacity: 1; transform: translateY(0) scale(1); }
+
+        /* ── AI generate block ── */
+        .ins-ai-block {
+          border-radius: 24px;
+          background: linear-gradient(135deg, #1A3A5C 0%, #0D1F33 100%);
+          padding: 24px 20px;
+          margin-bottom: 20px;
+          position: relative;
+          overflow: hidden;
         }
-        @keyframes iwOut {
-          from { opacity: 1; transform: translateY(0) scale(1); }
-          to   { opacity: 0; transform: translateY(-8px) scale(0.97); }
+        .ins-ai-block::before {
+          content: '';
+          position: absolute;
+          top: -30px; right: -30px;
+          width: 120px; height: 120px;
+          border-radius: 50%;
+          background: radial-gradient(circle, rgba(43,143,216,0.3) 0%, transparent 70%);
         }
-        .app.dark .iw-card { background: var(--surface-2); }
-        /* Декоративная полоска сверху */
-        .iw-stripe {
-          height: 3px;
-          background: var(--gradient);
-        }
-        .iw-body { padding: 14px 16px 16px; }
-        .iw-top {
-          display: flex; align-items: flex-start;
-          justify-content: space-between; gap: 8px; margin-bottom: 10px;
-        }
-        .iw-title-row {
-          display: flex; align-items: center; gap: 8px;
-        }
-        .iw-icon {
-          width: 32px; height: 32px; border-radius: 10px;
-          background: rgba(200,51,74,0.08);
-          display: flex; align-items: center; justify-content: center;
-          flex-shrink: 0; color: var(--rose);
-        }
-        .iw-title {
-          font-size: 14px; font-weight: 700; color: var(--ink);
-        }
-        .iw-close {
-          width: 28px; height: 28px; border-radius: 50%;
-          background: var(--blush); border: none;
-          display: flex; align-items: center; justify-content: center;
-          color: var(--text-muted); cursor: pointer; flex-shrink: 0;
-        }
-        .app.dark .iw-close { background: #3D1520; }
-        .iw-text {
-          font-size: 13px; color: var(--text-muted); line-height: 1.5;
-          margin-bottom: 14px;
-        }
-        .iw-actions {
-          display: flex; flex-wrap: wrap; gap: 7px;
-        }
-        .iw-btn {
-          flex: 1; min-width: 80px;
-          padding: 9px 12px; border-radius: 12px; border: none;
-          font-family: var(--font-body); font-size: 13px; font-weight: 600;
-          cursor: pointer; transition: opacity 0.15s, transform 0.1s;
-          white-space: nowrap;
-        }
-        .iw-btn:active { transform: scale(0.96); opacity: 0.88; }
-        .iw-btn-primary {
-          background: var(--gradient); color: white;
-          box-shadow: 0 3px 12px rgba(139,26,44,0.25);
-        }
-        .iw-btn-ghost {
-          background: var(--blush);
-          color: var(--text-muted);
-        }
-        .app.dark .iw-btn-ghost { background: #3D1520; }
-        .iw-btn-text {
-          background: transparent;
-          color: var(--text-muted); font-size: 12px; font-weight: 500;
-          flex: none; padding: 9px 8px;
-        }
-        /* Ползунок проактивности — если открыты настройки */
-        .iw-settings-row {
+        .ins-ai-header {
           display: flex; align-items: center; gap: 10px;
-          padding: 10px 16px 14px;
-          border-top: 1px solid var(--border);
+          margin-bottom: 12px;
         }
-        .iw-settings-label {
-          font-size: 11px; color: var(--text-muted);
-          white-space: nowrap;
+        .ins-ai-icon {
+          width: 40px; height: 40px; border-radius: 12px;
+          background: rgba(43,143,216,0.2);
+          display: flex; align-items: center; justify-content: center;
+          color: #5BB8FF;
         }
-        .iw-slider {
-          flex: 1; accent-color: var(--rose);
-          height: 3px; cursor: pointer;
+        .ins-ai-label {
+          font-size: 12px; font-weight: 600; letter-spacing: 0.5px;
+          text-transform: uppercase; color: rgba(91,184,255,0.8);
+          margin-bottom: 2px;
+        }
+        .ins-ai-title {
+          font-size: 15px; font-weight: 700; color: #FFFFFF;
+        }
+        .ins-ai-text {
+          font-size: 14px; line-height: 1.6;
+          color: rgba(255,255,255,0.8);
+          margin-bottom: 16px;
+        }
+        .ins-ai-btn {
+          display: flex; align-items: center; justify-content: center; gap: 8px;
+          width: 100%;
+          padding: 12px;
+          border-radius: 14px;
+          background: rgba(43,143,216,0.25);
+          border: 1px solid rgba(43,143,216,0.4);
+          color: #5BB8FF;
+          font-size: 14px; font-weight: 600;
+          cursor: pointer;
+          -webkit-tap-highlight-color: transparent;
+          transition: background 0.2s;
+        }
+        .ins-ai-btn:active { background: rgba(43,143,216,0.4); }
+        .ins-ai-btn:disabled { opacity: 0.5; }
+        .ins-ai-spin {
+          animation: insSpin 1s linear infinite;
+        }
+        @keyframes insSpin { to { transform: rotate(360deg); } }
+
+        /* ── Section label ── */
+        .ins-section-label {
+          font-size: 11px; font-weight: 700; letter-spacing: 0.8px;
+          text-transform: uppercase;
+          color: var(--muted, #9A6070);
+          margin: 0 4px 12px;
+        }
+
+        /* ── Insight cards ── */
+        .ins-card {
+          border-radius: 18px;
+          padding: 16px;
+          margin-bottom: 10px;
+          border: 1px solid var(--border, rgba(200,51,74,0.1));
+          background: var(--surface, #FFFFFF);
+          display: flex; gap: 12px; align-items: flex-start;
+          animation: insCardIn 0.3s ease both;
+        }
+        @keyframes insCardIn {
+          from { opacity: 0; transform: translateY(8px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .insights-dark .ins-card {
+          background: #1A0810;
+          border-color: rgba(200,51,74,0.18);
+        }
+        .ins-card-icon {
+          width: 38px; height: 38px; border-radius: 11px;
+          display: flex; align-items: center; justify-content: center;
+          flex-shrink: 0;
+        }
+        .ins-card-body { flex: 1; min-width: 0; }
+        .ins-card-title {
+          font-size: 14px; font-weight: 700;
+          color: var(--ink, #1E0A10);
+          margin-bottom: 4px;
+        }
+        .insights-dark .ins-card-title { color: #F5E6EB; }
+        .ins-card-text {
+          font-size: 13px; line-height: 1.55;
+          color: var(--text-muted, #6B3A48);
+        }
+        .insights-dark .ins-card-text { color: #C4909A; }
+
+        /* ── Daily tip ── */
+        .ins-tip {
+          border-radius: 18px;
+          padding: 16px;
+          background: var(--blush, #FBF0F2);
+          border: 1px solid var(--border, rgba(200,51,74,0.1));
+          display: flex; gap: 12px; align-items: flex-start;
+        }
+        .insights-dark .ins-tip {
+          background: #2A0D16;
+          border-color: rgba(200,51,74,0.18);
+        }
+        .ins-tip-icon {
+          width: 38px; height: 38px; border-radius: 11px;
+          background: rgba(200,51,74,0.1);
+          display: flex; align-items: center; justify-content: center;
+          flex-shrink: 0;
+          color: var(--rose, #C8334A);
+        }
+        .ins-tip-label {
+          font-size: 10px; font-weight: 700; letter-spacing: 0.6px;
+          text-transform: uppercase;
+          color: var(--rose, #C8334A); margin-bottom: 3px;
+        }
+        .ins-tip-title {
+          font-size: 14px; font-weight: 700;
+          color: var(--ink, #1E0A10);
+          margin-bottom: 4px;
+        }
+        .insights-dark .ins-tip-title { color: #F5E6EB; }
+        .ins-tip-text {
+          font-size: 13px; line-height: 1.55;
+          color: var(--text-muted, #6B3A48);
+        }
+        .insights-dark .ins-tip-text { color: #C4909A; }
+
+        /* ── Loading skeleton ── */
+        .ins-skeleton {
+          border-radius: 18px;
+          height: 90px;
+          background: linear-gradient(90deg,
+            var(--blush, #FBF0F2) 25%,
+            rgba(200,51,74,0.06) 50%,
+            var(--blush, #FBF0F2) 75%);
+          background-size: 200% 100%;
+          animation: insSkeleton 1.4s ease-in-out infinite;
+          margin-bottom: 10px;
+        }
+        @keyframes insSkeleton {
+          0%   { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
         }
       `}</style>
 
-      <div className="iw-card">
-        <div className="iw-stripe" />
-        <div className="iw-body">
-          <div className="iw-top">
-            <div className="iw-title-row">
-              <div className="iw-icon">
-                <TypeIcon size={16} color="var(--rose)" />
-              </div>
-              <span className="iw-title">{insight.title}</span>
-            </div>
-            <button className="iw-close" onClick={() => hide('auto')} aria-label="Закрыть">
-              <CloseIcon size={12} />
-            </button>
+      {/* ── ИИ-блок ── */}
+      <div className="ins-ai-block">
+        <div className="ins-ai-header">
+          <div className="ins-ai-icon">
+            <SparkleIcon size={22} color="#5BB8FF" />
           </div>
-
-          <p className="iw-text">{insight.text}</p>
-
-          <div className="iw-actions">
-            {/* Кнопка «Напомнить» — для диалогов */}
-            {insight.actions.includes('remind') && (
-              <button className="iw-btn iw-btn-primary" onClick={handleRemind}>
-                Напомнить
-              </button>
-            )}
-
-            {/* Кнопка «Открыть зеркало» */}
-            {insight.actions.includes('open_mirror') && (
-              <button
-                className="iw-btn iw-btn-primary"
-                onClick={() => { hide('auto'); onOpenMirror?.() }}
-              >
-                Ответить
-              </button>
-            )}
-
-            {/* Кнопка «Написать в чат» */}
-            {insight.actions.includes('open_chat') && (
-              <button
-                className="iw-btn iw-btn-primary"
-                onClick={() => { hide('auto'); onNavigateChat?.('chat') }}
-              >
-                Написать
-              </button>
-            )}
-
-            {/* «Не сейчас» */}
-            {insight.actions.includes('later') && (
-              <button className="iw-btn iw-btn-ghost" onClick={handleLater}>
-                Не сейчас
-              </button>
-            )}
-
-            {/* «Больше не показывать» */}
-            {insight.actions.includes('never') && (
-              <button className="iw-btn iw-btn-text" onClick={handleNever}>
-                Не показывать
-              </button>
-            )}
+          <div>
+            <div className="ins-ai-label">Персональный совет</div>
+            <div className="ins-ai-title">Советник ИИ</div>
           </div>
         </div>
-
-        {/* Ползунок проактивности (компактный, прямо в виджете) */}
-        {settings && (
-          <div className="iw-settings-row">
-            <span className="iw-settings-label">Проактивность</span>
-            <input
-              type="range"
-              className="iw-slider"
-              min={0}
-              max={100}
-              step={10}
-              value={settings.proactivity ?? 70}
-              onChange={async e => {
-                const v = +e.target.value
-                setSettings(s => ({ ...s, proactivity: v }))
-                await supabase.from('ai_advisor_settings').upsert(
-                  { user_id: userId, proactivity: v, updated_at: new Date().toISOString() },
-                  { onConflict: 'user_id' },
-                )
-              }}
-            />
-            <span className="iw-settings-label" style={{ minWidth: 28, textAlign: 'right' }}>
-              {settings.proactivity ?? 70}%
-            </span>
-          </div>
-        )}
+        <p className="ins-ai-text">
+          {aiText || tip.text}
+        </p>
+        <button className="ins-ai-btn" onClick={generateAIAdvice} disabled={generating}>
+          <span className={generating ? 'ins-ai-spin' : ''}>
+            <RefreshIcon size={16} color="#5BB8FF" />
+          </span>
+          {generating ? 'Анализирую...' : 'Получить новый совет'}
+        </button>
       </div>
-    </>
+
+      {/* ── Аналитика по данным ── */}
+      <div className="ins-section-label">Анализ по вашим данным</div>
+
+      {loadingData ? (
+        <>
+          <div className="ins-skeleton" />
+          <div className="ins-skeleton" style={{ height: 70, opacity: 0.6 }} />
+        </>
+      ) : dataInsights.length === 0 ? (
+        <div className="ins-card" style={{ justifyContent: 'center' }}>
+          <div className="ins-card-body" style={{ textAlign: 'center' }}>
+            <div className="ins-card-title">Всё хорошо</div>
+            <div className="ins-card-text">Нет срочных рекомендаций. Продолжайте общаться!</div>
+          </div>
+        </div>
+      ) : (
+        dataInsights.map((ins, i) => {
+          const meta = TYPE_META[ins.type] || TYPE_META.ai
+          const { Icon } = meta
+          return (
+            <div key={ins.id} className="ins-card" style={{ animationDelay: `${i * 0.06}s` }}>
+              <div className="ins-card-icon" style={{ background: meta.bg }}>
+                <Icon size={18} color={meta.color} />
+              </div>
+              <div className="ins-card-body">
+                <div className="ins-card-title">{ins.title}</div>
+                <div className="ins-card-text">{ins.text}</div>
+              </div>
+            </div>
+          )
+        })
+      )}
+
+      {/* ── Совет дня ── */}
+      <div style={{ marginTop: 20, marginBottom: 8 }} className="ins-section-label">Совет дня</div>
+      <div className="ins-tip">
+        <div className="ins-tip-icon">
+          <HeartIcon size={18} color="var(--rose, #C8334A)" />
+        </div>
+        <div>
+          <div className="ins-tip-label">Для вас</div>
+          <div className="ins-tip-title">{tip.title}</div>
+          <div className="ins-tip-text">{tip.text}</div>
+        </div>
+      </div>
+    </div>
   )
 }

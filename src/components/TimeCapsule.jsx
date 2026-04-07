@@ -1,545 +1,502 @@
-// ══════════════════════════════════════════════════════════════
-// TimeCapsule — Капсула времени
-//
-// Письмо партнёру с отложенной отправкой. Триггеры:
-//   • конкретная дата
-//   • через N дней
-//   • когда поссоримся (нет сообщений 8+ часов)
-// При срабатывании отправляется в чат с пометкой «Капсула времени».
-// ══════════════════════════════════════════════════════════════
-
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 
-// ── SVG-иконки ─────────────────────────────────────────────
-
-function CapsuleIcon({ size = 24, color = 'currentColor' }) {
-  return (
-    <svg viewBox="0 0 24 24" width={size} height={size} fill="none"
-      stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
-      <circle cx="12" cy="10" r="3" />
-    </svg>
-  )
-}
-
-function CalendarIcon({ size = 18, color = 'currentColor' }) {
-  return (
-    <svg viewBox="0 0 24 24" width={size} height={size} fill="none"
-      stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="4" width="18" height="17" rx="2" />
-      <line x1="8" y1="2" x2="8" y2="6" />
-      <line x1="16" y1="2" x2="16" y2="6" />
-      <line x1="3" y1="10" x2="21" y2="10" />
-    </svg>
-  )
-}
-
-function ClockIcon({ size = 18, color = 'currentColor' }) {
-  return (
-    <svg viewBox="0 0 24 24" width={size} height={size} fill="none"
-      stroke={color} strokeWidth="1.8" strokeLinecap="round">
-      <circle cx="12" cy="12" r="9" />
-      <line x1="12" y1="12" x2="12" y2="7.5" strokeWidth="2" />
-      <line x1="12" y1="12" x2="15.5" y2="14" strokeWidth="1.5" />
-    </svg>
-  )
-}
-
-function HeartBreakIcon({ size = 18, color = 'currentColor' }) {
-  return (
-    <svg viewBox="0 0 24 24" width={size} height={size} fill="none"
-      stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0016.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 002 8.5c0 2.3 1.5 4.05 3 5.5l7 7z" />
-      <path d="M12 5l-2 4 4 1-2 4" strokeDasharray="2 1" />
-    </svg>
-  )
-}
-
-function TrashIcon({ size = 16, color = 'currentColor' }) {
-  return (
-    <svg viewBox="0 0 24 24" width={size} height={size} fill="none"
-      stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="3 6 5 6 21 6" />
-      <path d="M19 6l-1 14H6L5 6" />
-      <path d="M10 11v6M14 11v6" />
-      <path d="M9 6V4h6v2" />
-    </svg>
-  )
-}
-
-// ── Метки типов триггера ──────────────────────────────────
-const TRIGGER_LABELS = {
-  date:  'Конкретная дата',
-  days:  'Через N дней',
-  fight: 'Когда поссоримся',
-}
-
-const TRIGGER_ICONS = {
-  date:  CalendarIcon,
-  days:  ClockIcon,
-  fight: HeartBreakIcon,
-}
-
-// ── Форматирование даты на русском ────────────────────────
 function formatDate(iso) {
   if (!iso) return ''
-  return new Date(iso).toLocaleDateString('ru-RU', {
-    day: 'numeric', month: 'long', year: 'numeric',
-  })
+  return new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
-export default function TimeCapsule({ session, profile, darkMode, onClose }) {
+function TrashIcon({ size = 16 }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor"
+      strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6l-1 14H6L5 6M10 11v6M14 11v6M9 6V4h6v2" />
+    </svg>
+  )
+}
+
+const TRIGGERS = [
+  {
+    id: 'date',
+    label: 'Дата',
+    desc: 'Конкретная дата',
+    icon: (
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor"
+        strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="4" width="18" height="17" rx="2" />
+        <line x1="8" y1="2" x2="8" y2="6" /><line x1="16" y1="2" x2="16" y2="6" />
+        <line x1="3" y1="10" x2="21" y2="10" />
+      </svg>
+    ),
+  },
+  {
+    id: 'days',
+    label: 'Дни',
+    desc: 'Через N дней',
+    icon: (
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor"
+        strokeWidth="1.8" strokeLinecap="round">
+        <circle cx="12" cy="12" r="9" />
+        <line x1="12" y1="12" x2="12" y2="7.5" strokeWidth="2" />
+        <line x1="12" y1="12" x2="15.5" y2="14" strokeWidth="1.5" />
+      </svg>
+    ),
+  },
+  {
+    id: 'fight',
+    label: 'Ссора',
+    desc: 'Если замолчим',
+    icon: (
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor"
+        strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0016.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 002 8.5c0 2.3 1.5 4.05 3 5.5l7 7z" />
+      </svg>
+    ),
+  },
+]
+
+const STATUS_META = {
+  sent:    { label: 'Доставлено', color: '#4CAF50',  bg: 'rgba(76,175,80,0.1)'  },
+  pending: { label: 'Ожидает',   color: '#C8A84B',  bg: 'rgba(200,168,75,0.1)' },
+  fight:   { label: 'Ждёт ссоры', color: '#C8334A', bg: 'rgba(200,51,74,0.1)'  },
+}
+
+export default function TimeCapsule({ session, profile, darkMode }) {
   const userId    = session?.user?.id
   const partnerId = profile?.partner_id
 
-  // ── Состояние ─────────────────────────────────────────────
-  const [capsules,  setCapsules]  = useState([])
-  const [loading,   setLoading]   = useState(true)
-  const [view,      setView]      = useState('list')   // 'list' | 'create'
-  const [saving,    setSaving]    = useState(false)
-
-  // Форма создания
+  const [capsules,     setCapsules]     = useState([])
+  const [loading,      setLoading]      = useState(true)
+  const [view,         setView]         = useState('list')
+  const [saving,       setSaving]       = useState(false)
   const [message,      setMessage]      = useState('')
   const [triggerType,  setTriggerType]  = useState('date')
   const [triggerDate,  setTriggerDate]  = useState('')
   const [triggerDays,  setTriggerDays]  = useState('')
   const [deleteId,     setDeleteId]     = useState(null)
 
-  // ── Загрузка капсул ───────────────────────────────────────
   const loadCapsules = useCallback(async () => {
     if (!userId) return
     setLoading(true)
-    const { data } = await supabase
-      .from('time_capsules')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
+    const { data } = await supabase.from('time_capsules').select('*')
+      .eq('user_id', userId).order('created_at', { ascending: false })
     setCapsules(data ?? [])
     setLoading(false)
   }, [userId])
 
   useEffect(() => { loadCapsules() }, [loadCapsules])
 
-  // ── Сохранение капсулы ────────────────────────────────────
   async function saveCapsule() {
     if (!message.trim() || !userId || !partnerId) return
     if (triggerType === 'date' && !triggerDate) return
     if (triggerType === 'days' && (!triggerDays || +triggerDays < 1)) return
-
     setSaving(true)
     const { error } = await supabase.from('time_capsules').insert({
-      user_id:      userId,
-      partner_id:   partnerId,
-      message:      message.trim(),
+      user_id: userId, partner_id: partnerId, message: message.trim(),
       trigger_type: triggerType,
       trigger_date: triggerType === 'date' ? new Date(triggerDate).toISOString() : null,
       trigger_days: triggerType === 'days' ? +triggerDays : null,
     })
-
-    if (!error) {
-      setMessage('')
-      setTriggerDate('')
-      setTriggerDays('')
-      setView('list')
-      await loadCapsules()
-    }
+    if (!error) { setMessage(''); setTriggerDate(''); setTriggerDays(''); setView('list'); await loadCapsules() }
     setSaving(false)
   }
 
-  // ── Удаление капсулы ──────────────────────────────────────
   async function deleteCapsule(id) {
     await supabase.from('time_capsules').delete().eq('id', id).eq('user_id', userId)
     setDeleteId(null)
     setCapsules(prev => prev.filter(c => c.id !== id))
   }
 
-  // ── Отображение статуса капсулы ───────────────────────────
   function capsuleStatus(cap) {
-    if (cap.is_sent) return 'Доставлено'
-    if (cap.trigger_type === 'date' && cap.trigger_date) {
-      return `Будет доставлено ${formatDate(cap.trigger_date)}`
-    }
+    if (cap.is_sent) return { text: 'Доставлено', ...STATUS_META.sent }
+    if (cap.trigger_type === 'fight') return { text: 'Ждёт ссоры', ...STATUS_META.fight }
+    if (cap.trigger_type === 'date' && cap.trigger_date)
+      return { text: `Отправится ${formatDate(cap.trigger_date)}`, ...STATUS_META.pending }
     if (cap.trigger_type === 'days' && cap.trigger_days) {
       const sendAt = new Date(cap.created_at)
       sendAt.setDate(sendAt.getDate() + cap.trigger_days)
       const daysLeft = Math.max(0, Math.ceil((sendAt - Date.now()) / 86400000))
-      return daysLeft > 0 ? `Осталось ${daysLeft} дн` : 'Скоро будет доставлено'
+      return { text: daysLeft > 0 ? `Осталось ${daysLeft} дн` : 'Скоро', ...STATUS_META.pending }
     }
-    if (cap.trigger_type === 'fight') return 'Ждёт ссоры'
-    return 'Ожидает'
+    return { text: 'Ожидает', ...STATUS_META.pending }
   }
 
   return (
-    <div className="capsule-container" style={{ padding: '20px', paddingBottom: 'calc(20px + env(safe-area-inset-bottom, 0px))' }}>
+    <div className={`tc-page${darkMode ? ' tc-dark' : ''}`}>
       <style>{`
-        .caps-sheet {
-          width: 100%;
-          background: var(--surface);
-          padding: 20px 20px 24px;
-        }
-        .caps-sheet-dark { background: #1E0A10 !important; }
-        .caps-sheet-dark .caps-handle { background: #3D1520; }
-        .caps-sheet-dark .caps-close { background: #3D1520; }
-        .caps-sheet-dark .caps-title { color: #F5E8EA; }
-        .caps-sheet-dark .caps-item { background: #3D1520; }
-        .caps-sheet-dark .caps-item-msg { color: #F5E8EA; }
-        .caps-sheet-dark .caps-textarea { background: #3D1520; border-color: rgba(232,85,106,0.2); color: #F5E8EA; }
-        .caps-sheet-dark .caps-date-input { background: #3D1520; border-color: rgba(232,85,106,0.2); color: #F5E8EA; }
-        .caps-sheet-dark .caps-days-input { background: #3D1520; border-color: rgba(232,85,106,0.2); color: #F5E8EA; }
-        .caps-sheet-dark .caps-back-btn { border-color: rgba(232,85,106,0.2); color: #8A5060; }
-        .caps-sheet-dark .caps-confirm-box { background: #1E0A10; }
-        .caps-sheet-dark .caps-del-cancel { background: #3D1520; }
-        .caps-handle {
-          width: 36px; height: 4px; background: var(--blush-2);
-          border-radius: 99px; margin: 0 auto 20px;
-        }
-        .app.dark .caps-handle { background: #3D1520; }
-        .caps-header {
-          display: flex; align-items: center; justify-content: space-between;
-          margin-bottom: 20px;
-        }
-        .caps-title-row { display: flex; align-items: center; gap: 10px; }
-        .caps-title {
-          font-family: var(--font-display);
-          font-size: 22px; font-weight: 600; font-style: italic; color: var(--ink);
-        }
-        .caps-close {
-          width: 32px; height: 32px; border-radius: 50%;
-          background: var(--blush); border: none;
-          display: flex; align-items: center; justify-content: center;
-          color: var(--muted); cursor: pointer;
-        }
-        .app.dark .caps-close { background: #3D1520; }
-        .caps-new-btn {
-          width: 100%; padding: 13px;
-          background: var(--gradient); color: white; border: none;
-          border-radius: 14px; font-family: var(--font-body);
-          font-size: 15px; font-weight: 600; cursor: pointer;
-          box-shadow: 0 4px 16px rgba(139,26,44,0.3);
-          margin-bottom: 20px; transition: opacity 0.2s, transform 0.15s;
-        }
-        .caps-new-btn:active { opacity: 0.9; transform: scale(0.98); }
-        .caps-empty {
-          text-align: center; padding: 40px 0;
-          color: var(--text-muted); font-size: 14px; line-height: 1.6;
-        }
-        .caps-list { display: flex; flex-direction: column; gap: 10px; }
-        .caps-item {
-          background: var(--blush); border: 1px solid var(--border);
-          border-radius: 16px; padding: 14px 16px;
+        .tc-page { background: var(--surface, #fff); min-height: 100%; }
+        .tc-dark  { background: #0A0206; }
+
+        /* Hero */
+        .tc-hero {
           position: relative; overflow: hidden;
+          padding: 28px 20px 32px;
+          background: linear-gradient(160deg, #3D1A6B 0%, #1E0A38 50%, #080212 100%);
         }
-        .app.dark .caps-item { background: #3D1520; }
-        .caps-item-sent { opacity: 0.6; }
-        .caps-item-type {
+        .tc-hero-orb {
+          position: absolute; top: -40px; right: -40px;
+          width: 200px; height: 200px; border-radius: 50%;
+          background: radial-gradient(circle, rgba(123,63,190,0.45) 0%, transparent 70%);
+          pointer-events: none;
+        }
+        .tc-hero-tag {
+          display: inline-flex; align-items: center; gap: 6px;
+          background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15);
+          border-radius: 99px; padding: 4px 12px;
+          font-size: 11px; font-weight: 700; letter-spacing: 0.8px;
+          text-transform: uppercase; color: rgba(255,255,255,0.7);
+          margin-bottom: 14px; position: relative; z-index: 1;
+        }
+        .tc-hero-title {
+          font-family: var(--font-head, Georgia, serif);
+          font-size: 26px; font-weight: 700;
+          color: #FFFFFF; line-height: 1.2; margin-bottom: 8px;
+          position: relative; z-index: 1;
+        }
+        .tc-hero-sub {
+          font-size: 14px; color: rgba(255,255,255,0.6); line-height: 1.5;
+          position: relative; z-index: 1;
+        }
+        .tc-hero-count {
+          display: inline-block; margin-top: 12px;
+          background: rgba(255,255,255,0.12); border-radius: 10px;
+          padding: 6px 14px; font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.85);
+          position: relative; z-index: 1;
+        }
+
+        /* New btn */
+        .tc-new-btn {
+          display: flex; align-items: center; justify-content: center; gap: 10px;
+          margin: 16px; padding: 15px;
+          background: linear-gradient(135deg, #7B3FBE, #3D1A6B);
+          color: white; border: none; border-radius: 18px;
+          font-size: 15px; font-weight: 700; cursor: pointer;
+          box-shadow: 0 6px 20px rgba(61,26,107,0.45);
+          -webkit-tap-highlight-color: transparent;
+          transition: transform 0.15s;
+        }
+        .tc-new-btn:active { transform: scale(0.97); }
+
+        /* List */
+        .tc-list { padding: 4px 16px 20px; display: flex; flex-direction: column; gap: 12px; }
+
+        .tc-card {
+          border-radius: 20px; overflow: hidden;
+          border: 1px solid var(--border, rgba(200,51,74,0.1));
+          background: var(--surface, #fff);
+          animation: tcIn 0.3s ease both;
+          position: relative;
+        }
+        @keyframes tcIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .tc-dark .tc-card { background: #140820; border-color: rgba(123,63,190,0.2); }
+        .tc-card-sent { opacity: 0.55; }
+
+        .tc-card-top {
+          padding: 14px 16px 0;
+          display: flex; align-items: center; justify-content: space-between;
+        }
+        .tc-card-badge {
           display: flex; align-items: center; gap: 6px;
-          font-size: 11px; font-weight: 700; letter-spacing: 0.5px;
-          text-transform: uppercase; color: var(--rose); margin-bottom: 6px;
+          border-radius: 99px; padding: 4px 10px;
+          font-size: 11px; font-weight: 700;
         }
-        .caps-item-msg {
-          font-size: 14px; color: var(--ink); line-height: 1.5;
-          display: -webkit-box; -webkit-line-clamp: 2;
+        .tc-card-del {
+          background: none; border: none; cursor: pointer;
+          color: var(--muted, #9A6070); padding: 4px;
+          -webkit-tap-highlight-color: transparent;
+        }
+        .tc-card-del:active { color: #C8334A; }
+
+        .tc-card-msg {
+          padding: 10px 16px;
+          font-size: 15px; color: var(--ink, #1E0A10); line-height: 1.55;
+          display: -webkit-box; -webkit-line-clamp: 3;
           -webkit-box-orient: vertical; overflow: hidden;
         }
-        .caps-item-status {
-          font-size: 12px; color: var(--text-muted); margin-top: 6px;
-        }
-        .caps-item-del {
-          position: absolute; top: 12px; right: 12px;
-          background: none; border: none;
-          color: var(--text-muted); cursor: pointer; padding: 4px;
-          transition: color 0.15s;
-        }
-        .caps-item-del:hover { color: var(--rose); }
+        .tc-dark .tc-card-msg { color: #F5E6EB; }
 
-        /* Форма создания */
-        .caps-form { display: flex; flex-direction: column; gap: 16px; }
-        .caps-form-label {
-          font-size: 12px; font-weight: 700; letter-spacing: 0.5px;
-          text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px;
+        .tc-card-footer {
+          padding: 8px 16px 14px;
+          display: flex; align-items: center; gap: 6px;
+          font-size: 12px; color: var(--muted, #9A6070);
         }
-        .caps-textarea {
-          width: 100%; background: var(--blush);
-          border: 1.5px solid var(--border); border-radius: 16px;
-          padding: 14px 16px; font-family: var(--font-body);
-          font-size: 15px; color: var(--ink); resize: none;
-          min-height: 120px; line-height: 1.6; outline: none;
-          transition: border-color 0.2s, box-shadow 0.2s;
-        }
-        .app.dark .caps-textarea {
-          background: #3D1520; border-color: rgba(232,85,106,0.2); color: var(--ink);
-        }
-        .caps-textarea:focus {
-          border-color: var(--rose); box-shadow: 0 0 0 3px rgba(200,51,74,0.1);
-        }
-        .caps-trigger-tabs {
-          display: flex; gap: 6px;
-        }
-        .caps-tab {
-          flex: 1; padding: 10px 6px;
-          border-radius: 12px; border: 1.5px solid var(--border);
-          background: none; cursor: pointer;
-          display: flex; flex-direction: column;
-          align-items: center; gap: 5px;
-          font-family: var(--font-body);
-          font-size: 11px; font-weight: 600; color: var(--text-muted);
-          transition: border-color 0.2s, background 0.2s, color 0.2s;
-        }
-        .caps-tab.active {
-          border-color: var(--rose);
-          background: rgba(200,51,74,0.07);
-          color: var(--rose);
-        }
-        .caps-date-input {
-          width: 100%; padding: 12px 14px;
-          border: 1.5px solid var(--border); border-radius: 14px;
-          background: var(--blush); font-family: var(--font-body);
-          font-size: 14px; color: var(--ink); outline: none;
-        }
-        .app.dark .caps-date-input {
-          background: #3D1520; border-color: rgba(232,85,106,0.2); color: var(--ink);
-        }
-        .caps-date-input:focus { border-color: var(--rose); }
-        .caps-days-input {
-          width: 100%; padding: 12px 14px;
-          border: 1.5px solid var(--border); border-radius: 14px;
-          background: var(--blush); font-family: var(--font-body);
-          font-size: 14px; color: var(--ink); outline: none;
-          -moz-appearance: textfield;
-        }
-        .caps-days-input::-webkit-inner-spin-button { display: none; }
-        .app.dark .caps-days-input {
-          background: #3D1520; border-color: rgba(232,85,106,0.2); color: var(--ink);
-        }
-        .caps-days-input:focus { border-color: var(--rose); }
-        .caps-fight-hint {
-          background: rgba(200,51,74,0.06);
-          border: 1px dashed rgba(200,51,74,0.25);
-          border-radius: 12px; padding: 12px 14px;
-          font-size: 13px; color: var(--text-muted); line-height: 1.5;
-        }
-        .caps-save-btn {
-          width: 100%; padding: 14px;
-          background: var(--gradient); color: white; border: none;
-          border-radius: 14px; font-family: var(--font-body);
-          font-size: 15px; font-weight: 600; cursor: pointer;
-          box-shadow: 0 4px 16px rgba(139,26,44,0.3);
-          transition: opacity 0.2s, transform 0.15s;
-        }
-        .caps-save-btn:active { opacity: 0.9; transform: scale(0.98); }
-        .caps-save-btn:disabled { opacity: 0.5; cursor: default; }
-        .caps-back-btn {
-          width: 100%; padding: 12px; background: transparent;
-          border: 1.5px solid var(--border); border-radius: 14px;
-          font-family: var(--font-body); font-size: 14px; font-weight: 600;
-          color: var(--text-muted); cursor: pointer;
-          transition: background 0.15s;
-        }
-        .caps-back-btn:active { background: var(--blush); }
 
-        /* Диалог подтверждения удаления */
-        .caps-confirm-overlay {
-          position: fixed; inset: 0; z-index: 400;
-          background: rgba(28,10,14,0.65); backdrop-filter: blur(6px);
+        /* Empty */
+        .tc-empty {
+          text-align: center; padding: 60px 20px;
+        }
+        .tc-empty-icon {
+          width: 80px; height: 80px; border-radius: 50%;
+          background: linear-gradient(135deg, rgba(123,63,190,0.12), rgba(61,26,107,0.06));
           display: flex; align-items: center; justify-content: center;
-          padding: 24px; animation: fadeIn 0.15s ease;
+          margin: 0 auto 20px;
         }
-        .caps-confirm-box {
-          background: var(--surface); border-radius: 20px;
-          padding: 24px; max-width: 300px; width: 100%;
-          box-shadow: 0 24px 80px rgba(0,0,0,0.4);
-          animation: slideUp 0.25s cubic-bezier(0.34,1.56,0.64,1) both;
+        .tc-empty-title { font-size: 17px; font-weight: 700; color: var(--ink, #1E0A10); margin-bottom: 8px; }
+        .tc-dark .tc-empty-title { color: #F5E6EB; }
+        .tc-empty-text { font-size: 14px; color: var(--muted, #9A6070); line-height: 1.6; }
+
+        /* Create form */
+        .tc-form { padding: 20px 16px; display: flex; flex-direction: column; gap: 20px; }
+
+        .tc-form-section-label {
+          font-size: 11px; font-weight: 800; letter-spacing: 0.8px;
+          text-transform: uppercase; color: var(--muted, #9A6070);
+          margin-bottom: 8px;
         }
-        .app.dark .caps-confirm-box { background: #1E0A10; }
-        .caps-confirm-title {
-          font-family: var(--font-display); font-size: 20px;
-          font-weight: 600; color: var(--ink); margin-bottom: 8px;
+        .tc-textarea {
+          width: 100%; min-height: 140px; resize: none; outline: none;
+          background: var(--blush, #FBF0F2);
+          border: 2px solid transparent; border-radius: 18px; padding: 16px;
+          font-family: var(--font-body, sans-serif); font-size: 16px;
+          color: var(--ink, #1E0A10); line-height: 1.6;
+          transition: border-color 0.2s, box-shadow 0.2s; box-sizing: border-box;
         }
-        .caps-confirm-text { font-size: 14px; color: var(--text-muted); margin-bottom: 20px; }
-        .caps-confirm-btns { display: flex; gap: 8px; }
-        .caps-del-confirm {
-          flex: 1; padding: 11px; background: #C8334A;
-          color: white; border: none; border-radius: 12px;
-          font-family: var(--font-body); font-size: 14px; font-weight: 600;
-          cursor: pointer;
+        .tc-dark .tc-textarea { background: #1A0820; color: #F5E6EB; }
+        .tc-textarea:focus {
+          border-color: #7B3FBE;
+          box-shadow: 0 0 0 4px rgba(123,63,190,0.12);
         }
-        .caps-del-cancel {
-          flex: 1; padding: 11px; background: var(--blush);
-          color: var(--text-muted); border: none; border-radius: 12px;
-          font-family: var(--font-body); font-size: 14px; cursor: pointer;
+        .tc-counter { text-align: right; font-size: 11px; color: var(--muted, #9A6070); margin-top: 4px; }
+
+        .tc-trigger-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        .tc-trigger-btn {
+          display: flex; flex-direction: column; align-items: center; gap: 8px;
+          padding: 14px 8px; border-radius: 16px;
+          border: 2px solid var(--border, rgba(200,51,74,0.1));
+          background: var(--blush, #FBF0F2);
+          cursor: pointer; -webkit-tap-highlight-color: transparent;
+          transition: all 0.2s;
         }
-        .app.dark .caps-del-cancel { background: #3D1520; }
+        .tc-dark .tc-trigger-btn { background: #1A0820; border-color: rgba(123,63,190,0.2); }
+        .tc-trigger-btn.active {
+          border-color: #7B3FBE; background: rgba(123,63,190,0.1);
+          color: #7B3FBE;
+        }
+        .tc-trigger-icon { color: var(--muted, #9A6070); }
+        .tc-trigger-btn.active .tc-trigger-icon { color: #7B3FBE; }
+        .tc-trigger-label { font-size: 12px; font-weight: 700; color: var(--muted, #9A6070); }
+        .tc-trigger-btn.active .tc-trigger-label { color: #7B3FBE; }
+        .tc-trigger-desc { font-size: 10px; color: var(--muted, #9A6070); text-align: center; }
+
+        .tc-input {
+          width: 100%; padding: 14px 16px;
+          border: 2px solid var(--border, rgba(200,51,74,0.1)); border-radius: 16px;
+          background: var(--blush, #FBF0F2); font-size: 15px;
+          color: var(--ink, #1E0A10); outline: none; box-sizing: border-box;
+          transition: border-color 0.2s;
+        }
+        .tc-dark .tc-input { background: #1A0820; border-color: rgba(123,63,190,0.2); color: #F5E6EB; }
+        .tc-input:focus { border-color: #7B3FBE; }
+        .tc-input::-webkit-inner-spin-button { display: none; }
+
+        .tc-fight-info {
+          background: rgba(123,63,190,0.07);
+          border: 1.5px dashed rgba(123,63,190,0.3);
+          border-radius: 16px; padding: 16px;
+          font-size: 14px; color: var(--muted, #9A6070); line-height: 1.6;
+        }
+
+        .tc-save-btn {
+          padding: 15px; border: none; border-radius: 16px;
+          background: linear-gradient(135deg, #7B3FBE, #3D1A6B);
+          color: white; font-size: 16px; font-weight: 700;
+          cursor: pointer; letter-spacing: 0.2px;
+          box-shadow: 0 6px 20px rgba(61,26,107,0.4);
+          transition: transform 0.15s; -webkit-tap-highlight-color: transparent;
+        }
+        .tc-save-btn:active { transform: scale(0.97); }
+        .tc-save-btn:disabled { opacity: 0.45; cursor: default; }
+        .tc-cancel-btn {
+          padding: 14px; border-radius: 16px;
+          background: transparent; border: 2px solid var(--border, rgba(200,51,74,0.1));
+          font-size: 15px; font-weight: 600; color: var(--muted, #9A6070); cursor: pointer;
+        }
+        .tc-dark .tc-cancel-btn { border-color: rgba(123,63,190,0.2); }
+
+        /* Delete confirm */
+        .tc-confirm-overlay {
+          position: fixed; inset: 0; z-index: 500;
+          background: rgba(10,2,6,0.7); backdrop-filter: blur(8px);
+          display: flex; align-items: center; justify-content: center; padding: 24px;
+          animation: tcFade 0.15s ease;
+        }
+        @keyframes tcFade { from { opacity: 0; } to { opacity: 1; } }
+        .tc-confirm-box {
+          background: var(--surface, #fff); border-radius: 24px;
+          padding: 24px; width: 100%; max-width: 300px;
+          box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+          animation: tcConfirmIn 0.25s cubic-bezier(0.34,1.56,0.64,1) both;
+        }
+        @keyframes tcConfirmIn { from { opacity: 0; transform: scale(0.9) translateY(20px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+        .tc-dark .tc-confirm-box { background: #1A0820; }
+        .tc-confirm-title { font-size: 19px; font-weight: 700; color: var(--ink, #1E0A10); margin-bottom: 8px; }
+        .tc-dark .tc-confirm-title { color: #F5E6EB; }
+        .tc-confirm-text { font-size: 14px; color: var(--muted, #9A6070); margin-bottom: 20px; line-height: 1.5; }
+        .tc-confirm-btns { display: flex; gap: 10px; }
+        .tc-confirm-del {
+          flex: 1; padding: 12px; background: #C8334A; color: white;
+          border: none; border-radius: 14px; font-size: 15px; font-weight: 700; cursor: pointer;
+        }
+        .tc-confirm-cancel {
+          flex: 1; padding: 12px; background: var(--blush, #FBF0F2); color: var(--muted, #9A6070);
+          border: none; border-radius: 14px; font-size: 15px; cursor: pointer;
+        }
+        .tc-dark .tc-confirm-cancel { background: #3D1520; }
+
+        /* Loading */
+        .tc-loading { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 60px 20px; }
+        .tc-loading-ring {
+          width: 48px; height: 48px; border-radius: 50%;
+          border: 3px solid rgba(123,63,190,0.15); border-top-color: #7B3FBE;
+          animation: tcSpin 0.9s linear infinite;
+        }
+        @keyframes tcSpin { to { transform: rotate(360deg); } }
+        .tc-loading-text { font-size: 14px; color: var(--muted, #9A6070); }
       `}</style>
 
-      <div className={`caps-sheet${darkMode ? ' caps-sheet-dark' : ''}`}>
-          <div className="caps-header">
-            <div className="caps-title-row">
-              <CapsuleIcon size={22} color="var(--rose)" />
-              <span className="caps-title">Капсула времени</span>
+      {/* Hero */}
+      <div className="tc-hero">
+        <div className="tc-hero-orb" />
+        <div className="tc-hero-tag">
+          <svg viewBox="0 0 24 24" width="10" height="10" fill="rgba(255,255,255,0.7)">
+            <circle cx="12" cy="12" r="10" />
+          </svg>
+          Капсула времени
+        </div>
+        <div className="tc-hero-title">Письма<br />из прошлого</div>
+        <div className="tc-hero-sub">Напиши партнёру сообщение, которое откроется в особый момент</div>
+        {capsules.length > 0 && (
+          <div className="tc-hero-count">{capsules.length} {capsules.length === 1 ? 'капсула' : capsules.length < 5 ? 'капсулы' : 'капсул'}</div>
+        )}
+      </div>
+
+      {view === 'create' ? (
+        <div className="tc-form">
+          <div>
+            <div className="tc-form-section-label">Твоё сообщение</div>
+            <textarea
+              className="tc-textarea"
+              value={message}
+              onChange={e => setMessage(e.target.value)}
+              placeholder="Напиши то, что хочется сказать в особый момент..."
+              maxLength={1000}
+            />
+            <div className="tc-counter">{message.length}/1000</div>
+          </div>
+
+          <div>
+            <div className="tc-form-section-label">Когда отправить</div>
+            <div className="tc-trigger-grid">
+              {TRIGGERS.map(t => (
+                <button
+                  key={t.id}
+                  className={`tc-trigger-btn${triggerType === t.id ? ' active' : ''}`}
+                  onClick={() => setTriggerType(t.id)}
+                >
+                  <span className="tc-trigger-icon">{t.icon}</span>
+                  <span className="tc-trigger-label">{t.label}</span>
+                  <span className="tc-trigger-desc">{t.desc}</span>
+                </button>
+              ))}
             </div>
           </div>
 
-          {/* ── Список капсул ── */}
-          {view === 'list' && (
-            <>
-              <button className="caps-new-btn" onClick={() => setView('create')}>
-                Написать капсулу
-              </button>
-
-              {loading ? (
-                <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-muted)' }}>
-                  Загрузка...
-                </div>
-              ) : capsules.length === 0 ? (
-                <div className="caps-empty">
-                  <CapsuleIcon size={40} color="var(--blush-2)" />
-                  <p style={{ marginTop: 12 }}>
-                    Напиши письмо партнёру — оно откроется<br />в нужный момент.
-                  </p>
-                </div>
-              ) : (
-                <div className="caps-list">
-                  {capsules.map(cap => {
-                    const Icon = TRIGGER_ICONS[cap.trigger_type] ?? CapsuleIcon
-                    return (
-                      <div
-                        key={cap.id}
-                        className={`caps-item${cap.is_sent ? ' caps-item-sent' : ''}`}
-                      >
-                        <div className="caps-item-type">
-                          <Icon size={13} color="var(--rose)" />
-                          {TRIGGER_LABELS[cap.trigger_type]}
-                          {cap.is_sent && <span style={{ marginLeft: 4 }}>— Доставлено</span>}
-                        </div>
-                        <div className="caps-item-msg">{cap.message}</div>
-                        <div className="caps-item-status">{capsuleStatus(cap)}</div>
-                        {!cap.is_sent && (
-                          <button
-                            className="caps-item-del"
-                            onClick={() => setDeleteId(cap.id)}
-                            aria-label="Удалить"
-                          >
-                            <TrashIcon />
-                          </button>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </>
-          )}
-
-          {/* ── Форма создания ── */}
-          {view === 'create' && (
-            <div className="caps-form">
-              <div>
-                <div className="caps-form-label">Сообщение</div>
-                <textarea
-                  className="caps-textarea"
-                  value={message}
-                  onChange={e => setMessage(e.target.value)}
-                  placeholder="Напиши то, что хочешь сказать в особый момент..."
-                  maxLength={1000}
-                />
-                <div style={{
-                  textAlign: 'right', fontSize: 11,
-                  color: 'var(--text-muted)', marginTop: 4,
-                }}>
-                  {message.length}/1000
-                </div>
-              </div>
-
-              <div>
-                <div className="caps-form-label">Когда отправить</div>
-                <div className="caps-trigger-tabs">
-                  {(['date', 'days', 'fight']).map(type => {
-                    const Icon = TRIGGER_ICONS[type]
-                    return (
-                      <button
-                        key={type}
-                        className={`caps-tab${triggerType === type ? ' active' : ''}`}
-                        onClick={() => setTriggerType(type)}
-                      >
-                        <Icon size={16} color={triggerType === type ? 'var(--rose)' : 'var(--muted)'} />
-                        {TRIGGER_LABELS[type].split(' ')[0]}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-
-              {/* Поле ввода в зависимости от типа триггера */}
-              {triggerType === 'date' && (
-                <div>
-                  <div className="caps-form-label">Дата отправки</div>
-                  <input
-                    type="datetime-local"
-                    className="caps-date-input"
-                    value={triggerDate}
-                    onChange={e => setTriggerDate(e.target.value)}
-                    min={new Date().toISOString().slice(0, 16)}
-                  />
-                </div>
-              )}
-
-              {triggerType === 'days' && (
-                <div>
-                  <div className="caps-form-label">Через сколько дней</div>
-                  <input
-                    type="number"
-                    className="caps-days-input"
-                    value={triggerDays}
-                    onChange={e => setTriggerDays(e.target.value)}
-                    placeholder="Например: 30"
-                    min={1}
-                    max={3650}
-                  />
-                </div>
-              )}
-
-              {triggerType === 'fight' && (
-                <div className="caps-fight-hint">
-                  Капсула откроется автоматически, если в чате не будет сообщений
-                  8 часов подряд при обычной активности. Идеально для письма-примирения.
-                </div>
-              )}
-
-              <button
-                className="caps-save-btn"
-                onClick={saveCapsule}
-                disabled={
-                  saving ||
-                  !message.trim() ||
-                  (triggerType === 'date' && !triggerDate) ||
-                  (triggerType === 'days' && (!triggerDays || +triggerDays < 1))
-                }
-              >
-                {saving ? 'Сохраняю...' : 'Запечатать капсулу'}
-              </button>
-              <button className="caps-back-btn" onClick={() => setView('list')}>
-                Назад
-              </button>
+          {triggerType === 'date' && (
+            <div>
+              <div className="tc-form-section-label">Дата отправки</div>
+              <input type="datetime-local" className="tc-input"
+                value={triggerDate} onChange={e => setTriggerDate(e.target.value)}
+                min={new Date().toISOString().slice(0, 16)} />
             </div>
           )}
-        </div>
+          {triggerType === 'days' && (
+            <div>
+              <div className="tc-form-section-label">Через сколько дней</div>
+              <input type="number" className="tc-input" placeholder="Например: 30"
+                value={triggerDays} onChange={e => setTriggerDays(e.target.value)} min={1} max={3650} />
+            </div>
+          )}
+          {triggerType === 'fight' && (
+            <div className="tc-fight-info">
+              Капсула откроется автоматически когда в чате не будет сообщений 8 часов подряд. Идеально для письма-примирения.
+            </div>
+          )}
 
-      {/* Диалог подтверждения удаления */}
+          <button
+            className="tc-save-btn"
+            onClick={saveCapsule}
+            disabled={saving || !message.trim() ||
+              (triggerType === 'date' && !triggerDate) ||
+              (triggerType === 'days' && (!triggerDays || +triggerDays < 1))}
+          >
+            {saving ? 'Запечатываю...' : '✦ Запечатать капсулу'}
+          </button>
+          <button className="tc-cancel-btn" onClick={() => setView('list')}>Назад</button>
+        </div>
+      ) : (
+        <>
+          <button className="tc-new-btn" onClick={() => setView('create')}>
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round">
+              <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            Написать капсулу
+          </button>
+
+          {loading ? (
+            <div className="tc-loading">
+              <div className="tc-loading-ring" />
+              <div className="tc-loading-text">Загрузка...</div>
+            </div>
+          ) : capsules.length === 0 ? (
+            <div className="tc-empty">
+              <div className="tc-empty-icon">
+                <svg viewBox="0 0 24 24" width="38" height="38" fill="none" stroke="#7B3FBE" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" /><circle cx="12" cy="10" r="3" />
+                </svg>
+              </div>
+              <div className="tc-empty-title">Капсул пока нет</div>
+              <div className="tc-empty-text">Напиши письмо партнёру — оно откроется<br />в нужный момент.</div>
+            </div>
+          ) : (
+            <div className="tc-list">
+              {capsules.map((cap, i) => {
+                const st = capsuleStatus(cap)
+                const trigger = TRIGGERS.find(t => t.id === cap.trigger_type)
+                return (
+                  <div key={cap.id} className={`tc-card${cap.is_sent ? ' tc-card-sent' : ''}`} style={{ animationDelay: `${i * 0.05}s` }}>
+                    <div className="tc-card-top">
+                      <div className="tc-card-badge" style={{ background: st.bg, color: st.color }}>
+                        <svg viewBox="0 0 8 8" width="7" height="7" fill={st.color} stroke="none"><circle cx="4" cy="4" r="4" /></svg>
+                        {st.text}
+                      </div>
+                      {!cap.is_sent && (
+                        <button className="tc-card-del" onClick={() => setDeleteId(cap.id)} aria-label="Удалить">
+                          <TrashIcon />
+                        </button>
+                      )}
+                    </div>
+                    <div className="tc-card-msg">{cap.message}</div>
+                    <div className="tc-card-footer">
+                      <span style={{ color: '#7B3FBE', display: 'flex', alignItems: 'center' }}>{trigger?.icon}</span>
+                      <span>{trigger?.desc}</span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </>
+      )}
+
       {deleteId && (
-        <div className="caps-confirm-overlay" onClick={() => setDeleteId(null)}>
-          <div className="caps-confirm-box" onClick={e => e.stopPropagation()}>
-            <div className="caps-confirm-title">Удалить капсулу?</div>
-            <p className="caps-confirm-text">
-              Сообщение будет удалено и не отправится партнёру.
-            </p>
-            <div className="caps-confirm-btns">
-              <button className="caps-del-confirm" onClick={() => deleteCapsule(deleteId)}>
-                Удалить
-              </button>
-              <button className="caps-del-cancel" onClick={() => setDeleteId(null)}>
-                Отмена
-              </button>
+        <div className="tc-confirm-overlay" onClick={() => setDeleteId(null)}>
+          <div className="tc-confirm-box" onClick={e => e.stopPropagation()}>
+            <div className="tc-confirm-title">Удалить капсулу?</div>
+            <p className="tc-confirm-text">Сообщение будет удалено и не отправится партнёру.</p>
+            <div className="tc-confirm-btns">
+              <button className="tc-confirm-del" onClick={() => deleteCapsule(deleteId)}>Удалить</button>
+              <button className="tc-confirm-cancel" onClick={() => setDeleteId(null)}>Отмена</button>
             </div>
           </div>
         </div>

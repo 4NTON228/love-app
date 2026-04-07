@@ -981,13 +981,12 @@ export default function Chat({ session, profile, darkMode }) {
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, p => {
         setMessages(prev => {
           if (prev.find(m => m.id === p.new.id)) return prev
-          const next = [...prev, p.new]
-          // если новое сообщение от партнёра — сразу помечаем прочитанным
-          if (p.new.user_id !== uid) {
-            supabase.from('messages').update({ read_at: new Date().toISOString() }).eq('id', p.new.id)
-          }
-          return next
+          return [...prev, p.new]
         })
+        // пометить прочитанным — СНАРУЖИ state updater
+        if (p.new.user_id !== uid) {
+          supabase.from('messages').update({ read_at: new Date().toISOString() }).eq('id', p.new.id)
+        }
         setTimeout(scrollToBottom, 60)
       })
       .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'messages' }, p => {
@@ -1023,8 +1022,11 @@ export default function Chat({ session, profile, darkMode }) {
       }, p => setPartnerLastSeen(p.new.last_seen))
       .subscribe()
 
-    // Broadcast канал для статуса записи
-    const bcChannel = supabase.channel(`recording-status`)
+    // Broadcast канал для typing + записи (без задержки DB)
+    const bcChannel = supabase.channel(`user-activity`)
+      .on('broadcast', { event: 'typing' }, ({ payload }) => {
+        if (payload.userId === partner.id) setPartnerTyping(!!payload.value)
+      })
       .on('broadcast', { event: 'recording' }, ({ payload }) => {
         if (payload.userId === partner.id) setPartnerRecording(payload.kind || null)
       })
@@ -1093,8 +1095,10 @@ export default function Chat({ session, profile, darkMode }) {
         if (replyTo) {
           msgData.reply_to_id = replyTo.id
         }
-        await supabase.from('messages').insert(msgData)
+        const { data: sent } = await supabase.from('messages').insert(msgData).select().single()
+        if (sent) setMessages(prev => prev.find(m => m.id === sent.id) ? prev : [...prev, sent])
         setReplyTo(null)
+        scrollToBottom()
         if (partner?.id) {
           const body = photoUrl && !newText.trim() ? 'Фото' : newText.trim()
           sendPushNotification(profile?.name || 'Сообщение', body, partner.id, uid).catch(() => {})
@@ -1175,7 +1179,8 @@ export default function Chat({ session, profile, darkMode }) {
         setSending(true)
         try {
           const url = await upload(file, 'circles')
-          await supabase.from('messages').insert({ user_id: uid, video_url: url, is_video_circle: true })
+          const { data: sent } = await supabase.from('messages').insert({ user_id: uid, video_url: url, is_video_circle: true }).select().single()
+          if (sent) setMessages(prev => prev.find(m => m.id === sent.id) ? prev : [...prev, sent])
           scrollToBottom()
           if (partner?.id) sendPushNotification(profile?.name || 'Сообщение', 'Видео-кружочек', partner.id, uid).catch(() => {})
         } catch (e) { console.error(e) }
@@ -1242,7 +1247,8 @@ export default function Chat({ session, profile, darkMode }) {
         setSending(true)
         try {
           const url = await upload(file, 'voices')
-          await supabase.from('messages').insert({ user_id: uid, audio_url: url, is_voice: true, duration: sec })
+          const { data: sent } = await supabase.from('messages').insert({ user_id: uid, audio_url: url, is_voice: true, duration: sec }).select().single()
+          if (sent) setMessages(prev => prev.find(m => m.id === sent.id) ? prev : [...prev, sent])
           scrollToBottom()
           if (partner?.id) sendPushNotification(profile?.name || 'Сообщение', 'Голосовое сообщение', partner.id, uid).catch(() => {})
         } catch (e) { console.error(e) }
@@ -1330,11 +1336,10 @@ export default function Chat({ session, profile, darkMode }) {
     navigator.clipboard?.writeText(text)
   }
 
-  async function sendTyping(isTyping) {
-    await supabase.from('typing_status').upsert({
-      user_id: uid,
-      is_typing: isTyping,
-      updated_at: new Date().toISOString()
+  function sendTyping(isTyping) {
+    broadcastRef.current?.send({
+      type: 'broadcast', event: 'typing',
+      payload: { userId: uid, value: isTyping }
     })
   }
 

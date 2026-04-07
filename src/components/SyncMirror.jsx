@@ -216,19 +216,10 @@ export default function SyncMirror({ session, profile, darkMode, onClose }) {
   return (
     <div className="mirror-container" style={{ padding: '20px', paddingBottom: 'calc(20px + env(safe-area-inset-bottom, 0px))' }}>
       <style>{`
-        .mirror-overlay {
-          position: fixed; inset: 0; z-index: 300;
-          background: rgba(28,10,14,0.75);
-          backdrop-filter: blur(10px);
-          display: flex; align-items: flex-end; justify-content: center;
-          animation: fadeIn 0.2s ease;
-        }
         .mirror-sheet {
-          width: 100%; max-height: 92vh; overflow-y: auto;
+          width: 100%;
           background: var(--surface);
-          border-radius: 24px 24px 0 0;
-          padding: 20px 20px calc(var(--safe-bottom, 0px) + 24px);
-          animation: slideUp 0.35s cubic-bezier(0.34,1.56,0.64,1) both;
+          padding: 20px 20px 24px;
         }
         .mirror-sheet-dark { background: #1E0A10 !important; }
         .mirror-sheet-dark .mirror-handle { background: #3D1520; }
@@ -386,22 +377,12 @@ export default function SyncMirror({ session, profile, darkMode, onClose }) {
         .mirror-sticker-text strong { color: var(--rose); }
       `}</style>
 
-      <div className="mirror-overlay" onClick={onClose}>
-        <div className={`mirror-sheet${darkMode ? ' mirror-sheet-dark' : ''}`} onClick={e => e.stopPropagation()}>
-          <div className="mirror-handle" />
-
+      <div className={`mirror-sheet${darkMode ? ' mirror-sheet-dark' : ''}`}>
           <div className="mirror-header">
             <div className="mirror-title-row">
               <MirrorIcon size={22} color="var(--rose)" />
               <span className="mirror-title">Зеркало</span>
             </div>
-            <button className="mirror-close" onClick={onClose}>
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none"
-                stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            </button>
           </div>
 
           {loading ? (
@@ -540,7 +521,6 @@ export default function SyncMirror({ session, profile, darkMode, onClose }) {
             </>
           )}
         </div>
-      </div>
     </div>
   )
 }

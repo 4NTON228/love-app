@@ -13,13 +13,61 @@
 //      — секрет AI_API_KEY задаётся в Supabase Dashboard → Secrets
 // ══════════════════════════════════════════════════════════════
 
-import { createClient } from 'npm:@supabase/supabase-js@2'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import webpush       from 'https://esm.sh/web-push@3.6.7'
 
 // ── Заголовки CORS ────────────────────────────────────────────
 const cors = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Content-Type': 'application/json',
+}
+
+// ── VAPID-ключи (те же что в send-notification) ───────────────
+const VAPID_PUBLIC  = 'BJZU7YGUVM4c0w-tCFGqOdUXqzOTQoYXMOKrn_EHDBUV_eKx9tQtzXf7rgfmLkAhkfh45bEmtGuis8b8m5-BHVs'
+const VAPID_PRIVATE = 'Drbxv8iXT2ryLjkGGhhyy3-_2NZTJ31AARv1F7zaCVE'
+const VAPID_SUBJECT = 'mailto:admin@example.com'
+
+webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC, VAPID_PRIVATE)
+
+// ── Отправка web-push уведомления конкретному пользователю ────
+// Берём подписки из таблицы push_subscriptions (как в send-notification).
+// Если подписок нет — тихо игнорируем, не бросаем ошибку.
+async function pushToUser(
+  supabase: ReturnType<typeof createClient>,
+  userId: string,
+  title: string,
+  body: string,
+) {
+  const { data: subs } = await supabase
+    .from('push_subscriptions')
+    .select('subscription')
+    .eq('user_id', userId)
+
+  if (!subs || subs.length === 0) return 0
+
+  const payload = JSON.stringify({ title, body })
+  const results = await Promise.allSettled(
+    subs.map((row: { subscription: PushSubscriptionJSON }) =>
+      webpush.sendNotification(row.subscription, payload),
+    ),
+  )
+
+  // Удаляем протухшие подписки (410 Gone)
+  const expired = results
+    .map((r, i) => ({ r, sub: subs[i].subscription }))
+    .filter(({ r }) => r.status === 'rejected' && (r as PromiseRejectedResult).reason?.statusCode === 410)
+
+  if (expired.length > 0) {
+    const endpoints = expired.map(({ sub }) => (sub as { endpoint: string }).endpoint)
+    await supabase
+      .from('push_subscriptions')
+      .delete()
+      .in('endpoint', endpoints)
+      .eq('user_id', userId)
+  }
+
+  return results.filter(r => r.status === 'fulfilled').length
 }
 
 // ── Банк вопросов для Зеркала (30 вопросов) ──────────────────
@@ -161,7 +209,12 @@ async function generateDailyMirrorQuestions(supabase: ReturnType<typeof createCl
       question,
     })
 
-    if (!insertErr) created++
+    if (!insertErr) {
+      created++
+      // Уведомляем обоих участников пары
+      await pushToUser(supabase, p.id,        'Зеркало', `Вопрос дня: ${question.slice(0, 60)}...`)
+      await pushToUser(supabase, p.partner_id, 'Зеркало', `Вопрос дня: ${question.slice(0, 60)}...`)
+    }
   }
 
   return { question, created, date: today }
@@ -361,11 +414,13 @@ async function checkTimeCapsules(supabase: ReturnType<typeof createClient>) {
   return { fired }
 }
 
-// ── Отправить капсулу в чат ───────────────────────────────────
+// ── Отправить капсулу в чат + push-уведомление партнёру ──────
 async function sendCapsule(
   supabase: ReturnType<typeof createClient>,
   cap: Record<string, unknown>,
 ) {
+  const preview = (cap.message as string).slice(0, 60).trim()
+
   // Создаём сообщение в чате с пометкой «Капсула времени»
   await supabase.from('messages').insert({
     user_id: cap.user_id,
@@ -378,6 +433,14 @@ async function sendCapsule(
     .from('time_capsules')
     .update({ is_sent: true, sent_at: new Date().toISOString() })
     .eq('id', cap.id)
+
+  // Уведомляем партнёра о прибытии капсулы
+  await pushToUser(
+    supabase,
+    cap.partner_id as string,
+    'Капсула времени',
+    `Тебе пришло письмо из прошлого: «${preview}...»`,
+  )
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -426,6 +489,14 @@ async function findUnfinishedDialogs(supabase: ReturnType<typeof createClient>) 
         topic,
         messageId: q.id,
       })
+
+      // Тихий push-напоминалка партнёру о незавершённом диалоге
+      await pushToUser(
+        supabase,
+        profile.partner_id,
+        'Незавершённый разговор',
+        `Тебя ждёт ответ: «${topic}»`,
+      )
 
       // Сохраняем инсайт для InsightsWidget (через таблицу ai_advisor_insights)
       // На упрощённом уровне обновляем флаг в ai_advisor_settings

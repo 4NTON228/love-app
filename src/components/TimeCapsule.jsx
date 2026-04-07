@@ -16,44 +16,43 @@ function TrashIcon({ size = 16 }) {
   )
 }
 
+// Proper function components for trigger icons — fixes the JSX-in-array bug
+function CalIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor"
+      strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="17" rx="2" />
+      <line x1="8" y1="2" x2="8" y2="6" />
+      <line x1="16" y1="2" x2="16" y2="6" />
+      <line x1="3" y1="10" x2="21" y2="10" />
+    </svg>
+  )
+}
+
+function DaysIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor"
+      strokeWidth="1.8" strokeLinecap="round">
+      <circle cx="12" cy="12" r="9" />
+      <line x1="12" y1="12" x2="12" y2="7.5" strokeWidth="2" />
+      <line x1="12" y1="12" x2="15.5" y2="14" strokeWidth="1.5" />
+    </svg>
+  )
+}
+
+function FightIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor"
+      strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0016.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 002 8.5c0 2.3 1.5 4.05 3 5.5l7 7z" />
+    </svg>
+  )
+}
+
 const TRIGGERS = [
-  {
-    id: 'date',
-    label: 'Дата',
-    desc: 'Конкретная дата',
-    icon: (
-      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor"
-        strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="3" y="4" width="18" height="17" rx="2" />
-        <line x1="8" y1="2" x2="8" y2="6" /><line x1="16" y1="2" x2="16" y2="6" />
-        <line x1="3" y1="10" x2="21" y2="10" />
-      </svg>
-    ),
-  },
-  {
-    id: 'days',
-    label: 'Дни',
-    desc: 'Через N дней',
-    icon: (
-      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor"
-        strokeWidth="1.8" strokeLinecap="round">
-        <circle cx="12" cy="12" r="9" />
-        <line x1="12" y1="12" x2="12" y2="7.5" strokeWidth="2" />
-        <line x1="12" y1="12" x2="15.5" y2="14" strokeWidth="1.5" />
-      </svg>
-    ),
-  },
-  {
-    id: 'fight',
-    label: 'Ссора',
-    desc: 'Если замолчим',
-    icon: (
-      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor"
-        strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0016.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 002 8.5c0 2.3 1.5 4.05 3 5.5l7 7z" />
-      </svg>
-    ),
-  },
+  { id: 'date',  label: 'Дата',  desc: 'Конкретная дата', Icon: CalIcon },
+  { id: 'days',  label: 'Дни',   desc: 'Через N дней',    Icon: DaysIcon },
+  { id: 'fight', label: 'Ссора', desc: 'Если замолчим',   Icon: FightIcon },
 ]
 
 const STATUS_META = {
@@ -70,6 +69,7 @@ export default function TimeCapsule({ session, profile, darkMode }) {
   const [loading,      setLoading]      = useState(true)
   const [view,         setView]         = useState('list')
   const [saving,       setSaving]       = useState(false)
+  const [saveError,    setSaveError]    = useState(null)
   const [message,      setMessage]      = useState('')
   const [triggerType,  setTriggerType]  = useState('date')
   const [triggerDate,  setTriggerDate]  = useState('')
@@ -92,13 +92,18 @@ export default function TimeCapsule({ session, profile, darkMode }) {
     if (triggerType === 'date' && !triggerDate) return
     if (triggerType === 'days' && (!triggerDays || +triggerDays < 1)) return
     setSaving(true)
+    setSaveError(null)
     const { error } = await supabase.from('time_capsules').insert({
       user_id: userId, partner_id: partnerId, message: message.trim(),
       trigger_type: triggerType,
       trigger_date: triggerType === 'date' ? new Date(triggerDate).toISOString() : null,
       trigger_days: triggerType === 'days' ? +triggerDays : null,
     })
-    if (!error) { setMessage(''); setTriggerDate(''); setTriggerDays(''); setView('list'); await loadCapsules() }
+    if (!error) {
+      setMessage(''); setTriggerDate(''); setTriggerDays(''); setView('list'); await loadCapsules()
+    } else {
+      setSaveError('Не удалось сохранить капсулу. Попробуйте ещё раз.')
+    }
     setSaving(false)
   }
 
@@ -128,17 +133,56 @@ export default function TimeCapsule({ session, profile, darkMode }) {
         .tc-page { background: var(--surface, #fff); min-height: 100%; }
         .tc-dark  { background: #0A0206; }
 
+        @keyframes tcFloat1 {
+          0%, 100% { transform: translateY(0px) scale(1); }
+          50% { transform: translateY(-16px) scale(1.03); }
+        }
+        @keyframes tcFloat2 {
+          0%, 100% { transform: translateY(0px) scale(1); }
+          50% { transform: translateY(12px) scale(0.97); }
+        }
+        @keyframes tcIn {
+          from { opacity: 0; transform: translateY(14px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes tcSlideRight {
+          from { opacity: 0; transform: translateX(32px); }
+          to   { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes tcFade { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes tcConfirmIn {
+          from { opacity: 0; transform: scale(0.9) translateY(20px); }
+          to   { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        @keyframes tcSpin { to { transform: rotate(360deg); } }
+        @keyframes tcCountIn {
+          from { opacity: 0; transform: scale(0.7); }
+          to   { opacity: 1; transform: scale(1); }
+        }
+        @keyframes tcShine {
+          from { background-position: -200% center; }
+          to   { background-position: 200% center; }
+        }
+
         /* Hero */
         .tc-hero {
           position: relative; overflow: hidden;
           padding: 28px 20px 32px;
           background: linear-gradient(160deg, #3D1A6B 0%, #1E0A38 50%, #080212 100%);
         }
-        .tc-hero-orb {
+        .tc-hero-orb1 {
           position: absolute; top: -40px; right: -40px;
           width: 200px; height: 200px; border-radius: 50%;
           background: radial-gradient(circle, rgba(123,63,190,0.45) 0%, transparent 70%);
           pointer-events: none;
+          animation: tcFloat1 7s ease-in-out infinite;
+        }
+        .tc-hero-orb2 {
+          position: absolute; bottom: -20px; left: -50px;
+          width: 150px; height: 150px; border-radius: 50%;
+          background: radial-gradient(circle, rgba(61,26,107,0.5) 0%, transparent 70%);
+          pointer-events: none;
+          animation: tcFloat2 9s ease-in-out infinite;
         }
         .tc-hero-tag {
           display: inline-flex; align-items: center; gap: 6px;
@@ -163,7 +207,25 @@ export default function TimeCapsule({ session, profile, darkMode }) {
           background: rgba(255,255,255,0.12); border-radius: 10px;
           padding: 6px 14px; font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.85);
           position: relative; z-index: 1;
+          animation: tcCountIn 0.5s 0.2s cubic-bezier(0.34,1.56,0.64,1) both;
         }
+
+        /* No partner notice */
+        .tc-no-partner {
+          margin: 16px; padding: 18px 20px;
+          border-radius: 18px;
+          background: rgba(123,63,190,0.08);
+          border: 1.5px dashed rgba(123,63,190,0.3);
+          display: flex; align-items: center; gap: 14px;
+        }
+        .tc-no-partner-icon {
+          width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%;
+          background: rgba(123,63,190,0.15);
+          display: flex; align-items: center; justify-content: center;
+        }
+        .tc-no-partner-text { font-size: 14px; color: var(--muted, #9A6070); line-height: 1.5; }
+        .tc-no-partner-text strong { color: var(--ink, #1E0A10); display: block; font-size: 15px; margin-bottom: 2px; }
+        .tc-dark .tc-no-partner-text strong { color: #F5E6EB; }
 
         /* New btn */
         .tc-new-btn {
@@ -174,9 +236,17 @@ export default function TimeCapsule({ session, profile, darkMode }) {
           font-size: 15px; font-weight: 700; cursor: pointer;
           box-shadow: 0 6px 20px rgba(61,26,107,0.45);
           -webkit-tap-highlight-color: transparent;
-          transition: transform 0.15s;
+          transition: transform 0.15s, box-shadow 0.15s;
+          position: relative; overflow: hidden;
         }
-        .tc-new-btn:active { transform: scale(0.97); }
+        .tc-new-btn:active { transform: scale(0.97); box-shadow: 0 3px 10px rgba(61,26,107,0.3); }
+        .tc-new-btn:hover::after {
+          content: '';
+          position: absolute; inset: 0;
+          background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.18) 50%, transparent 100%);
+          background-size: 200% auto;
+          animation: tcShine 0.6s linear;
+        }
 
         /* List */
         .tc-list { padding: 4px 16px 20px; display: flex; flex-direction: column; gap: 12px; }
@@ -185,10 +255,10 @@ export default function TimeCapsule({ session, profile, darkMode }) {
           border-radius: 20px; overflow: hidden;
           border: 1px solid var(--border, rgba(200,51,74,0.1));
           background: var(--surface, #fff);
-          animation: tcIn 0.3s ease both;
+          opacity: 0;
+          animation: tcIn 0.38s ease both;
           position: relative;
         }
-        @keyframes tcIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .tc-dark .tc-card { background: #140820; border-color: rgba(123,63,190,0.2); }
         .tc-card-sent { opacity: 0.55; }
 
@@ -205,6 +275,7 @@ export default function TimeCapsule({ session, profile, darkMode }) {
           background: none; border: none; cursor: pointer;
           color: var(--muted, #9A6070); padding: 4px;
           -webkit-tap-highlight-color: transparent;
+          transition: color 0.15s;
         }
         .tc-card-del:active { color: #C8334A; }
 
@@ -236,8 +307,11 @@ export default function TimeCapsule({ session, profile, darkMode }) {
         .tc-dark .tc-empty-title { color: #F5E6EB; }
         .tc-empty-text { font-size: 14px; color: var(--muted, #9A6070); line-height: 1.6; }
 
-        /* Create form */
-        .tc-form { padding: 20px 16px; display: flex; flex-direction: column; gap: 20px; }
+        /* Create form — slides in from right */
+        .tc-form {
+          padding: 20px 16px; display: flex; flex-direction: column; gap: 20px;
+          animation: tcSlideRight 0.35s cubic-bezier(0.25,0.46,0.45,0.94) both;
+        }
 
         .tc-form-section-label {
           font-size: 11px; font-weight: 800; letter-spacing: 0.8px;
@@ -297,21 +371,43 @@ export default function TimeCapsule({ session, profile, darkMode }) {
           font-size: 14px; color: var(--muted, #9A6070); line-height: 1.6;
         }
 
+        /* Save error */
+        .tc-save-error {
+          background: rgba(200,51,74,0.08);
+          border: 1px solid rgba(200,51,74,0.25);
+          border-radius: 12px; padding: 12px 14px;
+          font-size: 14px; color: #C8334A; line-height: 1.4;
+          display: flex; align-items: center; gap: 8px;
+        }
+
+        /* Save button with shimmer hover */
         .tc-save-btn {
           padding: 15px; border: none; border-radius: 16px;
           background: linear-gradient(135deg, #7B3FBE, #3D1A6B);
           color: white; font-size: 16px; font-weight: 700;
           cursor: pointer; letter-spacing: 0.2px;
           box-shadow: 0 6px 20px rgba(61,26,107,0.4);
-          transition: transform 0.15s; -webkit-tap-highlight-color: transparent;
+          transition: transform 0.15s, box-shadow 0.15s;
+          -webkit-tap-highlight-color: transparent;
+          position: relative; overflow: hidden;
         }
-        .tc-save-btn:active { transform: scale(0.97); }
+        .tc-save-btn::after {
+          content: '';
+          position: absolute; inset: 0;
+          background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.22) 50%, transparent 100%);
+          background-size: 200% auto;
+          opacity: 0; transition: opacity 0.2s;
+        }
+        .tc-save-btn:hover::after { opacity: 1; animation: tcShine 0.65s linear; }
+        .tc-save-btn:active { transform: scale(0.97); box-shadow: 0 3px 10px rgba(61,26,107,0.3); }
         .tc-save-btn:disabled { opacity: 0.45; cursor: default; }
         .tc-cancel-btn {
           padding: 14px; border-radius: 16px;
           background: transparent; border: 2px solid var(--border, rgba(200,51,74,0.1));
           font-size: 15px; font-weight: 600; color: var(--muted, #9A6070); cursor: pointer;
+          transition: background 0.15s;
         }
+        .tc-cancel-btn:active { background: rgba(123,63,190,0.05); }
         .tc-dark .tc-cancel-btn { border-color: rgba(123,63,190,0.2); }
 
         /* Delete confirm */
@@ -321,14 +417,12 @@ export default function TimeCapsule({ session, profile, darkMode }) {
           display: flex; align-items: center; justify-content: center; padding: 24px;
           animation: tcFade 0.15s ease;
         }
-        @keyframes tcFade { from { opacity: 0; } to { opacity: 1; } }
         .tc-confirm-box {
           background: var(--surface, #fff); border-radius: 24px;
           padding: 24px; width: 100%; max-width: 300px;
           box-shadow: 0 24px 80px rgba(0,0,0,0.5);
           animation: tcConfirmIn 0.25s cubic-bezier(0.34,1.56,0.64,1) both;
         }
-        @keyframes tcConfirmIn { from { opacity: 0; transform: scale(0.9) translateY(20px); } to { opacity: 1; transform: scale(1) translateY(0); } }
         .tc-dark .tc-confirm-box { background: #1A0820; }
         .tc-confirm-title { font-size: 19px; font-weight: 700; color: var(--ink, #1E0A10); margin-bottom: 8px; }
         .tc-dark .tc-confirm-title { color: #F5E6EB; }
@@ -351,13 +445,13 @@ export default function TimeCapsule({ session, profile, darkMode }) {
           border: 3px solid rgba(123,63,190,0.15); border-top-color: #7B3FBE;
           animation: tcSpin 0.9s linear infinite;
         }
-        @keyframes tcSpin { to { transform: rotate(360deg); } }
         .tc-loading-text { font-size: 14px; color: var(--muted, #9A6070); }
       `}</style>
 
       {/* Hero */}
       <div className="tc-hero">
-        <div className="tc-hero-orb" />
+        <div className="tc-hero-orb1" />
+        <div className="tc-hero-orb2" />
         <div className="tc-hero-tag">
           <svg viewBox="0 0 24 24" width="10" height="10" fill="rgba(255,255,255,0.7)">
             <circle cx="12" cy="12" r="10" />
@@ -373,6 +467,21 @@ export default function TimeCapsule({ session, profile, darkMode }) {
 
       {view === 'create' ? (
         <div className="tc-form">
+          {/* No partner guard */}
+          {!partnerId && (
+            <div className="tc-no-partner">
+              <div className="tc-no-partner-icon">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#7B3FBE" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" /><circle cx="12" cy="7" r="4" />
+                </svg>
+              </div>
+              <div className="tc-no-partner-text">
+                <strong>Партнёр не подключён</strong>
+                Добавьте партнёра в настройках профиля, чтобы создать капсулу.
+              </div>
+            </div>
+          )}
+
           <div>
             <div className="tc-form-section-label">Твоё сообщение</div>
             <textarea
@@ -394,7 +503,7 @@ export default function TimeCapsule({ session, profile, darkMode }) {
                   className={`tc-trigger-btn${triggerType === t.id ? ' active' : ''}`}
                   onClick={() => setTriggerType(t.id)}
                 >
-                  <span className="tc-trigger-icon">{t.icon}</span>
+                  <span className="tc-trigger-icon"><t.Icon /></span>
                   <span className="tc-trigger-label">{t.label}</span>
                   <span className="tc-trigger-desc">{t.desc}</span>
                 </button>
@@ -423,16 +532,25 @@ export default function TimeCapsule({ session, profile, darkMode }) {
             </div>
           )}
 
+          {saveError && (
+            <div className="tc-save-error">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#C8334A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              {saveError}
+            </div>
+          )}
+
           <button
             className="tc-save-btn"
             onClick={saveCapsule}
-            disabled={saving || !message.trim() ||
+            disabled={saving || !message.trim() || !partnerId ||
               (triggerType === 'date' && !triggerDate) ||
               (triggerType === 'days' && (!triggerDays || +triggerDays < 1))}
           >
-            {saving ? 'Запечатываю...' : '✦ Запечатать капсулу'}
+            {saving ? 'Запечатываю...' : 'Запечатать капсулу'}
           </button>
-          <button className="tc-cancel-btn" onClick={() => setView('list')}>Назад</button>
+          <button className="tc-cancel-btn" onClick={() => { setView('list'); setSaveError(null) }}>Назад</button>
         </div>
       ) : (
         <>
@@ -464,7 +582,7 @@ export default function TimeCapsule({ session, profile, darkMode }) {
                 const st = capsuleStatus(cap)
                 const trigger = TRIGGERS.find(t => t.id === cap.trigger_type)
                 return (
-                  <div key={cap.id} className={`tc-card${cap.is_sent ? ' tc-card-sent' : ''}`} style={{ animationDelay: `${i * 0.05}s` }}>
+                  <div key={cap.id} className={`tc-card${cap.is_sent ? ' tc-card-sent' : ''}`} style={{ animationDelay: `${i * 0.055}s` }}>
                     <div className="tc-card-top">
                       <div className="tc-card-badge" style={{ background: st.bg, color: st.color }}>
                         <svg viewBox="0 0 8 8" width="7" height="7" fill={st.color} stroke="none"><circle cx="4" cy="4" r="4" /></svg>
@@ -478,7 +596,11 @@ export default function TimeCapsule({ session, profile, darkMode }) {
                     </div>
                     <div className="tc-card-msg">{cap.message}</div>
                     <div className="tc-card-footer">
-                      <span style={{ color: '#7B3FBE', display: 'flex', alignItems: 'center' }}>{trigger?.icon}</span>
+                      {trigger && (
+                        <span style={{ color: '#7B3FBE', display: 'flex', alignItems: 'center' }}>
+                          <trigger.Icon />
+                        </span>
+                      )}
                       <span>{trigger?.desc}</span>
                     </div>
                   </div>

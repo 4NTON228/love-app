@@ -30,15 +30,72 @@ function calcWarmth(messages) {
 }
 
 function warmthLevel(idx) {
-  if (idx < 0.35) return { label: 'Внимание',   emoji: '❄️', color: '#E8556A', colorDark: '#FF6B80', track: '#E8556A' }
-  if (idx < 0.65) return { label: 'Нейтрально', emoji: '🌤', color: '#C8A84B', colorDark: '#FFD166', track: '#C8A84B' }
-  return               { label: 'Тепло',       emoji: '🔥', color: '#4CAF50', colorDark: '#66BB6A', track: '#4CAF50' }
+  if (idx < 0.35) return { label: 'Внимание',   color: '#E8556A', colorDark: '#FF6B80', track: '#E8556A' }
+  if (idx < 0.65) return { label: 'Нейтрально', color: '#C8A84B', colorDark: '#FFD166', track: '#C8A84B' }
+  return               { label: 'Тепло',        color: '#4CAF50', colorDark: '#66BB6A', track: '#4CAF50' }
 }
 
 function fmtTime(s) {
   if (s < 60) return `${s}с`
   if (s < 3600) return `${Math.round(s / 60)}мин`
   return `${Math.round(s / 3600)}ч`
+}
+
+// SVG icon components — no emoji
+function SnowflakeIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#FF6B80" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="2" x2="12" y2="22" />
+      <line x1="2" y1="12" x2="22" y2="12" />
+      <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
+      <line x1="19.07" y1="4.93" x2="4.93" y2="19.07" />
+      <polyline points="12 6 9 9 12 6 15 9" />
+      <polyline points="18 12 15 9 18 12 15 15" />
+      <polyline points="12 18 9 15 12 18 15 15" />
+      <polyline points="6 12 9 15 6 12 9 9" />
+    </svg>
+  )
+}
+
+function CloudSunIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#FFD166" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="9" cy="13" r="4" />
+      <path d="M13 13a4 4 0 10-4-4" />
+      <path d="M17.5 13H18a3 3 0 000-6 3 3 0 00-5.5-1.5" />
+      <line x1="19" y1="4" x2="19.5" y2="3.5" />
+      <line x1="21" y1="7" x2="22" y2="7" />
+      <line x1="19" y1="10" x2="19.5" y2="10.5" />
+    </svg>
+  )
+}
+
+function FlameIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#66BB6A" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M8.5 14.5A4.5 4.5 0 0012 19a4.5 4.5 0 004.5-4.5c0-2-1-3.5-2.5-5C13 11 12 9 12 7c-1 2-3.5 4-3.5 7.5z" />
+      <path d="M12 7c0-1.5-.5-3-1.5-4C9 5 8 7 8 9.5A4.5 4.5 0 0012 14" />
+    </svg>
+  )
+}
+
+function WarningTriangleIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#FF6B80" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+      <line x1="12" y1="9" x2="12" y2="13" />
+      <line x1="12" y1="17" x2="12.01" y2="17" />
+    </svg>
+  )
+}
+
+function CheckCircleIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#66BB6A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <polyline points="9 12 11 14 15 10" />
+    </svg>
+  )
 }
 
 // Big SVG gauge — center at bottom, arc opens upward
@@ -60,7 +117,8 @@ function BigGauge({ index }) {
   const [nx, ny] = pt(index)
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} aria-hidden>
+    <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} aria-hidden
+      style={{ opacity: 0, animation: 'wbGaugeIn 0.6s 0.3s ease both' }}>
       {/* Track */}
       <path d={seg(0, 1)} fill="none" stroke="rgba(200,51,74,0.08)" strokeWidth="16" strokeLinecap="round" />
       {/* Zone colors */}
@@ -145,8 +203,14 @@ export default function WarmthBarometer({ session, profile, darkMode }) {
   }
 
   const hints = buildHints()
-
   const pct = Math.round(warmth.index * 100)
+
+  function LevelIcon() {
+    const idx = warmth.index
+    if (idx < 0.35) return <SnowflakeIcon />
+    if (idx < 0.65) return <CloudSunIcon />
+    return <FlameIcon />
+  }
 
   return (
     <div className={`wb-page${darkMode ? ' wb-dark' : ''}`}>
@@ -154,16 +218,47 @@ export default function WarmthBarometer({ session, profile, darkMode }) {
         .wb-page { background: var(--surface, #fff); min-height: 100%; }
         .wb-dark { background: #0A0206; }
 
+        @keyframes wbFloat1 {
+          0%, 100% { transform: translateY(0px) scale(1); }
+          50% { transform: translateY(-18px) scale(1.04); }
+        }
+        @keyframes wbFloat2 {
+          0%, 100% { transform: translateY(0px) scale(1); }
+          50% { transform: translateY(14px) scale(0.97); }
+        }
+        @keyframes wbGaugeIn {
+          from { opacity: 0; transform: scale(0.92); }
+          to { opacity: 1; transform: scale(1); }
+        }
+        @keyframes wbSlideUp {
+          from { opacity: 0; transform: translateY(16px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes wbSpin { to { transform: rotate(360deg); } }
+        @keyframes wbShimmer {
+          0%   { background-position: -200% 0; }
+          100% { background-position: 200% 0; }
+        }
+
         /* Hero */
         .wb-hero {
           position: relative; overflow: hidden;
           padding: 28px 20px 0;
           background: linear-gradient(160deg, #4A2200 0%, #2A1200 50%, #0A0302 100%);
         }
-        .wb-hero-orb {
+        .wb-hero-orb1 {
           position: absolute; top: -40px; right: -40px;
           width: 200px; height: 200px; border-radius: 50%;
           background: radial-gradient(circle, rgba(232,117,58,0.4) 0%, transparent 70%);
+          animation: wbFloat1 6s ease-in-out infinite;
+          pointer-events: none;
+        }
+        .wb-hero-orb2 {
+          position: absolute; bottom: 10px; left: -60px;
+          width: 160px; height: 160px; border-radius: 50%;
+          background: radial-gradient(circle, rgba(200,51,74,0.25) 0%, transparent 70%);
+          animation: wbFloat2 8s ease-in-out infinite;
+          pointer-events: none;
         }
         .wb-hero-tag {
           display: inline-flex; align-items: center; gap: 6px;
@@ -180,6 +275,7 @@ export default function WarmthBarometer({ session, profile, darkMode }) {
           position: relative; z-index: 1;
         }
         .wb-hero-level {
+          display: flex; align-items: center; gap: 10px;
           font-family: var(--font-head, Georgia, serif);
           font-size: 36px; font-weight: 800;
           line-height: 1.1; margin-bottom: 4px;
@@ -217,6 +313,8 @@ export default function WarmthBarometer({ session, profile, darkMode }) {
           border-radius: 18px; padding: 16px;
           background: var(--blush, #FBF0F2);
           border: 1px solid var(--border, rgba(200,51,74,0.08));
+          opacity: 0;
+          animation: wbSlideUp 0.45s ease both;
         }
         .wb-dark .wb-stat { background: #180810; border-color: rgba(232,117,58,0.15); }
         .wb-stat-val {
@@ -244,11 +342,13 @@ export default function WarmthBarometer({ session, profile, darkMode }) {
           padding: 12px 14px; border-radius: 14px;
           font-size: 14px; line-height: 1.4;
           color: var(--ink, #1E0A10);
+          opacity: 0;
+          animation: wbSlideUp 0.4s ease both;
         }
         .wb-dark .wb-hint { color: #F5E6EB; }
         .wb-hint-bad  { background: rgba(232,85,106,0.07); }
         .wb-hint-good { background: rgba(76,175,80,0.07); }
-        .wb-hint-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+        .wb-hint-icon { flex-shrink: 0; margin-top: 2px; display: flex; }
 
         /* No partner */
         .wb-empty { text-align: center; padding: 60px 20px; }
@@ -256,15 +356,21 @@ export default function WarmthBarometer({ session, profile, darkMode }) {
         .wb-dark .wb-empty-title { color: #F5E6EB; }
         .wb-empty-text { font-size: 14px; color: var(--muted, #9A6070); line-height: 1.5; }
 
-        /* Loading */
+        /* Loading — spinning ring with gradient border-top */
         .wb-loading { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 60px 20px; }
         .wb-loading-ring {
           width: 48px; height: 48px; border-radius: 50%;
           border: 3px solid rgba(232,117,58,0.15); border-top-color: #E8753A;
           animation: wbSpin 0.9s linear infinite;
         }
-        @keyframes wbSpin { to { transform: rotate(360deg); } }
-        .wb-loading-text { font-size: 14px; color: var(--muted, #9A6070); }
+        .wb-loading-text {
+          font-size: 14px; color: var(--muted, #9A6070);
+          background: linear-gradient(90deg, #9A6070 0%, #E8753A 50%, #9A6070 100%);
+          background-size: 200% auto;
+          -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+          background-clip: text;
+          animation: wbShimmer 2s linear infinite;
+        }
       `}</style>
 
       {loading ? (
@@ -281,14 +387,16 @@ export default function WarmthBarometer({ session, profile, darkMode }) {
         <>
           {/* Hero */}
           <div className="wb-hero">
-            <div className="wb-hero-orb" />
+            <div className="wb-hero-orb1" />
+            <div className="wb-hero-orb2" />
             <div className="wb-hero-tag">
               <svg viewBox="0 0 8 8" width="8" height="8" fill="rgba(255,255,255,0.7)"><circle cx="4" cy="4" r="4" /></svg>
               Барометр теплоты
             </div>
             <div className="wb-hero-label">Сейчас в отношениях</div>
             <div className="wb-hero-level" style={{ color: level.colorDark ?? level.color }}>
-              {level.emoji} {level.label}
+              <LevelIcon />
+              {level.label}
             </div>
             <div className="wb-hero-pct" style={{ color: level.colorDark ?? level.color }}>
               {pct}% тепла
@@ -309,28 +417,28 @@ export default function WarmthBarometer({ session, profile, darkMode }) {
               <>
                 <div className="wb-stats-label">Статистика</div>
                 <div className="wb-stats-grid">
-                  <div className="wb-stat">
+                  <div className="wb-stat" style={{ animationDelay: '0s' }}>
                     <div className="wb-stat-val">{warmth.details.avgLength ?? 0}</div>
                     <div className="wb-stat-bar-wrap">
                       <div className="wb-stat-bar" style={{ width: `${Math.min((warmth.details.avgLength ?? 0) / 100 * 100, 100)}%`, background: level.color }} />
                     </div>
                     <div className="wb-stat-label">символов в среднем</div>
                   </div>
-                  <div className="wb-stat">
+                  <div className="wb-stat" style={{ animationDelay: '0.05s' }}>
                     <div className="wb-stat-val">{warmth.details.avgRT ? fmtTime(warmth.details.avgRT) : '—'}</div>
                     <div className="wb-stat-bar-wrap">
                       <div className="wb-stat-bar" style={{ width: `${Math.max(0, 100 - (warmth.details.avgRT ?? 0) / 3600 * 100)}%`, background: level.color }} />
                     </div>
                     <div className="wb-stat-label">среднее время ответа</div>
                   </div>
-                  <div className="wb-stat">
+                  <div className="wb-stat" style={{ animationDelay: '0.1s' }}>
                     <div className="wb-stat-val">{Math.round((warmth.details.emojiDens ?? 0) * 100)}%</div>
                     <div className="wb-stat-bar-wrap">
                       <div className="wb-stat-bar" style={{ width: `${Math.round((warmth.details.emojiDens ?? 0) * 100)}%`, background: level.color }} />
                     </div>
                     <div className="wb-stat-label">сообщений с эмодзи</div>
                   </div>
-                  <div className="wb-stat">
+                  <div className="wb-stat" style={{ animationDelay: '0.15s' }}>
                     <div className="wb-stat-val">{Math.round((warmth.details.weRatio ?? 0) * 100)}%</div>
                     <div className="wb-stat-bar-wrap">
                       <div className="wb-stat-bar" style={{ width: `${Math.round((warmth.details.weRatio ?? 0) * 100)}%`, background: level.color }} />
@@ -347,8 +455,14 @@ export default function WarmthBarometer({ session, profile, darkMode }) {
                 <div className="wb-hints-label">Наблюдения</div>
                 <div className="wb-hints-list">
                   {hints.map((h, i) => (
-                    <div key={i} className={`wb-hint ${h.bad ? 'wb-hint-bad' : 'wb-hint-good'}`}>
-                      <span className="wb-hint-icon">{h.bad ? '⚠️' : '✅'}</span>
+                    <div
+                      key={i}
+                      className={`wb-hint ${h.bad ? 'wb-hint-bad' : 'wb-hint-good'}`}
+                      style={{ animationDelay: `${i * 0.07}s` }}
+                    >
+                      <span className="wb-hint-icon">
+                        {h.bad ? <WarningTriangleIcon /> : <CheckCircleIcon />}
+                      </span>
                       {h.text}
                     </div>
                   ))}
@@ -358,7 +472,9 @@ export default function WarmthBarometer({ session, profile, darkMode }) {
 
             {hints.length === 0 && !loading && (
               <div style={{ textAlign: 'center', padding: '20px 0' }}>
-                <div style={{ fontSize: 40, marginBottom: 12 }}>🔥</div>
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+                  <FlameIcon />
+                </div>
                 <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink, #1E0A10)', marginBottom: 6 }}>Всё отлично!</div>
                 <div style={{ fontSize: 14, color: 'var(--muted, #9A6070)' }}>Общение живое и тёплое</div>
               </div>

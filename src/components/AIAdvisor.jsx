@@ -4,200 +4,300 @@ import TimeCapsule from './TimeCapsule'
 import WarmthBarometer from './WarmthBarometer'
 import InsightsWidget from './InsightsWidget'
 
-// Icon for Mirror tab
-function IconMirror({ active }) {
-  const color = active ? '#C8334A' : '#9A6070'
-  return (
-    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <ellipse cx="12" cy="10" rx="7" ry="9" />
-      <path d="M9 21h6" />
-      <path d="M12 19v2" />
-    </svg>
-  )
-}
-
-// Icon for Capsule tab
-function IconCapsule({ active }) {
-  const color = active ? '#C8334A' : '#9A6070'
-  return (
-    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 2v10M12 12v10M6 7h12M6 17h12" />
-      <circle cx="12" cy="12" r="2" fill={color} />
-    </svg>
-  )
-}
-
-// Icon for Warmth tab
-function IconWarmth({ active }) {
-  const color = active ? '#C8334A' : '#9A6070'
-  return (
-    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 2c-1.5 2-3 4-3 7 0 2.5 1.3 4.7 3 6 1.7-1.3 3-3.5 3-6 0-3-1.5-5-3-7z" />
-      <path d="M12 15c-2.8 1-5 3.2-5 5.5 0 3 2.2 5.5 5 5.5s5-2.5 5-5.5c0-2.3-2.2-4.5-5-5.5z" />
-    </svg>
-  )
-}
-
-// Icon for Insights tab
-function IconInsights({ active }) {
-  const color = active ? '#C8334A' : '#9A6070'
-  return (
-    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="1" fill={color} />
-      <path d="M12 7v10M7 12h10M8.6 7.4l6.8 6.8M8.6 16.4l6.8-6.8" />
-    </svg>
-  )
-}
+const VIEWS = [
+  {
+    id: 'mirror',
+    label: 'Зеркало',
+    desc: 'Синхронность пары',
+    icon: (
+      <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor"
+        strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+        <ellipse cx="12" cy="10" rx="7" ry="9" />
+        <path d="M9 21h6M12 19v2" />
+      </svg>
+    ),
+    gradient: 'linear-gradient(135deg, #C8334A 0%, #6B0F1F 100%)',
+    glow: 'rgba(200,51,74,0.35)',
+  },
+  {
+    id: 'capsule',
+    label: 'Капсула',
+    desc: 'Письма будущему',
+    icon: (
+      <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor"
+        strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0118 0z" />
+        <circle cx="12" cy="10" r="3" />
+      </svg>
+    ),
+    gradient: 'linear-gradient(135deg, #7B3FBE 0%, #3D1A6B 100%)',
+    glow: 'rgba(123,63,190,0.35)',
+  },
+  {
+    id: 'warmth',
+    label: 'Теплота',
+    desc: 'Барометр общения',
+    icon: (
+      <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor"
+        strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 2c-1.5 2-3 4-3 7 0 2.5 1.3 4.7 3 6 1.7-1.3 3-3.5 3-6 0-3-1.5-5-3-7z" />
+        <path d="M12 15c-2.8 1-5 3.2-5 5.5 0 3 2.2 5.5 5 5.5s5-2.5 5-5.5c0-2.3-2.2-4.5-5-5.5z" />
+      </svg>
+    ),
+    gradient: 'linear-gradient(135deg, #E8753A 0%, #8B2200 100%)',
+    glow: 'rgba(232,117,58,0.35)',
+  },
+  {
+    id: 'insights',
+    label: 'Советы ИИ',
+    desc: 'Персональный анализ',
+    icon: (
+      <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor"
+        strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M9.5 2A2.5 2.5 0 007 4.5A2.5 2.5 0 004.5 7A2.5 2.5 0 002 9.5v5A2.5 2.5 0 004.5 17A2.5 2.5 0 007 19.5A2.5 2.5 0 009.5 22h5a2.5 2.5 0 002.5-2.5 2.5 2.5 0 002.5-2.5 2.5 2.5 0 002.5-2.5v-5A2.5 2.5 0 0019.5 7 2.5 2.5 0 0017 4.5 2.5 2.5 0 0014.5 2z"/>
+        <path d="M12 5v14M9 9h6M9 15h6" />
+      </svg>
+    ),
+    gradient: 'linear-gradient(135deg, #2B8FD8 0%, #0D4A7A 100%)',
+    glow: 'rgba(43,143,216,0.35)',
+  },
+]
 
 export default function AIAdvisor({ session, profile, darkMode }) {
-  const [activeView, setActiveView] = useState('mirror')
+  const [activeView, setActiveView] = useState(null)
 
-  const views = [
-    { id: 'mirror', label: 'Зеркало', Icon: IconMirror },
-    { id: 'capsule', label: 'Капсула', Icon: IconCapsule },
-    { id: 'warmth', label: 'Теплота', Icon: IconWarmth },
-    { id: 'insights', label: 'Советы', Icon: IconInsights },
-  ]
+  const current = VIEWS.find(v => v.id === activeView)
 
   return (
-    <div className={`advisor-view${darkMode ? ' dark' : ''}`}>
+    <div className={`adv${darkMode ? ' adv-dark' : ''}`}>
       <style>{`
-        .advisor-view {
+        .adv {
+          min-height: 100vh;
+          background: var(--surface, #FFFFFF);
+          color: var(--ink, #1E0A10);
           display: flex;
           flex-direction: column;
-          height: 100vh;
-          background: var(--surface, #FFFFFF);
-          color: var(--text, #1E0A10);
+        }
+        .adv-dark { background: #0A0206; color: #F5E6EB; }
+
+        /* ── Hero ── */
+        .adv-hero {
+          position: relative;
+          padding: max(52px, calc(env(safe-area-inset-top) + 20px)) 24px 28px;
           overflow: hidden;
         }
-        .advisor-view.dark {
-          background: #0F0408;
-          color: #F5E6EB;
+        .adv-hero-bg {
+          position: absolute; inset: 0;
+          background: linear-gradient(160deg, #C8334A 0%, #5C0E1D 60%, #0A0206 100%);
+        }
+        .adv-hero-orb1 {
+          position: absolute; top: -40px; right: -40px;
+          width: 200px; height: 200px; border-radius: 50%;
+          background: radial-gradient(circle, rgba(200,51,74,0.5) 0%, transparent 70%);
+        }
+        .adv-hero-orb2 {
+          position: absolute; bottom: -20px; left: 20px;
+          width: 130px; height: 130px; border-radius: 50%;
+          background: radial-gradient(circle, rgba(139,26,44,0.4) 0%, transparent 70%);
+        }
+        .adv-hero-content { position: relative; z-index: 1; }
+        .adv-hero-badge {
+          display: inline-flex; align-items: center; gap: 6px;
+          background: rgba(255,255,255,0.12);
+          border: 1px solid rgba(255,255,255,0.2);
+          border-radius: 99px;
+          padding: 4px 12px;
+          font-size: 11px; font-weight: 600; letter-spacing: 0.8px;
+          text-transform: uppercase; color: rgba(255,255,255,0.85);
+          margin-bottom: 14px;
+          backdrop-filter: blur(8px);
+        }
+        .adv-hero-badge-dot {
+          width: 6px; height: 6px; border-radius: 50%;
+          background: #FF6B8A;
+          animation: advPulse 2s ease-in-out infinite;
+        }
+        @keyframes advPulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.5; transform: scale(0.7); }
+        }
+        .adv-hero-title {
+          font-family: var(--font-head, Georgia, serif);
+          font-size: 30px; font-weight: 700;
+          color: #FFFFFF;
+          line-height: 1.2;
+          margin-bottom: 8px;
+          letter-spacing: -0.5px;
+        }
+        .adv-hero-sub {
+          font-size: 14px; color: rgba(255,255,255,0.65);
+          line-height: 1.5;
         }
 
-        .advisor-header {
-          padding: max(12px, env(safe-area-inset-top)) 20px 16px;
-          border-bottom: 0.5px solid var(--border, rgba(200,51,74,0.13));
-          background: rgba(255,245,247,0.7);
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
+        /* ── Card grid ── */
+        .adv-grid {
+          padding: 20px 16px;
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 12px;
         }
-        .advisor-view.dark .advisor-header {
-          background: rgba(15,4,8,0.8);
+        .adv-card {
+          border-radius: 20px;
+          padding: 20px 16px;
+          cursor: pointer;
+          position: relative;
+          overflow: hidden;
+          border: none;
+          text-align: left;
+          -webkit-tap-highlight-color: transparent;
+          transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.2s;
+          min-height: 140px;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+        }
+        .adv-card:active { transform: scale(0.95); }
+
+        .adv-card-icon {
+          width: 52px; height: 52px;
+          border-radius: 14px;
+          background: rgba(255,255,255,0.18);
+          display: flex; align-items: center; justify-content: center;
+          color: #FFFFFF;
+          margin-bottom: 12px;
+          backdrop-filter: blur(4px);
+        }
+        .adv-card-label {
+          font-size: 16px; font-weight: 700;
+          color: #FFFFFF;
+          margin-bottom: 4px;
+        }
+        .adv-card-desc {
+          font-size: 12px;
+          color: rgba(255,255,255,0.65);
+          line-height: 1.4;
+        }
+        .adv-card-arrow {
+          position: absolute; top: 16px; right: 16px;
+          opacity: 0.5;
+        }
+        .adv-card-glow {
+          position: absolute; inset: 0;
+          border-radius: inherit;
+          pointer-events: none;
+        }
+
+        /* ── Content view ── */
+        .adv-back-bar {
+          display: flex; align-items: center; gap: 12px;
+          padding: max(16px, calc(env(safe-area-inset-top) + 8px)) 16px 12px;
+          border-bottom: 0.5px solid var(--border, rgba(200,51,74,0.1));
+          position: sticky; top: 0; z-index: 10;
+          background: var(--surface, #FFFFFF);
+          backdrop-filter: blur(20px);
+        }
+        .adv-dark .adv-back-bar {
+          background: rgba(10,2,6,0.92);
           border-bottom-color: rgba(200,51,74,0.18);
         }
-
-        .advisor-title {
-          font-family: var(--font-head);
-          font-size: 24px;
-          font-weight: 700;
-          letter-spacing: -0.5px;
-          margin-bottom: 16px;
-          background: linear-gradient(135deg, #C8334A, #8B1A2C);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
-        }
-
-        .advisor-tabs {
-          display: flex;
-          gap: 8px;
-          overflow-x: auto;
-          -webkit-overflow-scrolling: touch;
-          scrollbar-width: none;
-          padding: 0 16px 12px;
-        }
-        .advisor-tabs::-webkit-scrollbar { display: none; }
-
-        .advisor-tab-btn {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          padding: 8px 14px;
-          border-radius: 12px;
-          border: 1px solid var(--border, rgba(200,51,74,0.13));
-          background: var(--blush, #FBF0F2);
-          cursor: pointer;
-          white-space: nowrap;
-          font-family: var(--font-body);
-          font-size: 13px;
-          font-weight: 500;
-          color: var(--muted, #9A6070);
-          transition: all 0.2s ease;
+        .adv-back-btn {
+          width: 36px; height: 36px; border-radius: 50%;
+          background: var(--blush, #FBF0F2); border: none;
+          display: flex; align-items: center; justify-content: center;
+          cursor: pointer; color: var(--rose, #C8334A);
+          flex-shrink: 0;
           -webkit-tap-highlight-color: transparent;
         }
-        .advisor-view.dark .advisor-tab-btn {
-          background: #3D1520;
-          border-color: rgba(200,51,74,0.18);
-          color: #C4909A;
+        .adv-dark .adv-back-btn { background: #3D1520; }
+        .adv-back-title {
+          font-family: var(--font-head, Georgia, serif);
+          font-size: 18px; font-weight: 700;
+          color: var(--ink, #1E0A10);
         }
+        .adv-dark .adv-back-title { color: #F5E6EB; }
 
-        .advisor-tab-btn.active {
-          background: linear-gradient(135deg, #C8334A, #8B1A2C);
-          color: #FFFFFF;
-          border-color: transparent;
-        }
-
-        .advisor-tab-btn:active:not(.active) {
-          transform: scale(0.96);
-        }
-
-        .advisor-content {
+        .adv-content-area {
           flex: 1;
           overflow-y: auto;
-          overflow-x: hidden;
           -webkit-overflow-scrolling: touch;
-          padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+          padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+          animation: advSlideIn 0.28s cubic-bezier(0.2,1,0.4,1) both;
+        }
+        @keyframes advSlideIn {
+          from { opacity: 0; transform: translateX(18px); }
+          to   { opacity: 1; transform: translateX(0); }
         }
 
-        .advisor-section {
-          animation: fadeInUp 0.3s ease;
-        }
-
-        @keyframes fadeInUp {
-          from {
-            opacity: 0;
-            transform: translateY(12px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
+        .adv-scroll {
+          flex: 1;
+          overflow-y: auto;
+          -webkit-overflow-scrolling: touch;
+          padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
         }
       `}</style>
 
-      <div className="advisor-header">
-        <div className="advisor-title">Советник пары</div>
-        <div className="advisor-tabs">
-          {views.map(({ id, label, Icon }) => (
-            <button
-              key={id}
-              className={`advisor-tab-btn${activeView === id ? ' active' : ''}`}
-              onClick={() => setActiveView(id)}
-            >
-              <Icon active={activeView === id} />
-              <span>{label}</span>
+      {activeView ? (
+        /* ── Sub-view ── */
+        <>
+          <div className="adv-back-bar">
+            <button className="adv-back-btn" onClick={() => setActiveView(null)} aria-label="Назад">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none"
+                stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="15,18 9,12 15,6" />
+              </svg>
             </button>
-          ))}
-        </div>
-      </div>
+            <span className="adv-back-title">{current?.label}</span>
+          </div>
+          <div className="adv-content-area">
+            {activeView === 'mirror'   && <SyncMirror    session={session} profile={profile} darkMode={darkMode} />}
+            {activeView === 'capsule'  && <TimeCapsule   session={session} profile={profile} darkMode={darkMode} />}
+            {activeView === 'warmth'   && <WarmthBarometer session={session} profile={profile} darkMode={darkMode} />}
+            {activeView === 'insights' && <InsightsWidget session={session} profile={profile} darkMode={darkMode} />}
+          </div>
+        </>
+      ) : (
+        /* ── Home grid ── */
+        <div className="adv-scroll">
+          <div className="adv-hero">
+            <div className="adv-hero-bg" />
+            <div className="adv-hero-orb1" />
+            <div className="adv-hero-orb2" />
+            <div className="adv-hero-content">
+              <div className="adv-hero-badge">
+                <div className="adv-hero-badge-dot" />
+                Советник пары
+              </div>
+              <div className="adv-hero-title">Умный помощник<br />ваших отношений</div>
+              <div className="adv-hero-sub">Анализирует, напоминает и помогает<br />сохранять тепло между вами</div>
+            </div>
+          </div>
 
-      <div className="advisor-content">
-        <div className="advisor-section">
-          {activeView === 'mirror' && (
-            <SyncMirror session={session} profile={profile} darkMode={darkMode} />
-          )}
-          {activeView === 'capsule' && (
-            <TimeCapsule session={session} profile={profile} darkMode={darkMode} />
-          )}
-          {activeView === 'warmth' && (
-            <WarmthBarometer session={session} profile={profile} darkMode={darkMode} />
-          )}
-          {activeView === 'insights' && (
-            <InsightsWidget session={session} profile={profile} darkMode={darkMode} />
-          )}
+          <div className="adv-grid">
+            {VIEWS.map(v => (
+              <button
+                key={v.id}
+                className="adv-card"
+                style={{
+                  background: v.gradient,
+                  boxShadow: `0 8px 28px ${v.glow}`,
+                }}
+                onClick={() => setActiveView(v.id)}
+              >
+                <div>
+                  <div className="adv-card-icon">{v.icon}</div>
+                  <div className="adv-card-label">{v.label}</div>
+                  <div className="adv-card-desc">{v.desc}</div>
+                </div>
+                <svg className="adv-card-arrow" viewBox="0 0 24 24" width="18" height="18"
+                  fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                  <polyline points="12,5 19,12 12,19" />
+                </svg>
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }

@@ -60,7 +60,7 @@ function fmtLastSeen(ts) {
 
 function isOnline(ts) {
   if (!ts) return false
-  return (Date.now() - new Date(ts).getTime()) < 60000
+  return (Date.now() - new Date(ts).getTime()) < 120000
 }
 
 function isSameGroup(msg1, msg2) {
@@ -863,6 +863,8 @@ export default function Chat({ session, profile, darkMode }) {
   const [showDown, setShowDown] = useState(false)
   const [showSearch, setShowSearch] = useState(false)
   const [partnerTyping, setPartnerTyping] = useState(false)
+  const [partnerRecording, setPartnerRecording] = useState(null) // 'voice' | 'video' | null
+  const broadcastRef = useRef(null)
 
   const [photoFile, setPhotoFile] = useState(null)
   const [photoPreview, setPhotoPreview] = useState(null)
@@ -967,9 +969,13 @@ export default function Chat({ session, profile, darkMode }) {
     loadPartner()
     updateLastSeen()
 
-    const lastSeenTimer = setInterval(updateLastSeen, 30000)
+    const lastSeenTimer = setInterval(() => {
+      if (document.visibilityState === 'visible') updateLastSeen()
+    }, 30000)
     const onFocus = () => updateLastSeen()
+    const onVisible = () => { if (document.visibilityState === 'visible') updateLastSeen() }
     window.addEventListener('focus', onFocus)
+    document.addEventListener('visibilitychange', onVisible)
 
     const channel = supabase.channel('chat')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, p => {
@@ -996,6 +1002,7 @@ export default function Chat({ session, profile, darkMode }) {
       supabase.removeChannel(channel)
       clearInterval(lastSeenTimer)
       window.removeEventListener('focus', onFocus)
+      document.removeEventListener('visibilitychange', onVisible)
     }
   }, [uid])
 
@@ -1016,7 +1023,18 @@ export default function Chat({ session, profile, darkMode }) {
       }, p => setPartnerLastSeen(p.new.last_seen))
       .subscribe()
 
-    return () => { supabase.removeChannel(typingChannel) }
+    // Broadcast канал для статуса записи
+    const bcChannel = supabase.channel(`recording-status`)
+      .on('broadcast', { event: 'recording' }, ({ payload }) => {
+        if (payload.userId === partner.id) setPartnerRecording(payload.kind || null)
+      })
+      .subscribe()
+    broadcastRef.current = bcChannel
+
+    return () => {
+      supabase.removeChannel(typingChannel)
+      supabase.removeChannel(bcChannel)
+    }
   }, [partner?.id])
 
   // подключаем стрим к превью-видео ПОСЛЕ того как recording=true и элемент отрендерился
@@ -1161,11 +1179,13 @@ export default function Chat({ session, profile, darkMode }) {
           scrollToBottom()
           if (partner?.id) sendPushNotification(profile?.name || 'Сообщение', 'Видео-кружочек', partner.id, uid).catch(() => {})
         } catch (e) { console.error(e) }
+        broadcastRef.current?.send({ type: 'broadcast', event: 'recording', payload: { userId: uid, kind: null } })
         setSending(false)
         setRecording(false)
         setRecordSeconds(0)
       }
       setRecording(true)
+      broadcastRef.current?.send({ type: 'broadcast', event: 'recording', payload: { userId: uid, kind: 'video' } })
       setRecordSeconds(0)
       clearInterval(recTimer.current)
       recTimer.current = setInterval(() => setRecordSeconds(s => s + 1), 1000)
@@ -1226,11 +1246,13 @@ export default function Chat({ session, profile, darkMode }) {
           scrollToBottom()
           if (partner?.id) sendPushNotification(profile?.name || 'Сообщение', 'Голосовое сообщение', partner.id, uid).catch(() => {})
         } catch (e) { console.error(e) }
+        broadcastRef.current?.send({ type: 'broadcast', event: 'recording', payload: { userId: uid, kind: null } })
         setSending(false)
         setVoiceRec(false)
         setRecordSeconds(0)
       }
       rec.start(100)   // чанк каждые 100ms — не потеряем данные при быстром стопе
+      broadcastRef.current?.send({ type: 'broadcast', event: 'recording', payload: { userId: uid, kind: 'voice' } })
       setVoiceRec(true)
       setRecordSeconds(0)
       voiceSecRef.current = 0
@@ -1358,8 +1380,11 @@ export default function Chat({ session, profile, darkMode }) {
             {partnerName}
           </div>
           <div style={{ fontSize: 11, transition: 'color .3s',
-            color: partnerTyping ? '#4CAF50' : isOnline(partnerLastSeen) ? '#4CAF50' : MUTED }}>
-            {partnerTyping ? 'печатает...' : fmtLastSeen(partnerLastSeen)}
+            color: (partnerTyping || partnerRecording) ? '#4CAF50' : isOnline(partnerLastSeen) ? '#4CAF50' : MUTED }}>
+            {partnerRecording === 'voice' ? 'записывает голосовое...'
+              : partnerRecording === 'video' ? 'записывает кружочек...'
+              : partnerTyping ? 'печатает...'
+              : fmtLastSeen(partnerLastSeen)}
           </div>
         </div>
         <button onClick={() => setShowSearch(true)} style={{ width: 36, height: 36, borderRadius: '50%',

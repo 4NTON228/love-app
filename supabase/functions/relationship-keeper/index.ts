@@ -537,10 +537,10 @@ async function handleAIProxy(body: Record<string, unknown>): Promise<Response> {
   }
 
   const messages = (body.messages ?? []) as Array<{ role: string; content: string }>
-  const model    = (body.model as string) ?? 'grok-4.20-reasoning'
+  const model    = (body.model as string) ?? 'grok-3-mini-fast'
 
-  // Системный промпт советчика по отношениям
-  const systemPrompt =
+  // Дефолтный системный промпт советчика по отношениям
+  const defaultSystemPrompt =
     'Ты тактичный советчик по отношениям. ' +
     'Отвечай по-русски, кратко и тепло. ' +
     'Не навязывай советы — предлагай мягко. ' +
@@ -557,9 +557,11 @@ async function handleAIProxy(body: Record<string, unknown>): Promise<Response> {
     })
     .join('\n')
 
-  // Если клиент прислал свой system-промпт — добавляем к нашему
+  // Если клиент прислал свой system-промпт — используем его целиком.
+  // Добавлять дефолтный промпт поверх нельзя: это сбивает форматирование
+  // (например, когда клиент просит JSON-ответ).
   const clientSystem = messages.find(m => m.role === 'system')?.content ?? ''
-  const fullSystem   = clientSystem ? `${systemPrompt}\n\n${clientSystem}` : systemPrompt
+  const fullSystem   = clientSystem || defaultSystemPrompt
 
   // Вызов xAI /v1/responses
   const xaiBody: Record<string, unknown> = {

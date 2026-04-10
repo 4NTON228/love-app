@@ -121,22 +121,56 @@ export default function EmotionTranslator({ session, profile, darkMode, initialT
     setSent(false)
 
     try {
-      const { data, error: fnErr } = await supabase.functions.invoke('rewrite-message', {
+      const systemPrompt =
+        'Ты эксперт по ненасильственному общению. ' +
+        'Переформулируй сообщение: убери агрессию и обвинения, ' +
+        'вырази через «я-высказывания», сохрани смысл, звучи тепло. ' +
+        'Отвечай СТРОГО в формате JSON без markdown:\n' +
+        '{"rewritten":"...","tips":["совет 1","совет 2"]}'
+
+      const userMsg = selectedTemplate
+        ? `Ситуация: ${selectedTemplate.label}. Сообщение: "${inputText.trim()}"`
+        : `Сообщение: "${inputText.trim()}"`
+
+      const { data, error: fnErr } = await supabase.functions.invoke('relationship-keeper', {
         body: {
-          message: inputText.trim(),
-          template: selectedTemplate?.label,
+          model: 'grok-3-mini-fast',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userMsg },
+          ],
         },
       })
 
-      if (fnErr) throw fnErr
+      if (fnErr) throw new Error(fnErr.message ?? String(fnErr))
+      if (data?.error) throw new Error(data.error)
 
-      if (data?.rewritten) {
-        setResult(data)
+      const raw = data?.choices?.[0]?.message?.content ?? ''
+
+      // Parse JSON from response
+      let parsed = null
+      try {
+        const cleaned = raw.replace(/^```json\s*/m, '').replace(/```\s*$/m, '').trim()
+        // Find first { ... } block
+        const match = cleaned.match(/\{[\s\S]*\}/)
+        if (match) parsed = JSON.parse(match[0])
+      } catch (_) { /* ignore */ }
+
+      if (parsed?.rewritten) {
+        setResult({
+          original: inputText.trim(),
+          rewritten: parsed.rewritten,
+          tips: Array.isArray(parsed.tips) ? parsed.tips.slice(0, 2) : [],
+        })
+      } else if (raw) {
+        // Fallback: use raw text as rewritten
+        setResult({ original: inputText.trim(), rewritten: raw, tips: [] })
       } else {
         setError('Не удалось переформулировать. Попробуй ещё раз.')
       }
     } catch (e) {
-      setError('Ошибка соединения. Проверь интернет.')
+      console.error('[EmotionTranslator]', e)
+      setError('Не удалось подключиться к ИИ. Попробуй позже.')
     }
     setLoading(false)
   }

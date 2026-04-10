@@ -134,6 +134,7 @@ export default function EmotionTranslator({ session, profile, darkMode, initialT
 
       const { data, error: fnErr } = await supabase.functions.invoke('relationship-keeper', {
         body: {
+          model: 'grok-3-mini-fast',
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: userMsg },
@@ -142,6 +143,7 @@ export default function EmotionTranslator({ session, profile, darkMode, initialT
       })
 
       if (fnErr) throw new Error(fnErr.message ?? String(fnErr))
+      if (data?.error) throw new Error(data.error)
 
       const raw = data?.choices?.[0]?.message?.content ?? ''
 

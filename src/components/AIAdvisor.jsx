@@ -3,6 +3,9 @@ import SyncMirror from './SyncMirror'
 import TimeCapsule from './TimeCapsule'
 import WarmthBarometer from './WarmthBarometer'
 import InsightsWidget from './InsightsWidget'
+import PrivateJournal from './PrivateJournal'
+import EmotionTranslator from './EmotionTranslator'
+import Contracts from './Contracts'
 
 const VIEWS = [
   {
@@ -61,12 +64,68 @@ const VIEWS = [
     gradient: 'linear-gradient(135deg, #2B8FD8 0%, #0D4A7A 100%)',
     glow: 'rgba(43,143,216,0.35)',
   },
+  {
+    id: 'journal',
+    label: 'Дневник',
+    desc: 'Личные заметки',
+    icon: (
+      <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor"
+        strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+        <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+      </svg>
+    ),
+    gradient: 'linear-gradient(135deg, #7B3FBE 0%, #1A0A2E 100%)',
+    glow: 'rgba(123,63,190,0.4)',
+  },
+  {
+    id: 'translator',
+    label: 'Переводчик',
+    desc: 'Смягчи эмоции',
+    icon: (
+      <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor"
+        strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M5 8l6 6" />
+        <path d="M4 14l6-6 2-3" />
+        <path d="M2 5h12" />
+        <path d="M7 2h1" />
+        <path d="M22 22l-5-10-5 10" />
+        <path d="M14 18h6" />
+      </svg>
+    ),
+    gradient: 'linear-gradient(135deg, #2B8F50 0%, #0D2A18 100%)',
+    glow: 'rgba(43,143,80,0.4)',
+  },
+  {
+    id: 'contracts',
+    label: 'Контракты',
+    desc: 'Договорённости пары',
+    icon: (
+      <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor"
+        strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+        <polyline points="14 2 14 8 20 8" />
+        <line x1="16" y1="13" x2="8" y2="13" />
+        <line x1="16" y1="17" x2="8" y2="17" />
+        <polyline points="10 9 9 9 8 9" />
+      </svg>
+    ),
+    gradient: 'linear-gradient(135deg, #2B64D8 0%, #0D1A4A 100%)',
+    glow: 'rgba(43,100,216,0.4)',
+  },
 ]
 
 export default function AIAdvisor({ session, profile, darkMode }) {
   const [activeView, setActiveView] = useState(null)
+  // For journal → translator flow
+  const [translatorInitialText, setTranslatorInitialText] = useState(null)
 
   const current = VIEWS.find(v => v.id === activeView)
+
+  function handleConvertToMessage(text) {
+    setTranslatorInitialText(text)
+    setActiveView('translator')
+  }
 
   return (
     <div className={`adv${darkMode ? ' adv-dark' : ''}`}>
@@ -155,7 +214,19 @@ export default function AIAdvisor({ session, profile, darkMode }) {
           display: flex;
           flex-direction: column;
           justify-content: space-between;
+          animation: advCardIn 0.4s cubic-bezier(0.2,1,0.4,1) both;
         }
+        @keyframes advCardIn {
+          from { opacity: 0; transform: translateY(16px) scale(0.96); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .adv-card:nth-child(1) { animation-delay: 0.04s; }
+        .adv-card:nth-child(2) { animation-delay: 0.08s; }
+        .adv-card:nth-child(3) { animation-delay: 0.12s; }
+        .adv-card:nth-child(4) { animation-delay: 0.16s; }
+        .adv-card:nth-child(5) { animation-delay: 0.20s; }
+        .adv-card:nth-child(6) { animation-delay: 0.24s; }
+        .adv-card:nth-child(7) { animation-delay: 0.28s; }
         .adv-card:active { transform: scale(0.95); }
 
         .adv-card-icon {
@@ -185,6 +256,13 @@ export default function AIAdvisor({ session, profile, darkMode }) {
           position: absolute; inset: 0;
           border-radius: inherit;
           pointer-events: none;
+        }
+
+        /* ── Section divider ── */
+        .adv-section-label {
+          padding: 0 20px 8px;
+          font-size: 11px; font-weight: 700; letter-spacing: 0.8px;
+          text-transform: uppercase; color: rgba(255,255,255,0.35);
         }
 
         /* ── Content view ── */
@@ -240,7 +318,7 @@ export default function AIAdvisor({ session, profile, darkMode }) {
         /* ── Sub-view ── */
         <>
           <div className="adv-back-bar">
-            <button className="adv-back-btn" onClick={() => setActiveView(null)} aria-label="Назад">
+            <button className="adv-back-btn" onClick={() => { setActiveView(null); setTranslatorInitialText(null) }} aria-label="Назад">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none"
                 stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="15,18 9,12 15,6" />
@@ -249,10 +327,13 @@ export default function AIAdvisor({ session, profile, darkMode }) {
             <span className="adv-back-title">{current?.label}</span>
           </div>
           <div className="adv-content-area">
-            {activeView === 'mirror'   && <SyncMirror    session={session} profile={profile} darkMode={darkMode} />}
-            {activeView === 'capsule'  && <TimeCapsule   session={session} profile={profile} darkMode={darkMode} />}
-            {activeView === 'warmth'   && <WarmthBarometer session={session} profile={profile} darkMode={darkMode} />}
-            {activeView === 'insights' && <InsightsWidget session={session} profile={profile} darkMode={darkMode} />}
+            {activeView === 'mirror'      && <SyncMirror       session={session} profile={profile} darkMode={darkMode} />}
+            {activeView === 'capsule'     && <TimeCapsule      session={session} profile={profile} darkMode={darkMode} />}
+            {activeView === 'warmth'      && <WarmthBarometer  session={session} profile={profile} darkMode={darkMode} />}
+            {activeView === 'insights'    && <InsightsWidget   session={session} profile={profile} darkMode={darkMode} />}
+            {activeView === 'journal'     && <PrivateJournal   session={session} profile={profile} darkMode={darkMode} onConvertToMessage={handleConvertToMessage} />}
+            {activeView === 'translator'  && <EmotionTranslator session={session} profile={profile} darkMode={darkMode} initialText={translatorInitialText} />}
+            {activeView === 'contracts'   && <Contracts        session={session} profile={profile} darkMode={darkMode} />}
           </div>
         </>
       ) : (

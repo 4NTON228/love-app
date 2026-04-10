@@ -121,22 +121,20 @@ export default function EmotionTranslator({ session, profile, darkMode, initialT
     setSent(false)
 
     try {
-      const systemPrompt =
-        'Ты эксперт по ненасильственному общению. ' +
-        'Переформулируй сообщение: убери агрессию и обвинения, ' +
-        'вырази через «я-высказывания», сохрани смысл, звучи тепло. ' +
-        'Отвечай СТРОГО в формате JSON без markdown:\n' +
-        '{"rewritten":"...","tips":["совет 1","совет 2"]}'
-
-      const userMsg = selectedTemplate
-        ? `Ситуация: ${selectedTemplate.label}. Сообщение: "${inputText.trim()}"`
-        : `Сообщение: "${inputText.trim()}"`
+      // Все инструкции — в user-сообщении, без system-роли.
+      // Это нужно потому что relationship-keeper добавляет свой
+      // system-промпт поверх клиентского и конфликт ломает JSON-формат.
+      const context = selectedTemplate ? `Ситуация: ${selectedTemplate.label}. ` : ''
+      const userMsg =
+        `${context}Партнёр написал: "${inputText.trim()}"\n\n` +
+        'Переформулируй это сообщение по принципам ненасильственного общения: ' +
+        'убери обвинения и агрессию, используй «я-высказывания», сохрани смысл, звучи тепло. ' +
+        'Ответь ТОЛЬКО валидным JSON без markdown и пояснений:\n' +
+        '{"rewritten":"переформулированный текст","tips":["краткий совет 1","краткий совет 2"]}'
 
       const { data, error: fnErr } = await supabase.functions.invoke('relationship-keeper', {
         body: {
-          model: 'grok-3-mini-fast',
           messages: [
-            { role: 'system', content: systemPrompt },
             { role: 'user', content: userMsg },
           ],
         },

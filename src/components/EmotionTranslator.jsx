@@ -140,7 +140,15 @@ export default function EmotionTranslator({ session, profile, darkMode, initialT
         },
       })
 
-      if (fnErr) throw new Error(fnErr.message ?? String(fnErr))
+      if (fnErr) {
+        // Try to extract the actual error body from FunctionsHttpError
+        let detail = fnErr.message ?? String(fnErr)
+        try {
+          const body = await fnErr.context?.json?.()
+          if (body?.error) detail = body.error
+        } catch (_) {}
+        throw new Error(detail)
+      }
       if (data?.error) throw new Error(data.error)
 
       const raw = data?.choices?.[0]?.message?.content ?? ''
@@ -167,8 +175,12 @@ export default function EmotionTranslator({ session, profile, darkMode, initialT
         setError('Не удалось переформулировать. Попробуй ещё раз.')
       }
     } catch (e) {
-      console.error('[EmotionTranslator]', e)
-      setError('Не удалось подключиться к ИИ. Попробуй позже.')
+      const msg = e?.message ?? String(e)
+      console.error('[EmotionTranslator]', msg)
+      // Show actual error so user/dev can diagnose
+      setError(msg.includes('AI_API_KEY')
+        ? 'ИИ не настроен: добавь AI_API_KEY в Supabase → Edge Functions → Secrets'
+        : `Ошибка: ${msg}`)
     }
     setLoading(false)
   }

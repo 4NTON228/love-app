@@ -147,7 +147,7 @@ export default function AIAdvisor({ session, profile, darkMode }) {
         }
         .adv-hero-bg {
           position: absolute; inset: 0;
-          background: linear-gradient(160deg, #C8334A 0%, #5C0E1D 60%, #0A0206 100%);
+          background: linear-gradient(175deg, #0D0305 0%, #220810 35%, #46101F 65%, #0A0206 100%);
         }
         .adv-hero-orb1 {
           position: absolute; top: -40px; right: -40px;

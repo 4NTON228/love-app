@@ -310,13 +310,22 @@ export default function WarmthBarometer({ session, profile, darkMode }) {
           gap: 10px; margin-bottom: 20px;
         }
         .wb-stat {
-          border-radius: 18px; padding: 16px;
-          background: var(--blush, #FBF0F2);
-          border: 1px solid var(--border, rgba(200,51,74,0.08));
+          border-radius: 22px; padding: 16px;
+          background: rgba(255,255,255,0.96);
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
+          border: 1px solid rgba(200,51,74,0.08);
+          box-shadow: 0 4px 20px rgba(0,0,0,0.06), 0 1px 0 rgba(255,255,255,0.9);
           opacity: 0;
           animation: wbSlideUp 0.45s ease both;
         }
-        .wb-dark .wb-stat { background: #180810; border-color: rgba(232,117,58,0.15); }
+        .wb-dark .wb-stat {
+          background: rgba(18,5,10,0.92);
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
+          border-color: rgba(232,117,58,0.15);
+          box-shadow: 0 8px 28px rgba(0,0,0,0.45);
+        }
         .wb-stat-val {
           font-family: var(--font-head, Georgia, serif);
           font-size: 26px; font-weight: 800; line-height: 1;

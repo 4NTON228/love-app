@@ -346,11 +346,14 @@ export default function InsightsWidget({ session, profile, darkMode }) {
 
         /* ── Insight cards ── */
         .ins-card {
-          border-radius: 18px;
+          border-radius: 22px;
           padding: 16px;
           margin-bottom: 10px;
-          border: 1px solid var(--border, rgba(200,51,74,0.1));
-          background: var(--surface, #FFFFFF);
+          border: 1px solid rgba(200,51,74,0.09);
+          background: rgba(255,255,255,0.96);
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
+          box-shadow: 0 4px 20px rgba(0,0,0,0.06), 0 1px 0 rgba(255,255,255,0.9);
           display: flex; gap: 12px; align-items: flex-start;
           animation: insCardIn 0.3s ease both;
         }
@@ -359,8 +362,11 @@ export default function InsightsWidget({ session, profile, darkMode }) {
           to   { opacity: 1; transform: translateY(0); }
         }
         .insights-dark .ins-card {
-          background: #1A0810;
-          border-color: rgba(200,51,74,0.18);
+          background: rgba(18,5,10,0.92);
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
+          border-color: rgba(200,51,74,0.14);
+          box-shadow: 0 8px 28px rgba(0,0,0,0.45);
         }
         .ins-card-icon {
           width: 38px; height: 38px; border-radius: 11px;

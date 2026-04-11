@@ -118,15 +118,19 @@ export default function LoveLetter({ session, profile }) {
       <style>{`
         .letter-wrap {
           min-height: 100%;
-          background: var(--gradient-banner, linear-gradient(160deg, #C8334A 0%, #8B1A2C 100%));
-          background-size: 200% 200%;
-          animation: gradientShift 8s ease infinite;
+          background: linear-gradient(175deg, #0D0305 0%, #220810 30%, #46101F 60%, #1A0608 100%);
           display: flex;
           flex-direction: column;
           align-items: center;
           padding: 70px 20px 120px;
           position: relative;
           overflow: hidden;
+        }
+        .letter-wrap::after {
+          content: '';
+          position: fixed; inset: 0;
+          background: radial-gradient(ellipse at 50% 0%, rgba(200,51,74,0.3) 0%, transparent 55%);
+          pointer-events: none; z-index: 0;
         }
         .letter-wrap::before {
           content: '';

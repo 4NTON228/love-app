@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 
-const COUPLE_START = new Date('2025-10-17T00:00:00')
+// COUPLE_START теперь берётся из profile.couple_start_date (динамически)
 
 /* ─────────────────────────────────────────
    Helpers
@@ -630,7 +630,10 @@ function mouseGlow(e) {
    MAIN COMPONENT
 ───────────────────────────────────────── */
 export default function Home({ session, profile, onNavigate }) {
-  const [time,           setTime]           = useState(getRelTime(COUPLE_START))
+  const coupleStart = profile?.couple_start_date
+    ? new Date(profile.couple_start_date + 'T00:00:00')
+    : new Date('2025-10-17T00:00:00')
+  const [time,           setTime]           = useState(getRelTime(coupleStart))
   const [prevTime,       setPrevTime]       = useState(null)
   const [settings,       setSettings]       = useState(null)
   const [nextEvent,      setNextEvent]      = useState(null)
@@ -650,10 +653,10 @@ export default function Home({ session, profile, onNavigate }) {
   useEffect(() => {
     const id = setInterval(() => {
       setPrevTime(t => t)
-      setTime(getRelTime(COUPLE_START))
+      setTime(getRelTime(coupleStart))
     }, 1000)
     return () => clearInterval(id)
-  }, [])
+  }, [profile?.couple_start_date])
 
   /* Meeting countdown */
   useEffect(() => {
@@ -728,7 +731,7 @@ export default function Home({ session, profile, onNavigate }) {
     setSaving(false)
   }
 
-  const anniv  = getAnniv(COUPLE_START)
+  const anniv  = getAnniv(coupleStart)
   const myName = profile?.name || 'Антон'
   const pName  = partnerProfile?.name || 'Эльвира'
 

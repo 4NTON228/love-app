@@ -285,9 +285,7 @@ export default function Plans({ session, profile }) {
 
         .plan-list { padding: 0 14px; }
         .plan-item-new {
-          background: rgba(255,255,255,0.96);
-          backdrop-filter: blur(16px);
-          -webkit-backdrop-filter: blur(16px);
+          background: var(--bg-card, #ffffff);
           border: 1px solid rgba(200,51,74,0.08);
           border-radius: 22px;
           margin-bottom: 10px;
@@ -295,16 +293,14 @@ export default function Plans({ session, profile }) {
           align-items: center;
           gap: 14px;
           padding: 14px 14px 14px 12px;
-          box-shadow: 0 4px 24px rgba(0,0,0,0.06), 0 1px 0 rgba(255,255,255,0.9);
+          box-shadow: 0 2px 14px rgba(0,0,0,0.06);
           animation: planIn 0.4s ease both;
           transition: opacity 0.3s;
         }
         .app.dark .plan-item-new {
-          background: rgba(18,5,10,0.92);
-          backdrop-filter: blur(16px);
-          -webkit-backdrop-filter: blur(16px);
+          background: #150509;
           border-color: rgba(200,51,74,0.12);
-          box-shadow: 0 8px 28px rgba(0,0,0,0.5);
+          box-shadow: 0 4px 20px rgba(0,0,0,0.4);
         }
         @keyframes planIn {
           from { opacity:0; transform: translateX(-16px); }

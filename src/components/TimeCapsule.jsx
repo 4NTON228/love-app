@@ -254,20 +254,16 @@ export default function TimeCapsule({ session, profile, darkMode }) {
         .tc-card {
           border-radius: 24px; overflow: hidden;
           border: 1px solid rgba(123,63,190,0.12);
-          background: rgba(255,255,255,0.96);
-          backdrop-filter: blur(16px);
-          -webkit-backdrop-filter: blur(16px);
-          box-shadow: 0 4px 24px rgba(0,0,0,0.07), 0 1px 0 rgba(255,255,255,0.9);
+          background: var(--surface, #ffffff);
+          box-shadow: 0 2px 16px rgba(0,0,0,0.07);
           opacity: 0;
           animation: tcIn 0.38s ease both;
           position: relative;
         }
         .tc-dark .tc-card {
-          background: rgba(14,5,24,0.92);
-          backdrop-filter: blur(16px);
-          -webkit-backdrop-filter: blur(16px);
+          background: #0E0518;
           border-color: rgba(123,63,190,0.2);
-          box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+          box-shadow: 0 4px 24px rgba(0,0,0,0.45);
         }
         .tc-card-sent { opacity: 0.55; }
 

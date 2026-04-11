@@ -921,9 +921,7 @@ export default function Home({ session, profile, onNavigate }) {
 
         /* ── Cards ── */
         .hc {
-          background: rgba(255,255,255,0.96);
-          backdrop-filter: blur(20px);
-          -webkit-backdrop-filter: blur(20px);
+          background: var(--surface, #ffffff);
           border-radius: 24px;
           border: 1px solid rgba(200,51,74,0.09);
           padding: 20px;
@@ -932,9 +930,7 @@ export default function Home({ session, profile, onNavigate }) {
           position: relative; overflow: hidden;
         }
         .app.dark .hc {
-          background: rgba(18,5,10,0.92);
-          backdrop-filter: blur(20px);
-          -webkit-backdrop-filter: blur(20px);
+          background: #150509;
           border-color: rgba(200,51,74,0.14);
           box-shadow: 0 8px 40px rgba(0,0,0,0.5);
         }

@@ -134,7 +134,6 @@ export default function EmotionTranslator({ session, profile, darkMode, initialT
 
       const { data, error: fnErr } = await supabase.functions.invoke('relationship-keeper', {
         body: {
-          model: 'grok-3',
           messages: [
             { role: 'user', content: userMsg },
           ],

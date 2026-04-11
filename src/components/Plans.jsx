@@ -175,13 +175,19 @@ export default function Plans({ session }) {
       <style>{`
         .plans-wrap { padding: 0 0 120px; }
         .plans-header {
-          background: var(--gradient-banner, linear-gradient(160deg, #C8334A 0%, #8B1A2C 100%));
-          background-size: 200% 200%;
-          animation: gradientShift 8s ease infinite;
-          padding: 60px 20px 24px;
-          border-radius: 0 0 28px 28px;
-          margin-bottom: 18px;
-          box-shadow: 0 8px 32px rgba(139,26,44,0.3);
+          background: linear-gradient(175deg, #0D0305 0%, #220810 38%, #46101F 68%, #2E0C18 100%);
+          padding: 60px 20px 28px;
+          border-radius: 0 0 36px 36px;
+          margin-bottom: 20px;
+          box-shadow: 0 16px 60px rgba(14,3,8,0.75), 0 4px 20px rgba(0,0,0,0.5);
+          overflow: hidden;
+          position: relative;
+        }
+        .plans-header::after {
+          content: '';
+          position: absolute; inset: 0; border-radius: inherit;
+          background: radial-gradient(ellipse at 50% 0%, rgba(200,51,74,0.38) 0%, transparent 65%);
+          pointer-events: none;
         }
         .plans-header-title {
           font-family: var(--font-display);
@@ -268,16 +274,26 @@ export default function Plans({ session }) {
 
         .plan-list { padding: 0 14px; }
         .plan-item-new {
-          background: var(--bg-card);
-          border-radius: 18px;
+          background: rgba(255,255,255,0.96);
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
+          border: 1px solid rgba(200,51,74,0.08);
+          border-radius: 22px;
           margin-bottom: 10px;
           display: flex;
           align-items: center;
           gap: 14px;
           padding: 14px 14px 14px 12px;
-          box-shadow: var(--shadow);
+          box-shadow: 0 4px 24px rgba(0,0,0,0.06), 0 1px 0 rgba(255,255,255,0.9);
           animation: planIn 0.4s ease both;
           transition: opacity 0.3s;
+        }
+        .app.dark .plan-item-new {
+          background: rgba(18,5,10,0.92);
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
+          border-color: rgba(200,51,74,0.12);
+          box-shadow: 0 8px 28px rgba(0,0,0,0.5);
         }
         @keyframes planIn {
           from { opacity:0; transform: translateX(-16px); }

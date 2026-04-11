@@ -93,13 +93,19 @@ export default function LoveClock() {
       <style>{`
         .clock-wrap {
           min-height: 100%;
-          background: linear-gradient(180deg, var(--bg, #200A10) 0%, #3D1520 50%, #8B1A2C 100%);
+          background: linear-gradient(175deg, #0D0305 0%, #220810 35%, #46101F 65%, #2E0C18 100%);
           position: relative;
           overflow: hidden;
           display: flex;
           flex-direction: column;
           align-items: center;
           padding: 70px 20px 120px;
+        }
+        .clock-wrap::before {
+          content: '';
+          position: fixed; inset: 0;
+          background: radial-gradient(ellipse at 50% 0%, rgba(200,51,74,0.35) 0%, transparent 55%);
+          pointer-events: none; z-index: 0;
         }
         .clock-particles {
           position: fixed;

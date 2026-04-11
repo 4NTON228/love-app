@@ -328,9 +328,18 @@ export default function SyncMirror({ session, profile, darkMode }) {
         /* Answer cards — alternating slide-in from left and right */
         .sm-answers { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
         .sm-answer-card {
-          border-radius: 18px; overflow: hidden;
-          border: 1px solid var(--border, rgba(200,51,74,0.1));
+          border-radius: 22px; overflow: hidden;
+          border: 1px solid rgba(200,51,74,0.1);
+          background: rgba(255,255,255,0.96);
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
+          box-shadow: 0 4px 20px rgba(0,0,0,0.06);
           opacity: 0;
+        }
+        .sm-dark .sm-answer-card {
+          background: rgba(18,5,10,0.92);
+          border-color: rgba(200,51,74,0.14);
+          box-shadow: 0 8px 24px rgba(0,0,0,0.45);
         }
         .sm-answer-card.slide-left  { animation: smSlideLeft  0.38s ease both; }
         .sm-answer-card.slide-right { animation: smSlideRight 0.38s ease both; }

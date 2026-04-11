@@ -536,7 +536,7 @@ async function handleAIProxy(body: Record<string, unknown>): Promise<Response> {
   }
 
   const messages = (body.messages ?? []) as Array<{ role: string; content: string }>
-  const model    = (body.model as string) ?? 'grok-3'
+  const model    = (body.model as string) ?? 'grok-4.20-reasoning'
 
   // Системный промпт советчика по отношениям
   const systemPrompt =
@@ -549,20 +549,23 @@ async function handleAIProxy(body: Record<string, unknown>): Promise<Response> {
   const clientSystem = messages.find(m => m.role === 'system')?.content ?? ''
   const fullSystem   = clientSystem ? `${systemPrompt}\n\n${clientSystem}` : systemPrompt
 
-  // Строим массив messages для Chat Completions API
-  const chatMessages = [
-    { role: 'system', content: fullSystem },
-    ...messages.filter(m => m.role !== 'system'),
-  ]
+  // input для Responses API — массив user/assistant сообщений (без system)
+  const inputMessages = messages
+    .filter(m => m.role !== 'system')
+    .map(m => ({ role: m.role, content: m.content }))
 
-  // Вызов xAI /v1/chat/completions (OpenAI-совместимый)
-  const upstream = await fetch('https://api.x.ai/v1/chat/completions', {
+  // Вызов xAI /v1/responses (Responses API для reasoning-моделей)
+  const upstream = await fetch('https://api.x.ai/v1/responses', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${aiKey}`,
     },
-    body: JSON.stringify({ model, messages: chatMessages }),
+    body: JSON.stringify({
+      model,
+      input: inputMessages.length > 0 ? inputMessages : 'Привет',
+      system: fullSystem,
+    }),
   })
 
   const xaiData = await upstream.json()
@@ -575,8 +578,33 @@ async function handleAIProxy(body: Record<string, unknown>): Promise<Response> {
     })
   }
 
-  // xAI /v1/chat/completions уже возвращает OpenAI-формат — отдаём как есть
-  return new Response(JSON.stringify(xaiData), {
+  // Извлекаем текст из ответа Responses API
+  // Формат: { output: [{ type: "message", content: [{ type: "output_text", text: "..." }] }] }
+  let assistantText = ''
+  try {
+    const outputItem = (xaiData.output ?? []).find(
+      (o: Record<string, unknown>) => o.type === 'message',
+    )
+    const contentItem = ((outputItem as Record<string, unknown>)?.content as Array<Record<string, unknown>> ?? []).find(
+      (c: Record<string, unknown>) => c.type === 'output_text',
+    )
+    assistantText = (contentItem?.text as string) ?? ''
+  } catch (_) {
+    assistantText = xaiData.text ?? xaiData.content ?? JSON.stringify(xaiData)
+  }
+
+  // Возвращаем в OpenAI Chat Completions формате
+  return new Response(JSON.stringify({
+    id:      xaiData.id ?? `chatcmpl-${Date.now()}`,
+    object:  'chat.completion',
+    model,
+    choices: [{
+      index:         0,
+      message:       { role: 'assistant', content: assistantText },
+      finish_reason: 'stop',
+    }],
+    usage: xaiData.usage ?? {},
+  }), {
     status: 200,
     headers: cors,
   })

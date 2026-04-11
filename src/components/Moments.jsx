@@ -220,7 +220,8 @@ function StoriesViewer({ stories, startIdx, onClose }) {
       {/* Background */}
       <div style={{ position:'absolute', inset:0 }}>
         {story.photo_url ? (
-          <img key={story.id} className="story-bg-img" src={story.photo_url} alt={story.title} loading="lazy" />
+          <img key={story.id} className="story-bg-img" src={story.photo_url} alt={story.title} loading="eager"
+            onError={e => { e.currentTarget.style.display='none' }} />
         ) : (
           <div style={{
             width:'100%', height:'100%',
@@ -607,6 +608,7 @@ export default function Moments({ session, profile }) {
                       src={moment.photo_url}
                       alt={moment.title}
                       loading="lazy"
+                      onError={e => { e.currentTarget.style.display='none' }}
                     />
                   ) : (
                     <div className="moment-no-photo">

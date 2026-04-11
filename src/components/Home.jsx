@@ -476,7 +476,8 @@ function AvatarRing({ src, name, birthday, onClick }) {
         <div className="av-gap">
           <div className="av-inner">
             {src
-              ? <img src={src} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+              ? <img src={src} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+                  onError={e => { e.currentTarget.style.display='none' }} />
               : <div className="av-initials-wrap">
                   <svg viewBox="0 0 40 40" width="36" height="36" fill="none">
                     <circle cx="20" cy="16" r="8" fill="rgba(139,26,44,0.7)"/>
@@ -566,7 +567,8 @@ function PartnerCard({ profile, onClose }) {
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
           {profile.avatar_url
-            ? <img src={profile.avatar_url} alt={profile.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ? <img src={profile.avatar_url} alt={profile.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                onError={e => { e.currentTarget.style.display='none' }} />
             : <svg viewBox="0 0 40 40" width="44" height="44" fill="none">
                 <circle cx="20" cy="16" r="8" fill="rgba(139,26,44,0.7)"/>
                 <path d="M4 38c0-8.8 7.2-16 16-16s16 7.2 16 16" fill="rgba(139,26,44,0.5)"/>

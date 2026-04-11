@@ -504,7 +504,8 @@ function EventCard({ event, idx, session, onDelete, onPhoto, past = false }) {
     <div className="cal-event-card" style={{ animationDelay: `${idx * 0.05}s` }}>
       {event.photo_url && (
         <div className="cal-event-photo-wrap" onClick={() => onPhoto(event.photo_url)}>
-          <img className="cal-event-photo" src={event.photo_url} alt={event.title} loading="lazy" />
+          <img className="cal-event-photo" src={event.photo_url} alt={event.title} loading="lazy"
+            onError={e => { e.currentTarget.parentElement.style.display='none' }} />
           <div className={`cal-event-badge${past ? ' past' : ''}`}>{badgeText}</div>
         </div>
       )}

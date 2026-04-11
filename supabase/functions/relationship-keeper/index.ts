@@ -543,69 +543,58 @@ async function handleAIProxy(body: Record<string, unknown>): Promise<Response> {
     'Ты тактичный советчик по отношениям. ' +
     'Отвечай по-русски, кратко и тепло. ' +
     'Не навязывай советы — предлагай мягко. ' +
-    'Избегай клише. Фокусируйся на конкретной ситуации пары. ' +
-    'Максимум 2-3 предложения.'
+    'Избегай клише. Фокусируйся на конкретной ситуации пары.'
 
-  // Собираем input: объединяем все user/assistant сообщения в строку
-  // (кроме system — он идёт отдельным полем)
-  const conversationParts = messages
-    .filter(m => m.role !== 'system')
-    .map(m => {
-      const who = m.role === 'user' ? 'Пользователь' : 'Ассистент'
-      return `${who}: ${m.content}`
-    })
-    .join('\n')
-
-  // Если клиент прислал свой system-промпт — добавляем к нашему
+  // Если клиент прислал свой system-промпт — объединяем с нашим
   const clientSystem = messages.find(m => m.role === 'system')?.content ?? ''
   const fullSystem   = clientSystem ? `${systemPrompt}\n\n${clientSystem}` : systemPrompt
 
-  // Вызов xAI /v1/responses
-  const xaiBody: Record<string, unknown> = {
-    model,
-    input: conversationParts || 'Привет',
-    system: fullSystem,
-  }
+  // input для Responses API — массив user/assistant сообщений (без system)
+  const inputMessages = messages
+    .filter(m => m.role !== 'system')
+    .map(m => ({ role: m.role, content: m.content }))
 
-  // Передаём reasoning effort если явно указан
-  if (body.reasoning_effort) xaiBody.reasoning_effort = body.reasoning_effort
-
+  // Вызов xAI /v1/responses (Responses API для reasoning-моделей)
   const upstream = await fetch('https://api.x.ai/v1/responses', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${aiKey}`,
     },
-    body: JSON.stringify(xaiBody),
+    body: JSON.stringify({
+      model,
+      input: inputMessages.length > 0 ? inputMessages : 'Привет',
+      system: fullSystem,
+    }),
   })
 
   const xaiData = await upstream.json()
 
   if (!upstream.ok) {
+    console.error('[relationship-keeper] xAI error:', upstream.status, JSON.stringify(xaiData))
     return new Response(JSON.stringify(xaiData), {
       status: upstream.status,
       headers: cors,
     })
   }
 
-  // Конвертируем ответ xAI в OpenAI-совместимый формат
-  // xAI /v1/responses возвращает: { output: [{type:"message", content:[{type:"output_text",text:"..."}]}], ... }
+  // Извлекаем текст из ответа Responses API
+  // Формат: { output: [{ type: "message", content: [{ type: "output_text", text: "..." }] }] }
   let assistantText = ''
   try {
     const outputItem = (xaiData.output ?? []).find(
       (o: Record<string, unknown>) => o.type === 'message',
     )
-    const contentItem = (outputItem?.content ?? []).find(
+    const contentItem = ((outputItem as Record<string, unknown>)?.content as Array<Record<string, unknown>> ?? []).find(
       (c: Record<string, unknown>) => c.type === 'output_text',
     )
-    assistantText = contentItem?.text ?? ''
+    assistantText = (contentItem?.text as string) ?? ''
   } catch (_) {
-    // Fallback: пробуем вытащить текст напрямую
     assistantText = xaiData.text ?? xaiData.content ?? JSON.stringify(xaiData)
   }
 
-  // Оборачиваем в OpenAI Chat Completions формат
-  const openaiCompat = {
+  // Возвращаем в OpenAI Chat Completions формате
+  return new Response(JSON.stringify({
     id:      xaiData.id ?? `chatcmpl-${Date.now()}`,
     object:  'chat.completion',
     model,
@@ -615,13 +604,7 @@ async function handleAIProxy(body: Record<string, unknown>): Promise<Response> {
       finish_reason: 'stop',
     }],
     usage: xaiData.usage ?? {},
-    // Поле для reasoning-моделей (если есть)
-    ...(xaiData.usage?.reasoning_tokens
-      ? { reasoning_tokens: xaiData.usage.reasoning_tokens }
-      : {}),
-  }
-
-  return new Response(JSON.stringify(openaiCompat), {
+  }), {
     status: 200,
     headers: cors,
   })

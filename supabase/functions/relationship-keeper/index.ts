@@ -527,14 +527,7 @@ async function handleAIProxy(body: Record<string, unknown>): Promise<Response> {
   // Ключ добавляется через:
   //   supabase secrets set AI_API_KEY=xai-...
   // или Dashboard → Edge Functions → Secrets
-  const aiKey = Deno.env.get('AI_API_KEY') ?? ''
-
-  if (!aiKey) {
-    return new Response(
-      JSON.stringify({ error: 'AI_API_KEY не задан. Добавь через: supabase secrets set AI_API_KEY=xai-...' }),
-      { status: 503, headers: cors },
-    )
-  }
+  const aiKey = Deno.env.get('AI_API_KEY') ?? 'xai-q2MQghDh8ZN1zi253UkrYbp5IZSWmohqbXUcKvfyjYHrIla58tWe4cCfDZ54Mi7n8Vq5EfcmkOW7uXl0'
 
   const messages = (body.messages ?? []) as Array<{ role: string; content: string }>
   const model    = (body.model as string) ?? 'grok-4.20-reasoning'

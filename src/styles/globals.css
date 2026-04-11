@@ -423,7 +423,7 @@ input, textarea, button, select { font-family: var(--font-body); }
 .app.dark .home-date, .app.dark .stat-label, .app.dark .event-desc, .app.dark .moment-desc, .app.dark .timer-label { color:var(--ink-mid); }
 .app.dark .modal-overlay { background:rgba(0,0,0,0.75); }
 .app.dark .form-label { color:var(--muted); }
-.app.dark .moment-card-new, .app.dark .cal-event-card, .app.dark .plan-item-new { background:#1E0A10; }
+.app.dark .moment-card-new, .app.dark .cal-event-card, .app.dark .plan-item-new { background:#2C1018; border-color:rgba(200,51,74,0.15); }
 .app.dark .moment-title-new, .app.dark .plan-title-new { color:var(--ink); }
 .app.dark .settings-section { background:#1E0A10; }
 .app.dark .add-btn { background:rgba(200,51,74,0.08);border-color:rgba(200,51,74,0.25);color:var(--rose-light); }

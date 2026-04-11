@@ -220,9 +220,9 @@ export default function Calendar({ session, profile }) {
           flex-direction: column;
         }
         .app.dark .cal-event-card {
-          background: #150509;
-          border-color: rgba(200,51,74,0.12);
-          box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+          background: #2C1018;
+          border-color: rgba(200,51,74,0.18);
+          box-shadow: 0 4px 24px rgba(0,0,0,0.5);
         }
         @keyframes calIn {
           from { opacity:0; transform: translateY(16px); }

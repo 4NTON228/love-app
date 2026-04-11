@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Love App — Генератор иконок</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, sans-serif;
+    background: #FBF0F2;
+    padding: 32px 20px;
+    min-height: 100vh;
+  }
+  h1 {
+    font-size: 24px; color: #C8334A; margin-bottom: 6px;
+    font-family: Georgia, serif; font-style: italic;
+  }
+  .sub { font-size: 14px; color: #9A6070; margin-bottom: 32px; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 20px; max-width: 900px;
+  }
+  .card {
+    background: white; border-radius: 16px;
+    padding: 20px; text-align: center;
+    box-shadow: 0 2px 16px rgba(200,51,74,0.1);
+    border: 1px solid rgba(200,51,74,0.1);
+  }
+  .card canvas { border-radius: 16px; display: block; margin: 0 auto 12px; }
+  .card h3 { font-size: 13px; color: #1C0A0E; margin-bottom: 4px; }
+  .card p { font-size: 11px; color: #9A6070; margin-bottom: 14px; line-height: 1.5; }
+  .btn {
+    display: inline-block; padding: 9px 18px;
+    background: linear-gradient(135deg, #C8334A, #8B1A2C);
+    color: white; border: none; border-radius: 10px;
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    text-decoration: none; transition: opacity 0.2s;
+  }
+  .btn:hover { opacity: 0.85; }
+  .btn-all {
+    display: inline-block; padding: 13px 28px; margin-bottom: 28px;
+    background: linear-gradient(135deg, #C8334A, #8B1A2C);
+    color: white; border: none; border-radius: 14px;
+    font-size: 15px; font-weight: 700; cursor: pointer;
+    box-shadow: 0 4px 20px rgba(200,51,74,0.3);
+  }
+  .note {
+    font-size: 12px; color: #9A6070; margin-top: 24px;
+    max-width: 600px; line-height: 1.7;
+    background: white; padding: 16px; border-radius: 12px;
+    border: 1px solid rgba(200,51,74,0.1);
+  }
+  .note strong { color: #C8334A; }
+</style>
+</head>
+<body>
+
+<h1>Love App — Иконки</h1>
+<p class="sub">Все иконки для VK Mini App и PWA</p>
+
+<button class="btn-all" onclick="downloadAll()">Скачать все иконки (ZIP)</button>
+
+<div class="grid" id="grid"></div>
+
+<div class="note">
+  <strong>Для VK:</strong><br>
+  • Универсальная иконка → 576×576<br>
+  • Иконка каталога → 278×278<br>
+  • Маленькая иконка → 150×150<br>
+  • Фавикон → 32×32<br><br>
+  <strong>Цвет фона иконок в каталоге:</strong> вставь <strong>#C8334A</strong> вместо #99A2AD<br><br>
+  <strong>Для PWA:</strong> icon-192.png и icon-512.png уже в папке public/ — замени их этими файлами
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+
+const ICONS = [
+  { name: 'vk-universal-576',  size: 576,  label: 'VK Универсальная',    desc: '576×576 px\nДля каталога и ленты',       radius: 0.18 },
+  { name: 'vk-catalog-278',    size: 278,  label: 'VK Каталог/сниппеты', desc: '278×278 px\nИконка для каталога',         radius: 0.18 },
+  { name: 'vk-small-150',      size: 150,  label: 'VK Маленькая',        desc: '150×150 px\nЭкран запуска, уведомления',  radius: 0.18 },
+  { name: 'vk-favicon-32',     size: 32,   label: 'VK Фавикон',          desc: '32×32 px\nВкладка браузера',              radius: 0.18 },
+  { name: 'icon-192',          size: 192,  label: 'PWA 192×192',         desc: '192×192 px\nAndroid, PWA install',         radius: 0.22 },
+  { name: 'icon-512',          size: 512,  label: 'PWA 512×512',         desc: '512×512 px\nSplash screen',               radius: 0.22 },
+  { name: 'apple-touch-icon',  size: 180,  label: 'Apple Touch 180×180', desc: '180×180 px\niPhone «На экран Домой»',     radius: 0.2  },
+]
+
+function drawIcon(canvas, size, radius) {
+  const ctx = canvas.getContext('2d')
+  const r = size * radius
+
+  ctx.clearRect(0, 0, size, size)
+
+  // Фон с скруглёнными углами
+  ctx.beginPath()
+  ctx.moveTo(r, 0)
+  ctx.lineTo(size - r, 0)
+  ctx.quadraticCurveTo(size, 0, size, r)
+  ctx.lineTo(size, size - r)
+  ctx.quadraticCurveTo(size, size, size - r, size)
+  ctx.lineTo(r, size)
+  ctx.quadraticCurveTo(0, size, 0, size - r)
+  ctx.lineTo(0, r)
+  ctx.quadraticCurveTo(0, 0, r, 0)
+  ctx.closePath()
+
+  // Градиент фона
+  const grad = ctx.createLinearGradient(0, 0, size, size)
+  grad.addColorStop(0,   '#E8556A')
+  grad.addColorStop(0.5, '#C8334A')
+  grad.addColorStop(1,   '#8B1A2C')
+  ctx.fillStyle = grad
+  ctx.fill()
+
+  // Блик сверху
+  const glow = ctx.createRadialGradient(size * 0.5, size * 0.08, 0, size * 0.5, size * 0.08, size * 0.6)
+  glow.addColorStop(0, 'rgba(255,255,255,0.22)')
+  glow.addColorStop(1, 'rgba(255,255,255,0)')
+  ctx.fillStyle = glow
+  ctx.fill()
+
+  // Сердце
+  const cx = size * 0.5
+  const cy = size * 0.5
+  const hw = size * 0.55  // ширина сердца
+
+  ctx.save()
+  ctx.shadowColor = 'rgba(0,0,0,0.25)'
+  ctx.shadowBlur  = size * 0.06
+  ctx.shadowOffsetY = size * 0.03
+
+  ctx.beginPath()
+  // Рисуем сердце через bezier
+  const hx = cx
+  const hy = cy + hw * 0.08
+
+  ctx.moveTo(hx, hy + hw * 0.45)
+  // Левая сторона
+  ctx.bezierCurveTo(
+    hx - hw * 0.48, hy + hw * 0.15,
+    hx - hw * 0.52, hy - hw * 0.32,
+    hx - hw * 0.26, hy - hw * 0.38
+  )
+  ctx.bezierCurveTo(
+    hx - hw * 0.12, hy - hw * 0.42,
+    hx,             hy - hw * 0.28,
+    hx,             hy - hw * 0.18
+  )
+  // Правая сторона
+  ctx.bezierCurveTo(
+    hx,             hy - hw * 0.28,
+    hx + hw * 0.12, hy - hw * 0.42,
+    hx + hw * 0.26, hy - hw * 0.38
+  )
+  ctx.bezierCurveTo(
+    hx + hw * 0.52, hy - hw * 0.32,
+    hx + hw * 0.48, hy + hw * 0.15,
+    hx,             hy + hw * 0.45
+  )
+  ctx.closePath()
+
+  ctx.fillStyle = 'rgba(255,255,255,0.95)'
+  ctx.fill()
+  ctx.restore()
+
+  // Маленький блик на сердце
+  if (size >= 64) {
+    ctx.beginPath()
+    ctx.ellipse(cx - hw * 0.1, cy - hw * 0.08, hw * 0.12, hw * 0.07, -0.4, 0, Math.PI * 2)
+    ctx.fillStyle = 'rgba(255,255,255,0.45)'
+    ctx.fill()
+  }
+}
+
+function renderAll() {
+  const grid = document.getElementById('grid')
+  ICONS.forEach(icon => {
+    const card = document.createElement('div')
+    card.className = 'card'
+
+    const previewSize = Math.min(icon.size, 160)
+    const canvas = document.createElement('canvas')
+    canvas.width  = icon.size
+    canvas.height = icon.size
+    canvas.style.width  = previewSize + 'px'
+    canvas.style.height = previewSize + 'px'
+    drawIcon(canvas, icon.size, icon.radius)
+
+    const h3 = document.createElement('h3')
+    h3.textContent = icon.label
+
+    const p = document.createElement('p')
+    p.textContent = icon.desc
+
+    const btn = document.createElement('button')
+    btn.className = 'btn'
+    btn.textContent = 'Скачать'
+    btn.onclick = () => downloadOne(canvas, icon.name, icon.size)
+
+    card.appendChild(canvas)
+    card.appendChild(h3)
+    card.appendChild(p)
+    card.appendChild(btn)
+    grid.appendChild(card)
+  })
+}
+
+function downloadOne(canvas, name, size) {
+  const link = document.createElement('a')
+  link.download = name + '.png'
+  link.href = canvas.toDataURL('image/png')
+  link.click()
+}
+
+async function downloadAll() {
+  const btn = document.querySelector('.btn-all')
+  btn.textContent = 'Собираем архив...'
+  btn.disabled = true
+
+  try {
+    const zip = new JSZip()
+    const canvases = document.querySelectorAll('canvas')
+
+    canvases.forEach((canvas, i) => {
+      const icon = ICONS[i]
+      const dataUrl = canvas.toDataURL('image/png')
+      const base64  = dataUrl.split(',')[1]
+      zip.file(icon.name + '.png', base64, { base64: true })
+    })
+
+    const blob = await zip.generateAsync({ type: 'blob' })
+    const url  = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.download = 'love-app-icons.zip'
+    link.href = url
+    link.click()
+    URL.revokeObjectURL(url)
+  } finally {
+    btn.textContent = 'Скачать все иконки (ZIP)'
+    btn.disabled = false
+  }
+}
+
+renderAll()
+</script>
+</body>
+</html>

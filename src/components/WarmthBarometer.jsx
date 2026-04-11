@@ -311,20 +311,16 @@ export default function WarmthBarometer({ session, profile, darkMode }) {
         }
         .wb-stat {
           border-radius: 22px; padding: 16px;
-          background: rgba(255,255,255,0.96);
-          backdrop-filter: blur(16px);
-          -webkit-backdrop-filter: blur(16px);
+          background: var(--surface, #ffffff);
           border: 1px solid rgba(200,51,74,0.08);
-          box-shadow: 0 4px 20px rgba(0,0,0,0.06), 0 1px 0 rgba(255,255,255,0.9);
+          box-shadow: 0 2px 14px rgba(0,0,0,0.06);
           opacity: 0;
           animation: wbSlideUp 0.45s ease both;
         }
         .wb-dark .wb-stat {
-          background: rgba(18,5,10,0.92);
-          backdrop-filter: blur(16px);
-          -webkit-backdrop-filter: blur(16px);
+          background: #150509;
           border-color: rgba(232,117,58,0.15);
-          box-shadow: 0 8px 28px rgba(0,0,0,0.45);
+          box-shadow: 0 4px 20px rgba(0,0,0,0.4);
         }
         .wb-stat-val {
           font-family: var(--font-head, Georgia, serif);

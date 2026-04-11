@@ -210,23 +210,19 @@ export default function Calendar({ session, profile }) {
 
         .cal-event-card {
           margin: 0 14px 12px;
-          background: rgba(255,255,255,0.96);
-          backdrop-filter: blur(16px);
-          -webkit-backdrop-filter: blur(16px);
+          background: var(--bg-card, #ffffff);
           border-radius: 24px;
           border: 1px solid rgba(200,51,74,0.08);
           overflow: hidden;
-          box-shadow: 0 4px 24px rgba(0,0,0,0.07), 0 1px 0 rgba(255,255,255,0.9);
+          box-shadow: 0 2px 16px rgba(0,0,0,0.07), 0 1px 0 rgba(255,255,255,0.8);
           animation: calIn 0.4s ease both;
           display: flex;
           flex-direction: column;
         }
         .app.dark .cal-event-card {
-          background: rgba(18,5,10,0.92);
-          backdrop-filter: blur(16px);
-          -webkit-backdrop-filter: blur(16px);
+          background: #150509;
           border-color: rgba(200,51,74,0.12);
-          box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+          box-shadow: 0 4px 20px rgba(0,0,0,0.4);
         }
         @keyframes calIn {
           from { opacity:0; transform: translateY(16px); }

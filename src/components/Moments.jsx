@@ -219,7 +219,7 @@ function StoriesViewer({ stories, startIdx, onClose }) {
       {/* Background */}
       <div style={{ position:'absolute', inset:0 }}>
         {story.photo_url ? (
-          <img key={story.id} className="story-bg-img" src={story.photo_url} alt={story.title} />
+          <img key={story.id} className="story-bg-img" src={story.photo_url} alt={story.title} loading="lazy" />
         ) : (
           <div style={{
             width:'100%', height:'100%',
@@ -444,20 +444,16 @@ export default function Moments({ session }) {
           margin-bottom: 12px;
           border-radius: 22px;
           overflow: hidden;
-          background: rgba(255,255,255,0.96);
-          backdrop-filter: blur(16px);
-          -webkit-backdrop-filter: blur(16px);
+          background: var(--bg-card, #ffffff);
           border: 1px solid rgba(200,51,74,0.08);
-          box-shadow: 0 4px 20px rgba(0,0,0,0.07), 0 1px 0 rgba(255,255,255,0.9);
+          box-shadow: 0 2px 16px rgba(0,0,0,0.07);
           animation: momentIn 0.45s ease both;
           cursor: pointer;
         }
         .app.dark .moment-card-new {
-          background: rgba(18,5,10,0.92);
-          backdrop-filter: blur(16px);
-          -webkit-backdrop-filter: blur(16px);
+          background: #150509;
           border-color: rgba(200,51,74,0.12);
-          box-shadow: 0 8px 28px rgba(0,0,0,0.5);
+          box-shadow: 0 4px 20px rgba(0,0,0,0.4);
         }
         @keyframes momentIn {
           from { opacity:0; transform: translateY(24px) scale(0.95); }

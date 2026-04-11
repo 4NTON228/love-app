@@ -309,6 +309,7 @@ export default function Moments({ session, profile }) {
   const [showModal, setShowModal] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [imgErrors, setImgErrors] = useState({})
   const [storiesIdx, setStoriesIdx] = useState(0)
   const [showStories, setShowStories] = useState(false)
 
@@ -463,9 +464,9 @@ export default function Moments({ session, profile }) {
           cursor: pointer;
         }
         .app.dark .moment-card-new {
-          background: #150509;
-          border-color: rgba(200,51,74,0.12);
-          box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+          background: #2C1018;
+          border-color: rgba(200,51,74,0.18);
+          box-shadow: 0 4px 24px rgba(0,0,0,0.5);
         }
         @keyframes momentIn {
           from { opacity:0; transform: translateY(24px) scale(0.95); }
@@ -602,13 +603,13 @@ export default function Moments({ session, profile }) {
                   style={{ animationDelay: `${i * 0.05}s` }}
                   onClick={() => openStories(i)}
                 >
-                  {moment.photo_url ? (
+                  {moment.photo_url && !imgErrors[moment.id] ? (
                     <img
                       className={`moment-img ${i % 3 === 0 ? 'moment-img-tall' : 'moment-img-wide'}`}
                       src={moment.photo_url}
                       alt={moment.title}
                       loading="lazy"
-                      onError={e => { e.currentTarget.style.display='none' }}
+                      onError={() => setImgErrors(prev => ({ ...prev, [moment.id]: true }))}
                     />
                   ) : (
                     <div className="moment-no-photo">

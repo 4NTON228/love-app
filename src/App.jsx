@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { supabase } from './lib/supabase'
 import { subscribeToPush } from './lib/push'
 import Auth from './components/Auth'
+import Onboarding from './components/Onboarding'
 import Home from './components/Home'
 import Chat from './components/Chat'
 import Calendar from './components/Calendar'
@@ -66,6 +67,17 @@ export default function App() {
     })
   }
 
+  // Сохраняем invite-код из URL до авторизации
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const inviteCode = params.get('invite')
+    if (inviteCode) {
+      localStorage.setItem('pendingInvite', inviteCode)
+      // Убираем из URL чтобы не мешало
+      window.history.replaceState({}, '', window.location.pathname)
+    }
+  }, [])
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
@@ -93,7 +105,25 @@ export default function App() {
   async function loadProfile(userId) {
     const { data } = await supabase.from('profiles').select('*').eq('id', userId).single()
     setProfile(data)
-    // Обновляем подписку только если разрешение уже выдано (не спрашиваем заново)
+
+    // Принимаем pending invite после входа
+    const pendingInvite = localStorage.getItem('pendingInvite')
+    if (pendingInvite && data && !data.partner_id) {
+      localStorage.removeItem('pendingInvite')
+      const { data: partner } = await supabase
+        .from('profiles')
+        .select('id, name')
+        .eq('invite_code', pendingInvite)
+        .single()
+      if (partner && partner.id !== userId) {
+        await supabase.from('profiles').update({ partner_id: partner.id }).eq('id', userId)
+        await supabase.from('profiles').update({ partner_id: userId }).eq('id', partner.id)
+        // Перезагружаем профиль с обновлённым partner_id
+        const { data: updated } = await supabase.from('profiles').select('*').eq('id', userId).single()
+        setProfile(updated)
+      }
+    }
+
     if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
       subscribeToPush(userId)
     }
@@ -158,6 +188,16 @@ export default function App() {
 
   if (!session) {
     return <Auth />
+  }
+
+  // Показываем онбординг если не пройден
+  if (profile && !profile.onboarding_done) {
+    return (
+      <Onboarding
+        session={session}
+        onComplete={reloadProfile}
+      />
+    )
   }
 
   const renderTab = () => {

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { subscribeToPush } from '../lib/push'
+import QRCode from 'qrcode'
 
 /* ── Small SVG icons for settings rows ── */
 function IcoUser() {
@@ -110,6 +111,118 @@ const THEMES = [
   { id: 'gold',      label: 'Золото',     a: '#F57F17', b: '#E65100' },
   { id: 'night',     label: 'Ночь',       a: '#1A237E', b: '#0D0D1A' },
 ]
+
+/* ── Partner Invite Section ── */
+function PartnerSection({ profile }) {
+  const [qrUrl, setQrUrl] = useState(null)
+  const [showQR, setShowQR] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const [partnerProfile, setPartnerProfile] = useState(null)
+
+  const inviteLink = profile?.invite_code
+    ? `${window.location.origin}/?invite=${profile.invite_code}`
+    : null
+
+  useEffect(() => {
+    if (profile?.partner_id) {
+      supabase.from('profiles').select('name, avatar_url').eq('id', profile.partner_id).single()
+        .then(({ data }) => setPartnerProfile(data))
+    }
+  }, [profile?.partner_id])
+
+  useEffect(() => {
+    if (inviteLink && showQR) {
+      QRCode.toDataURL(inviteLink, {
+        width: 200, margin: 1,
+        color: { dark: '#C8334A', light: '#FDF5F6' },
+      }).then(setQrUrl)
+    }
+  }, [inviteLink, showQR])
+
+  async function copy() {
+    await navigator.clipboard.writeText(inviteLink).catch(() => {})
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  return (
+    <div className="settings-section">
+      <div className="settings-section-title">Партнёр</div>
+
+      {profile?.partner_id && partnerProfile ? (
+        /* Партнёр подключён */
+        <div style={{ padding: '12px 0 4px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{
+              width: 44, height: 44, borderRadius: '50%', overflow: 'hidden',
+              background: 'linear-gradient(135deg,#FBF0F2,#F2D0D6)', flexShrink: 0,
+            }}>
+              {partnerProfile.avatar_url
+                ? <img src={partnerProfile.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>
+                    <svg viewBox="0 0 40 40" width="22" height="22" fill="none"><circle cx="20" cy="15" r="7" fill="#C8334A" opacity="0.6"/><path d="M4 38c0-8.8 7.2-16 16-16s16 7.2 16 16" fill="#C8334A" opacity="0.4"/></svg>
+                  </div>
+              }
+            </div>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>{partnerProfile.name}</div>
+              <div style={{ fontSize: 12, color: '#C8334A' }}>Подключён</div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        /* Партнёр не подключён */
+        <div style={{ paddingTop: 8 }}>
+          <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 14, lineHeight: 1.5 }}>
+            Партнёр ещё не подключён. Поделись ссылкой или QR-кодом.
+          </p>
+
+          <div style={{
+            background: 'var(--surface-2, #FDF5F6)', borderRadius: 12, padding: '10px 12px',
+            fontSize: 12, color: 'var(--text-muted)', marginBottom: 12, wordBreak: 'break-all',
+            border: '1px solid rgba(200,51,74,0.1)',
+          }}>
+            {inviteLink}
+          </div>
+
+          <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+            <button onClick={copy} style={{
+              flex: 1, padding: '10px 0', borderRadius: 12,
+              border: '1.5px solid rgba(200,51,74,0.25)',
+              background: copied ? 'rgba(200,51,74,0.08)' : 'transparent',
+              color: '#C8334A', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+            }}>
+              {copied ? '✓ Скопировано' : 'Скопировать'}
+            </button>
+            <button onClick={() => setShowQR(v => !v)} style={{
+              flex: 1, padding: '10px 0', borderRadius: 12,
+              border: '1.5px solid rgba(200,51,74,0.25)',
+              background: showQR ? 'rgba(200,51,74,0.08)' : 'transparent',
+              color: '#C8334A', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+            }}>
+              QR-код
+            </button>
+            {navigator.share && (
+              <button onClick={() => navigator.share({ title: 'Love App', url: inviteLink })} style={{
+                flex: 1, padding: '10px 0', borderRadius: 12,
+                border: 'none', background: 'linear-gradient(135deg,#C8334A,#8B1A2C)',
+                color: 'white', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              }}>
+                Поделиться
+              </button>
+            )}
+          </div>
+
+          {showQR && qrUrl && (
+            <div style={{ textAlign: 'center', padding: '12px 0' }}>
+              <img src={qrUrl} alt="QR" style={{ width: 160, height: 160, borderRadius: 12 }} />
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
 
 export default function Settings({ session, profile, darkMode, toggleDarkMode, onProfileUpdate }) {
   const [name, setName] = useState(profile?.name || '')
@@ -584,6 +697,9 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
             ))}
           </div>
         </div>
+
+        {/* Partner invite */}
+        <PartnerSection profile={profile} />
 
         {/* Logout */}
         <button className="settings-logout-btn" onClick={handleLogout}>

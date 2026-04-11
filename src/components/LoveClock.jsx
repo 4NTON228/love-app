@@ -260,7 +260,8 @@ export default function LoveClock() {
             const cy = 140 + R * Math.sin(angle) - 22
             const photo = photoRing[i]
             return photo ? (
-              <img key={i} className="photo-ring-img" src={photo} alt="" style={{ left: cx, top: cy }} />
+              <img key={i} className="photo-ring-img" src={photo} alt="" style={{ left: cx, top: cy }}
+                onError={e => { e.currentTarget.style.display='none' }} />
             ) : (
               <div key={i} className="photo-ring-placeholder" style={{ left: cx, top: cy }}>
                 <svg viewBox="0 0 20 18" width="18" height="16" fill="rgba(255,150,180,0.6)">

@@ -44,20 +44,14 @@ export async function subscribeToPush(userId) {
     
     console.log('✅ Подписка создана:', sub);
     
-    // Сначала удаляем старые записи этого пользователя
-    await supabase
-      .from('push_subscriptions')
-      .delete()
-      .eq('user_id', userId);
-
-    // Вставляем свежую подписку
+    // Upsert: обновляем если уже есть, иначе создаём
     const { error } = await supabase
       .from('push_subscriptions')
-      .insert({
+      .upsert({
         user_id: userId,
         subscription: sub.toJSON(),
         updated_at: new Date().toISOString()
-      });
+      }, { onConflict: 'user_id' });
     
     if (error) throw error;
     console.log('✅ Подписка сохранена в Supabase');

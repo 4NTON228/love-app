@@ -75,6 +75,27 @@ function IcoPersonFill() {
   )
 }
 
+function getZodiac(dateStr) {
+  if (!dateStr) return null
+  const d = new Date(dateStr), m = d.getMonth() + 1, day = d.getDate()
+  if ((m===3&&day>=21)||(m===4&&day<=19)) return 'Овен ♈'
+  if ((m===4&&day>=20)||(m===5&&day<=20)) return 'Телец ♉'
+  if ((m===5&&day>=21)||(m===6&&day<=20)) return 'Близнецы ♊'
+  if ((m===6&&day>=21)||(m===7&&day<=22)) return 'Рак ♋'
+  if ((m===7&&day>=23)||(m===8&&day<=22)) return 'Лев ♌'
+  if ((m===8&&day>=23)||(m===9&&day<=22)) return 'Дева ♍'
+  if ((m===9&&day>=23)||(m===10&&day<=22)) return 'Весы ♎'
+  if ((m===10&&day>=23)||(m===11&&day<=21)) return 'Скорпион ♏'
+  if ((m===11&&day>=22)||(m===12&&day<=21)) return 'Стрелец ♐'
+  if ((m===12&&day>=22)||(m===1&&day<=19)) return 'Козерог ♑'
+  if ((m===1&&day>=20)||(m===2&&day<=18)) return 'Водолей ♒'
+  return 'Рыбы ♓'
+}
+function formatBirthday(dateStr) {
+  if (!dateStr) return null
+  return new Date(dateStr).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
+}
+
 const THEMES = [
   { id: 'rose',      label: 'Роза',       a: '#C8334A', b: '#9C27B0' },
   { id: 'cherry',    label: 'Вишня',      a: '#AD1457', b: '#4A0072' },
@@ -202,29 +223,70 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
     <>
       <style>{`
         .settings-wrap { padding: 0 0 120px; }
+
+        /* ── Premium Header ── */
+        @property --sring-a { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
+        @keyframes sRingRotate { to { --sring-a: 360deg; } }
+        @keyframes outerGlow {
+          0%,100% { box-shadow: 0 0 0 0 rgba(200,51,74,0.35), 0 0 50px rgba(200,51,74,0.5); }
+          50%      { box-shadow: 0 0 0 10px rgba(200,51,74,0), 0 0 60px rgba(200,51,74,0.7); }
+        }
+
         .settings-header {
-          background: var(--gradient-banner, linear-gradient(160deg, #C8334A 0%, #8B1A2C 100%));
-          background-size: 200% 200%;
-          animation: gradientShift 8s ease infinite;
-          padding: 60px 20px 30px;
-          border-radius: 0 0 28px 28px;
+          background: linear-gradient(175deg, #0D0305 0%, #220810 38%, #46101F 68%, #2E0C18 100%);
+          padding: 76px 20px 40px;
+          border-radius: 0 0 40px 40px;
           display: flex;
           flex-direction: column;
           align-items: center;
-          margin-bottom: 20px;
-          box-shadow: 0 8px 32px rgba(139,26,44,0.3);
+          margin-bottom: 24px;
+          box-shadow: 0 20px 60px rgba(20,4,12,0.7), 0 4px 20px rgba(0,0,0,0.5);
+          overflow: hidden;
+          position: relative;
+        }
+        .settings-header::before {
+          content: '';
+          position: absolute;
+          top: -70px; left: 50%;
+          transform: translateX(-50%);
+          width: 320px; height: 280px;
+          background: radial-gradient(ellipse, rgba(200,51,74,0.45) 0%, transparent 68%);
+          pointer-events: none;
+        }
+        .settings-header::after {
+          content: '';
+          position: absolute;
+          bottom: 0; left: 0; right: 0;
+          height: 80px;
+          background: linear-gradient(to top, rgba(200,51,74,0.06), transparent);
+          pointer-events: none;
+        }
+
+        /* ── Avatar ring ── */
+        .settings-av-ring {
+          width: 126px; height: 126px;
+          border-radius: 50%;
+          padding: 3px;
+          background: conic-gradient(from var(--sring-a), #FF8FA5 0%, #C8334A 30%, #8B1A2C 55%, #C8334A 75%, #FF8FA5 100%);
+          animation: sRingRotate 4s linear infinite, outerGlow 2.5s ease-in-out infinite;
+          position: relative; z-index: 1;
+          flex-shrink: 0;
+          margin-bottom: 18px;
+        }
+        .settings-av-gap {
+          width: 100%; height: 100%;
+          border-radius: 50%;
+          background: #1A0608;
+          padding: 2px;
         }
         .settings-avatar-wrap {
           position: relative;
-          margin-bottom: 12px;
+          width: 100%; height: 100%;
         }
         .settings-avatar {
-          width: 90px;
-          height: 90px;
+          width: 100%; height: 100%;
           border-radius: 50%;
-          border: 3px solid rgba(255,255,255,0.6);
-          box-shadow: 0 4px 20px rgba(0,0,0,0.25);
-          background: rgba(255,255,255,0.15);
+          background: rgba(200,51,74,0.1);
           overflow: hidden;
           display: flex;
           align-items: center;
@@ -232,212 +294,196 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
         }
         .settings-avatar-btn {
           position: absolute;
-          bottom: -2px;
-          right: -2px;
-          background: white;
-          border: none;
+          bottom: 2px; right: 2px;
+          background: linear-gradient(135deg, #D94060, #9B1A30);
+          border: 2.5px solid #1A0608;
           border-radius: 50%;
-          width: 30px; height: 30px;
-          font-size: 14px;
+          width: 32px; height: 32px;
           cursor: pointer;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-          display: flex;
-          align-items: center;
-          justify-content: center;
+          box-shadow: 0 3px 14px rgba(139,26,44,0.55);
+          display: flex; align-items: center; justify-content: center;
+          color: white; z-index: 2;
         }
         .settings-header-name {
           font-family: var(--font-display);
-          font-size: 20px;
-          color: white;
-          margin-bottom: 2px;
+          font-size: 24px; font-weight: 700;
+          color: white; margin-bottom: 4px;
+          letter-spacing: -0.3px;
+          text-shadow: 0 2px 20px rgba(200,51,74,0.6);
+          position: relative; z-index: 1;
         }
         .settings-header-sub {
           font-family: var(--font-body);
-          font-size: 13px;
-          color: rgba(255,255,255,0.6);
+          font-size: 12px;
+          color: rgba(255,255,255,0.42);
+          margin-bottom: 16px;
+          position: relative; z-index: 1;
+        }
+        .settings-chips {
+          display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;
+          position: relative; z-index: 1;
+        }
+        .settings-chip {
+          display: inline-flex; align-items: center; gap: 5px;
+          background: rgba(255,255,255,0.08);
+          border: 1px solid rgba(255,255,255,0.16);
+          border-radius: 20px;
+          padding: 5px 14px;
+          font-family: var(--font-body);
+          font-size: 12px; font-weight: 500;
+          color: rgba(255,255,255,0.78);
         }
 
-        /* Sections */
+        /* ── Sections ── */
         .settings-section {
           background: var(--bg-card);
-          border-radius: 20px;
+          border-radius: 24px;
           margin: 0 14px 14px;
           overflow: hidden;
-          box-shadow: var(--shadow);
+          box-shadow: 0 2px 20px rgba(0,0,0,0.06), 0 1px 0 rgba(255,255,255,0.6);
+          border: 1px solid rgba(200,51,74,0.07);
         }
         .settings-section-title {
           font-family: var(--font-body);
-          font-size: 11px;
-          font-weight: 700;
-          text-transform: uppercase;
-          letter-spacing: 1.2px;
+          font-size: 11px; font-weight: 700;
+          text-transform: uppercase; letter-spacing: 1.4px;
           color: var(--text-muted);
-          padding: 14px 16px 8px;
+          padding: 16px 18px 8px;
         }
         .settings-row {
-          display: flex;
-          align-items: center;
-          padding: 13px 16px;
-          gap: 12px;
+          display: flex; align-items: center;
+          padding: 12px 16px; gap: 14px;
           border-top: 1px solid rgba(0,0,0,0.04);
         }
         .app.dark .settings-row { border-top-color: rgba(255,255,255,0.05); }
         .settings-row-icon {
           flex-shrink: 0;
-          width: 34px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
+          width: 38px; height: 38px;
+          border-radius: 12px;
+          display: flex; align-items: center; justify-content: center;
+          background: linear-gradient(135deg, rgba(200,51,74,0.13), rgba(139,26,44,0.08));
+          color: var(--rose, #C8334A);
         }
         .settings-row-label {
           flex: 1;
           font-family: var(--font-body);
-          font-size: 15px;
-          font-weight: 500;
+          font-size: 15px; font-weight: 500;
           color: var(--text);
         }
         .settings-row-right {
           font-family: var(--font-body);
-          font-size: 14px;
-          color: var(--text-muted);
+          font-size: 14px; color: var(--text-muted);
         }
         .settings-toggle {
-          width: 48px;
-          height: 28px;
+          width: 50px; height: 28px;
           background: var(--rose, #C8334A);
           border-radius: 99px;
-          position: relative;
-          cursor: pointer;
-          border: none;
-          flex-shrink: 0;
+          position: relative; cursor: pointer; border: none; flex-shrink: 0;
           transition: background 0.2s;
+          box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
         }
         .settings-toggle.off { background: rgba(0,0,0,0.15); }
         .app.dark .settings-toggle.off { background: rgba(255,255,255,0.12); }
         .settings-toggle-thumb {
-          position: absolute;
-          top: 3px;
-          left: 3px;
-          width: 22px; height: 22px;
-          border-radius: 50%;
+          position: absolute; top: 3px; left: 3px;
+          width: 22px; height: 22px; border-radius: 50%;
           background: white;
           transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1);
+          box-shadow: 0 1px 6px rgba(0,0,0,0.25);
         }
-        .settings-toggle:not(.off) .settings-toggle-thumb { transform: translateX(20px); }
+        .settings-toggle:not(.off) .settings-toggle-thumb { transform: translateX(22px); }
 
-        /* Input fields */
+        /* ── Inputs ── */
         .settings-input {
-          width: 100%;
-          background: none;
-          border: none;
-          font-family: var(--font-body);
-          font-size: 15px;
-          color: var(--text);
-          outline: none;
-          text-align: right;
+          width: 100%; background: none; border: none;
+          font-family: var(--font-body); font-size: 15px;
+          color: var(--text); outline: none; text-align: right;
         }
         .settings-input::placeholder { color: var(--text-muted); }
 
-        /* Themes grid */
+        /* ── Themes ── */
         .themes-grid {
-          display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          gap: 12px;
-          padding: 8px 16px 16px;
+          display: grid; grid-template-columns: repeat(4, 1fr);
+          gap: 14px; padding: 8px 16px 20px;
         }
-        .theme-swatch {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 6px;
-          cursor: pointer;
-        }
+        .theme-swatch { display: flex; flex-direction: column; align-items: center; gap: 7px; cursor: pointer; }
         .theme-circle {
-          width: 52px; height: 52px;
-          border-radius: 50%;
-          box-shadow: 0 2px 10px rgba(0,0,0,0.18);
-          position: relative;
-          transition: transform 0.15s, box-shadow 0.15s;
+          width: 54px; height: 54px; border-radius: 50%;
+          box-shadow: 0 3px 12px rgba(0,0,0,0.2);
+          position: relative; transition: transform 0.15s, box-shadow 0.15s;
           border: 3px solid transparent;
         }
         .theme-circle.active {
-          transform: scale(1.12);
-          border-color: white;
-          box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+          transform: scale(1.14); border-color: white;
+          box-shadow: 0 6px 24px rgba(0,0,0,0.35);
         }
         .theme-circle.active::after {
-          content: '';
-          position: absolute;
-          inset: 0;
-          border-radius: 50%;
+          content: ''; position: absolute; inset: 0; border-radius: 50%;
           background: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpolyline points='20 6 9 17 4 12' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/60% no-repeat;
         }
-        .theme-label {
-          font-family: var(--font-body);
-          font-size: 10px;
-          color: var(--text-muted);
-          text-align: center;
-          white-space: nowrap;
-        }
+        .theme-label { font-family: var(--font-body); font-size: 10px; color: var(--text-muted); text-align: center; white-space: nowrap; }
 
-        /* Save button */
+        /* ── Save button ── */
         .settings-save-btn {
           display: block;
           width: calc(100% - 28px);
           margin: 0 14px 14px;
-          background: linear-gradient(135deg, #C8334A, #8B1A2C);
-          color: white;
-          border: none;
-          border-radius: 16px;
-          padding: 14px;
-          font-family: var(--font-body);
-          font-weight: 700;
-          font-size: 15px;
-          cursor: pointer;
-          box-shadow: 0 4px 20px rgba(139,26,44,0.3);
+          background: linear-gradient(135deg, #D94060 0%, #9B1A30 100%);
+          color: white; border: none; border-radius: 20px;
+          padding: 16px;
+          font-family: var(--font-body); font-weight: 700; font-size: 15px;
+          cursor: pointer; letter-spacing: 0.3px;
+          box-shadow: 0 6px 28px rgba(139,26,44,0.38), inset 0 1px 0 rgba(255,255,255,0.2);
+          transition: transform 0.12s, box-shadow 0.12s;
         }
-        .settings-save-btn:active { transform: scale(0.98); }
+        .settings-save-btn:active { transform: scale(0.97); box-shadow: 0 3px 14px rgba(139,26,44,0.3); }
         .settings-save-btn.saved { background: linear-gradient(135deg, #22c55e, #16a34a); }
 
-        /* Logout */
+        /* ── Logout ── */
         .settings-logout-btn {
-          display: block;
-          width: calc(100% - 28px);
-          margin: 0 14px;
-          background: rgba(200,51,74,0.06);
+          display: block; width: calc(100% - 28px); margin: 0 14px;
+          background: rgba(200,51,74,0.05);
           border: 1.5px solid rgba(200,51,74,0.2);
           color: var(--rose, #C8334A);
-          border-radius: 16px;
-          padding: 14px;
-          font-family: var(--font-body);
-          font-weight: 600;
-          font-size: 15px;
-          cursor: pointer;
+          border-radius: 20px; padding: 15px;
+          font-family: var(--font-body); font-weight: 600; font-size: 15px;
+          cursor: pointer; transition: background 0.15s;
         }
+        .settings-logout-btn:active { background: rgba(200,51,74,0.1); }
 
-        /* dark */
-        .app.dark .settings-section { background: var(--surface-2, #1E0A10); }
+        /* ── Dark mode ── */
+        .app.dark .settings-section { background: rgba(20,6,12,0.95); border-color: rgba(200,51,74,0.1); box-shadow: 0 4px 24px rgba(0,0,0,0.35); }
         .app.dark .settings-row-label { color: var(--ink, #F5E8EA); }
         .app.dark .settings-input { color: var(--ink, #F5E8EA); }
       `}</style>
 
       <div className="settings-wrap">
-        {/* Header / Avatar */}
+        {/* ── Premium Header ── */}
         <div className="settings-header">
-          <div className="settings-avatar-wrap">
-            <div className="settings-avatar">
-              {avatarPreview
-                ? <img src={avatarPreview} alt={myName} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
-                : <IcoPersonFill />
-              }
+          <div className="settings-av-ring">
+            <div className="settings-av-gap">
+              <div className="settings-avatar-wrap">
+                <div className="settings-avatar">
+                  {avatarPreview
+                    ? <img src={avatarPreview} alt={myName} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                    : <IcoPersonFill />
+                  }
+                </div>
+                <button className="settings-avatar-btn" onClick={() => fileRef.current?.click()} disabled={savingAvatar}>
+                  {savingAvatar ? <IcoSpinner /> : <IcoCamera />}
+                </button>
+                <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatarChange} />
+              </div>
             </div>
-            <button className="settings-avatar-btn" onClick={() => fileRef.current?.click()} disabled={savingAvatar} style={{ color: '#8B1A2C' }}>
-              {savingAvatar ? <IcoSpinner /> : <IcoCamera />}
-            </button>
-            <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatarChange} />
           </div>
           <div className="settings-header-name">{myName}</div>
           <div className="settings-header-sub">Нажми на фото, чтобы изменить</div>
+          {birthday && (
+            <div className="settings-chips">
+              <div className="settings-chip">{getZodiac(birthday)}</div>
+              <div className="settings-chip">{formatBirthday(birthday)}</div>
+            </div>
+          )}
         </div>
 
         {/* Profile */}

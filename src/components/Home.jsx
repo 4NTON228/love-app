@@ -812,30 +812,28 @@ export default function Home({ session, profile, onNavigate }) {
 
         /* ── Hero banner ── */
         .home-banner {
-          background: var(--gradient-banner, linear-gradient(160deg, #C8334A 0%, #8B1A2C 100%));
+          background: linear-gradient(175deg, #0D0305 0%, #220810 35%, #46101F 65%, #2E0C18 100%);
           background-size: 200% 200%;
-          animation: gradientShift 8s ease infinite;
-          border-radius: 0 0 28px 28px;
-          padding: 56px 20px 20px;
+          animation: gradientShift 10s ease infinite;
+          border-radius: 0 0 36px 36px;
+          padding: 56px 20px 28px;
           display: flex;
           flex-direction: column;
           align-items: center;
           position: relative;
           z-index: 1;
-          box-shadow: 0 8px 40px rgba(139,26,44,0.35), 0 4px 16px rgba(200,51,74,0.2);
+          box-shadow: 0 16px 60px rgba(14,3,8,0.75), 0 4px 20px rgba(0,0,0,0.5);
           overflow: hidden;
         }
-        /* shimmer overlay */
+        /* radial glow + shimmer overlay */
         .home-banner::after {
           content: '';
           position: absolute;
           inset: 0;
           border-radius: inherit;
-          background: linear-gradient(135deg,
-            rgba(255,255,255,0.1) 0%,
-            transparent 35%,
-            transparent 65%,
-            rgba(255,255,255,0.05) 100%);
+          background:
+            radial-gradient(ellipse at 50% 0%, rgba(200,51,74,0.4) 0%, transparent 60%),
+            linear-gradient(135deg, rgba(255,255,255,0.07) 0%, transparent 50%);
           pointer-events: none;
         }
 
@@ -888,19 +886,20 @@ export default function Home({ session, profile, onNavigate }) {
 
         /* Live clock bar */
         .live-clock-bar {
-          margin-top: 14px;
+          margin-top: 16px;
           display: flex;
           gap: 1px;
           align-items: center;
           justify-content: center;
-          background: rgba(0,0,0,0.15);
-          border: 1px solid rgba(255,255,255,0.15);
-          border-radius: 14px;
-          padding: 8px 20px;
-          letter-spacing: 3px;
-          font-size: 24px;
+          background: rgba(255,255,255,0.06);
+          border: 1px solid rgba(255,255,255,0.12);
+          border-radius: 16px;
+          padding: 9px 22px;
+          letter-spacing: 4px;
+          font-size: 22px;
           color: white;
           font-weight: 700;
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
         }
         .clock-sep {
           opacity: 0.5;
@@ -922,15 +921,23 @@ export default function Home({ session, profile, onNavigate }) {
 
         /* ── Cards ── */
         .hc {
-          background: var(--surface, #FFFFFF);
-          border-radius: var(--radius-lg, 20px);
-          border: var(--border-width, 0.5px) solid var(--border, rgba(200,51,74,0.13));
-          padding: 18px 20px;
-          box-shadow: var(--shadow);
+          background: rgba(255,255,255,0.96);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+          border-radius: 24px;
+          border: 1px solid rgba(200,51,74,0.09);
+          padding: 20px;
+          box-shadow: 0 4px 28px rgba(0,0,0,0.07), 0 1px 0 rgba(255,255,255,0.9);
           animation: slideUp 0.5s ease both;
           position: relative; overflow: hidden;
         }
-        .app.dark .hc { background: var(--surface-2, #1E0A10); border-color: rgba(200,51,74,0.18); }
+        .app.dark .hc {
+          background: rgba(18,5,10,0.92);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+          border-color: rgba(200,51,74,0.14);
+          box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+        }
         /* Mouse glow effect */
         .hc::after {
           content: ''; position: absolute; inset: 0; border-radius: inherit;
@@ -1059,14 +1066,15 @@ export default function Home({ session, profile, onNavigate }) {
           box-shadow: 0 2px 8px rgba(139,26,44,0.12);
         }
         .action-btn-icon {
-          width: 42px; height: 42px;
-          border-radius: 14px;
-          background: linear-gradient(135deg, rgba(200,51,74,0.1) 0%, rgba(139,26,44,0.08) 100%);
+          width: 50px; height: 50px;
+          border-radius: 17px;
+          background: linear-gradient(135deg, rgba(200,51,74,0.14) 0%, rgba(139,26,44,0.09) 100%);
           display: flex;
           align-items: center;
           justify-content: center;
           color: var(--rose, #C8334A);
-          transition: transform 0.2s ease;
+          box-shadow: 0 4px 16px rgba(200,51,74,0.14), inset 0 1px 0 rgba(255,255,255,0.3);
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
         .action-btn:hover .action-btn-icon { transform: scale(1.1) rotate(-3deg); }
         .action-btn-label {
@@ -1246,6 +1254,15 @@ export default function Home({ session, profile, onNavigate }) {
 
           {/* Day counter wrapped in orbital ring */}
           <OrbitalRing progress={anniv.progress}>
+          <div style={{
+            background: 'rgba(0,0,0,0.28)',
+            backdropFilter: 'blur(28px)',
+            WebkitBackdropFilter: 'blur(28px)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: 36,
+            padding: '28px 44px 20px',
+            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.1), 0 12px 40px rgba(0,0,0,0.4)',
+          }}>
           <div className="day-counter">
             <div className="day-number">
               {String(time.totalDays).split('').map((d, i) => (
@@ -1282,6 +1299,7 @@ export default function Home({ session, profile, onNavigate }) {
               <span className="clock-sep">:</span>
               <GlowDigit value={pad(time.seconds)} />
             </div>
+          </div>
           </div>
           </OrbitalRing>
 

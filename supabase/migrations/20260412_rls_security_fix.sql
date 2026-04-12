@@ -51,21 +51,21 @@ DROP POLICY IF EXISTS "messages_insert" ON messages;
 DROP POLICY IF EXISTS "messages_update" ON messages;
 DROP POLICY IF EXISTS "messages_delete" ON messages;
 
--- Only messages between current user and their partner
+-- Only messages from current user or partner
 CREATE POLICY "messages_select" ON messages
   FOR SELECT USING (
-    sender_id = auth.uid()
-    OR recipient_id = auth.uid()
+    user_id = auth.uid()
+    OR user_id = get_partner_id()
   );
 
 CREATE POLICY "messages_insert" ON messages
-  FOR INSERT WITH CHECK (sender_id = auth.uid());
+  FOR INSERT WITH CHECK (user_id = auth.uid());
 
 CREATE POLICY "messages_update" ON messages
-  FOR UPDATE USING (sender_id = auth.uid());
+  FOR UPDATE USING (user_id = auth.uid());
 
 CREATE POLICY "messages_delete" ON messages
-  FOR DELETE USING (sender_id = auth.uid());
+  FOR DELETE USING (user_id = auth.uid());
 
 -- =====================================================
 -- MOMENTS TABLE
@@ -106,17 +106,13 @@ CREATE POLICY "plans_select" ON plans
   FOR SELECT USING (
     user_id = auth.uid()
     OR user_id = get_partner_id()
-    OR partner_id = auth.uid()
   );
 
 CREATE POLICY "plans_insert" ON plans
   FOR INSERT WITH CHECK (user_id = auth.uid());
 
 CREATE POLICY "plans_update" ON plans
-  FOR UPDATE USING (
-    user_id = auth.uid()
-    OR partner_id = auth.uid()
-  );
+  FOR UPDATE USING (user_id = auth.uid());
 
 CREATE POLICY "plans_delete" ON plans
   FOR DELETE USING (user_id = auth.uid());

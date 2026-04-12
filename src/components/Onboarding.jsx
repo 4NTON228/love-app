@@ -56,7 +56,7 @@ function NextBtn({ onClick, label = 'Далее', disabled = false, loading = fa
 }
 
 /* ── Шаг 1: Приветствие ── */
-function StepWelcome({ onNext }) {
+function StepWelcome({ onNext, onSignOut }) {
   return (
     <div style={{ textAlign: 'center', paddingTop: 40 }}>
       <div style={{ fontSize: 80, marginBottom: 24, animation: 'heartbeat 1.5s ease-in-out infinite' }}>
@@ -83,6 +83,13 @@ function StepWelcome({ onNext }) {
         Давай настроим всё за пару минут.
       </p>
       <NextBtn onClick={onNext} label="Начать →" />
+      <button onClick={onSignOut} style={{
+        marginTop: 20, background: 'none', border: 'none',
+        color: 'var(--text-muted, #9A6070)', fontSize: 13,
+        cursor: 'pointer', textDecoration: 'underline', padding: 8,
+      }}>
+        Вернуться ко входу
+      </button>
     </div>
   )
 }
@@ -484,7 +491,7 @@ function StepPartner({ session, inviteCode, partnerAlreadyLinked, onFinish }) {
 }
 
 /* ── Главный компонент онбординга ── */
-export default function Onboarding({ session, onComplete }) {
+export default function Onboarding({ session, onComplete, onSignOut }) {
   const [step, setStep] = useState(1)
   const [profileData, setProfileData] = useState({ name: '', avatar_url: null })
   const [birthday, setBirthday] = useState('')
@@ -594,7 +601,7 @@ export default function Onboarding({ session, onComplete }) {
 
       <div key={step} className="ob-step" style={{ flex: 1 }}>
         {step === 1 && (
-          <StepWelcome onNext={() => setStep(2)} />
+          <StepWelcome onNext={() => setStep(2)} onSignOut={onSignOut} />
         )}
 
         {step === 2 && (

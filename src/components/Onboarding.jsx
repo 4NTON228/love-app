@@ -551,17 +551,17 @@ export default function Onboarding({ session, onComplete, onSignOut }) {
     setStep(5)
   }
 
-  async function finish() {
-    setSaving(true)
-    // localStorage fallback — работает даже если миграция ещё не запущена
+  function finish() {
+    // Сразу записываем флаг и переходим — не ждём ответа от сервера
     localStorage.setItem(`ob_done_${session.user.id}`, '1')
-    const { error } = await supabase.from('profiles').upsert(
+    onComplete()
+    // Сохраняем в БД в фоне (не блокируем UX)
+    supabase.from('profiles').upsert(
       { id: session.user.id, onboarding_done: true },
       { onConflict: 'id' }
-    )
-    if (error) console.warn('finish onboarding error:', error.code, error.message)
-    setSaving(false)
-    onComplete()
+    ).then(({ error }) => {
+      if (error) console.warn('onboarding save error:', error.code, error.message)
+    })
   }
 
   return (

@@ -201,13 +201,13 @@ export default function App() {
   const onboardingDoneLocally = !!localStorage.getItem(`ob_done_${session?.user?.id}`)
 
   // Показываем онбординг новым пользователям:
-  // - profile === null: новый OAuth-пользователь, профиль ещё не создан
-  // - onboarding_done === false: явно не завершил онбординг
-  // - нет имени: старый способ определения нового пользователя
-  const needsOnboarding = !onboardingDoneLocally && (!profile || (
+  // Если пользователь завершил онбординг на этом устройстве — сразу пускаем
+  // Иначе: новый профиль (null) или явно не завершённый онбординг
+  const needsOnboarding = !onboardingDoneLocally && (
+    !profile ||
     profile.onboarding_done === false ||
     (!profile.name && profile.onboarding_done !== true)
-  ))
+  )
   if (needsOnboarding) {
     return (
       <Onboarding

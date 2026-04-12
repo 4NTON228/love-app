@@ -117,11 +117,9 @@ export default function App() {
     const pendingInvite = localStorage.getItem('pendingInvite')
     if (pendingInvite && data && !data.partner_id) {
       localStorage.removeItem('pendingInvite')
-      const { data: partner } = await supabase
-        .from('profiles')
-        .select('id, name')
-        .eq('invite_code', pendingInvite)
-        .single()
+      const { data: partnerArr } = await supabase
+        .rpc('find_profile_by_invite_code', { code: pendingInvite })
+      const partner = partnerArr?.[0] || null
       if (partner && partner.id !== userId) {
         await supabase.from('profiles').update({ partner_id: partner.id }).eq('id', userId)
         await supabase.from('profiles').update({ partner_id: userId }).eq('id', partner.id)

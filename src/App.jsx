@@ -213,6 +213,7 @@ export default function App() {
       <Onboarding
         session={session}
         onComplete={reloadProfile}
+        onSignOut={() => supabase.auth.signOut()}
       />
     )
   }

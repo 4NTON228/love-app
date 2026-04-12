@@ -332,30 +332,21 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
 
   async function handleDeleteAccount() {
     const confirmed = window.confirm(
-      'Удалить аккаунт?\n\nВсе ваши данные (профиль, сообщения, моменты, планы) будут удалены безвозвратно. Это действие нельзя отменить.'
+      'Удалить аккаунт?\n\nВсе ваши данные будут удалены безвозвратно. Это действие нельзя отменить.'
     )
     if (!confirmed) return
-
     const confirmed2 = window.confirm('Вы уверены? Восстановить данные будет невозможно.')
     if (!confirmed2) return
 
     try {
-      const userId = session.user.id
-      // Отвязываем партнёра
-      if (profile?.partner_id) {
-        await supabase.from('profiles').update({ partner_id: null }).eq('id', profile.partner_id)
-      }
-      // Удаляем данные пользователя
-      await supabase.from('push_subscriptions').delete().eq('user_id', userId)
-      await supabase.from('messages').delete().eq('user_id', userId)
-      await supabase.from('moments').delete().eq('user_id', userId)
-      await supabase.from('plans').delete().eq('user_id', userId)
-      await supabase.from('love_letters').delete().eq('user_id', userId)
-      await supabase.from('profiles').delete().eq('id', userId)
-      // Выходим из аккаунта (удаление auth.users требует service_role — выполним signOut)
+      // Вызываем серверную функцию — она удаляет все данные и auth-пользователя
+      const { error } = await supabase.rpc('delete_user_account')
+      if (error) throw error
+      // Очищаем localStorage
+      localStorage.clear()
       await supabase.auth.signOut()
     } catch (err) {
-      alert('Ошибка при удалении: ' + err.message)
+      alert('Ошибка при удалении: ' + (err.message || JSON.stringify(err)))
     }
   }
 

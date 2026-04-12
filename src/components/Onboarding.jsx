@@ -506,13 +506,15 @@ export default function Onboarding({ session, onComplete }) {
     })
   }, [session.user.id])
 
+  // upsert используется везде — на случай если строки профиля ещё нет (новый OAuth-пользователь)
   async function saveStep2() {
     setSaving(true)
     try {
-      await supabase.from('profiles').update({
+      await supabase.from('profiles').upsert({
+        id: session.user.id,
         name: profileData.name.trim(),
         avatar_url: profileData.avatar_url,
-      }).eq('id', session.user.id)
+      }, { onConflict: 'id' })
     } catch (e) { console.warn('saveStep2:', e) }
     setSaving(false)
     setStep(3)
@@ -521,7 +523,10 @@ export default function Onboarding({ session, onComplete }) {
   async function saveStep3() {
     setSaving(true)
     try {
-      await supabase.from('profiles').update({ birthday }).eq('id', session.user.id)
+      await supabase.from('profiles').upsert(
+        { id: session.user.id, birthday },
+        { onConflict: 'id' }
+      )
     } catch (e) { console.warn('saveStep3:', e) }
     setSaving(false)
     setStep(4)
@@ -530,7 +535,10 @@ export default function Onboarding({ session, onComplete }) {
   async function saveStep4() {
     setSaving(true)
     try {
-      await supabase.from('profiles').update({ couple_start_date: coupleStart || null }).eq('id', session.user.id)
+      await supabase.from('profiles').upsert(
+        { id: session.user.id, couple_start_date: coupleStart || null },
+        { onConflict: 'id' }
+      )
     } catch (e) { console.warn('saveStep4:', e) }
     setSaving(false)
     setStep(5)
@@ -539,7 +547,10 @@ export default function Onboarding({ session, onComplete }) {
   async function finish() {
     setSaving(true)
     try {
-      await supabase.from('profiles').update({ onboarding_done: true }).eq('id', session.user.id)
+      await supabase.from('profiles').upsert(
+        { id: session.user.id, onboarding_done: true },
+        { onConflict: 'id' }
+      )
     } catch (e) { console.warn('finish onboarding:', e) }
     setSaving(false)
     onComplete()

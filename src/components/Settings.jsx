@@ -330,6 +330,35 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
     await supabase.auth.signOut()
   }
 
+  async function handleDeleteAccount() {
+    const confirmed = window.confirm(
+      'Удалить аккаунт?\n\nВсе ваши данные (профиль, сообщения, моменты, планы) будут удалены безвозвратно. Это действие нельзя отменить.'
+    )
+    if (!confirmed) return
+
+    const confirmed2 = window.confirm('Вы уверены? Восстановить данные будет невозможно.')
+    if (!confirmed2) return
+
+    try {
+      const userId = session.user.id
+      // Отвязываем партнёра
+      if (profile?.partner_id) {
+        await supabase.from('profiles').update({ partner_id: null }).eq('id', profile.partner_id)
+      }
+      // Удаляем данные пользователя
+      await supabase.from('push_subscriptions').delete().eq('user_id', userId)
+      await supabase.from('messages').delete().eq('user_id', userId)
+      await supabase.from('moments').delete().eq('user_id', userId)
+      await supabase.from('plans').delete().eq('user_id', userId)
+      await supabase.from('love_letters').delete().eq('user_id', userId)
+      await supabase.from('profiles').delete().eq('id', userId)
+      // Выходим из аккаунта (удаление auth.users требует service_role — выполним signOut)
+      await supabase.auth.signOut()
+    } catch (err) {
+      alert('Ошибка при удалении: ' + err.message)
+    }
+  }
+
   const myName = profile?.name || 'Пользователь'
 
   return (
@@ -563,6 +592,14 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
           cursor: pointer; transition: background 0.15s;
         }
         .settings-logout-btn:active { background: rgba(200,51,74,0.1); }
+        .settings-delete-btn {
+          display: block; width: calc(100% - 28px); margin: 10px 14px 0;
+          background: transparent; border: 1.5px solid rgba(150,20,20,0.25);
+          color: #B02020; border-radius: 20px; padding: 13px;
+          font-family: var(--font-body); font-weight: 500; font-size: 13px;
+          cursor: pointer; transition: background 0.15s;
+        }
+        .settings-delete-btn:active { background: rgba(180,20,20,0.08); }
 
         /* ── Dark mode ── */
         .app.dark .settings-section { background: rgba(20,6,12,0.95); border-color: rgba(200,51,74,0.1); box-shadow: 0 4px 24px rgba(0,0,0,0.35); }
@@ -704,6 +741,9 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
         {/* Logout */}
         <button className="settings-logout-btn" onClick={handleLogout}>
           Выйти из аккаунта
+        </button>
+        <button className="settings-delete-btn" onClick={handleDeleteAccount}>
+          Удалить аккаунт
         </button>
       </div>
     </>

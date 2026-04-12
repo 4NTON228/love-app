@@ -485,7 +485,7 @@ function StepPartner({ session, inviteCode, partnerAlreadyLinked, onFinish }) {
 
 /* ── Главный компонент онбординга ── */
 export default function Onboarding({ session, onComplete }) {
-  const [step, setStep] = useState(0)
+  const [step, setStep] = useState(1)
   const [profileData, setProfileData] = useState({ name: '', avatar_url: null })
   const [birthday, setBirthday] = useState('')
   const [coupleStart, setCoupleStart] = useState('')
@@ -592,8 +592,6 @@ export default function Onboarding({ session, onComplete }) {
       )}
 
       <div key={step} className="ob-step" style={{ flex: 1 }}>
-        {step === 0 && <StepWelcome onNext={() => setStep(1)} />}
-
         {step === 1 && (
           <StepWelcome onNext={() => setStep(2)} />
         )}

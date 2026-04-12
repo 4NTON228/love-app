@@ -12,6 +12,7 @@ import LoveClock from './components/LoveClock'
 import LoveLetter from './components/LoveLetter'
 import Settings from './components/Settings'
 import AIAdvisor from './components/AIAdvisor'
+import Premium from './components/Premium'
 import Navigation from './components/Navigation'
 
 // Apply saved theme on load
@@ -53,6 +54,7 @@ import Navigation from './components/Navigation'
 export default function App() {
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [profileLoading, setProfileLoading] = useState(false)
   const [activeTab, setActiveTab] = useState(() => {
     const params = new URLSearchParams(window.location.search)
     return params.get('tab') || 'home'
@@ -87,7 +89,12 @@ export default function App() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session)
-      if (session) loadProfile(session.user.id)
+      if (session) {
+        setProfileLoading(true)
+        loadProfile(session.user.id).finally(() => setProfileLoading(false))
+      } else {
+        setProfile(null)
+      }
     })
 
     // Переключаем на чат по сообщению от service worker (тап по уведомлению)
@@ -133,7 +140,7 @@ export default function App() {
     if (session?.user?.id) loadProfile(session.user.id)
   }, [session?.user?.id])
 
-  if (loading) {
+  if (loading || profileLoading) {
     return (
       <div style={{
         position: 'fixed',
@@ -225,6 +232,8 @@ export default function App() {
         return <Plans session={session} profile={profile} />
       case 'advisor':
         return <AIAdvisor session={session} profile={profile} darkMode={darkMode} />
+      case 'premium':
+        return <Premium session={session} />
       case 'settings':
         return (
           <Settings

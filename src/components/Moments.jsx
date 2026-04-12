@@ -435,15 +435,16 @@ export default function Moments({ session }) {
           justify-content: center;
         }
 
-        /* Masonry grid */
+        /* Grid */
         .moments-grid {
           padding: 0 14px;
-          columns: 2;
-          column-gap: 12px;
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 12px;
+          align-items: start;
         }
         .moment-card-new {
-          break-inside: avoid;
-          margin-bottom: 12px;
+          margin-bottom: 0;
           border-radius: 22px;
           overflow: hidden;
           background: var(--bg-card, #ffffff);
@@ -464,7 +465,6 @@ export default function Moments({ session }) {
         .moment-card-new:active { transform: scale(0.97); }
         .moment-img {
           width: 100%;
-          aspect-ratio: auto;
           display: block;
           object-fit: cover;
         }

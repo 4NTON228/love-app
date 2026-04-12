@@ -79,9 +79,9 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session)
-      if (session) loadProfile(session.user.id)
+      if (session) await loadProfile(session.user.id)
       setLoading(false)
     })
 
@@ -190,10 +190,11 @@ export default function App() {
     return <Auth />
   }
 
-  // Показываем онбординг только новым пользователям (нет имени = точно новый)
-  // onboarding_done может быть undefined если миграция ещё не запущена — в таком случае
-  // проверяем по наличию имени чтобы не мешать существующим пользователям
-  const needsOnboarding = profile && (
+  // Показываем онбординг новым пользователям:
+  // - profile === null: новый OAuth-пользователь, профиль ещё не создан
+  // - onboarding_done === false: явно не завершил онбординг
+  // - нет имени: старый способ определения нового пользователя
+  const needsOnboarding = !profile || (
     profile.onboarding_done === false ||
     (!profile.name && profile.onboarding_done !== true)
   )

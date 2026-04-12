@@ -298,13 +298,11 @@ function StepPartner({ session, inviteCode, partnerAlreadyLinked, onFinish }) {
     if (code.trim().length < 4) return
     setSearching(true); setError(null); setFoundPartner(null)
     const { data, error: err } = await supabase
-      .from('profiles')
-      .select('id, name, avatar_url')
-      .eq('invite_code', code.trim().toLowerCase())
-      .single()
-    if (err || !data) setError('Профиль не найден. Проверь код.')
-    else if (data.id === session.user.id) setError('Это твой собственный код.')
-    else setFoundPartner(data)
+      .rpc('find_profile_by_invite_code', { code: code.trim() })
+    const found = data?.[0] || null
+    if (err || !found) setError('Профиль не найден. Проверь код.')
+    else if (found.id === session.user.id) setError('Это твой собственный код.')
+    else setFoundPartner(found)
     setSearching(false)
   }
 

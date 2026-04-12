@@ -197,14 +197,17 @@ export default function App() {
     return <Auth />
   }
 
+  // Проверяем localStorage-fallback (работает если миграция ещё не запущена)
+  const onboardingDoneLocally = !!localStorage.getItem(`ob_done_${session?.user?.id}`)
+
   // Показываем онбординг новым пользователям:
   // - profile === null: новый OAuth-пользователь, профиль ещё не создан
   // - onboarding_done === false: явно не завершил онбординг
   // - нет имени: старый способ определения нового пользователя
-  const needsOnboarding = !profile || (
+  const needsOnboarding = !onboardingDoneLocally && (!profile || (
     profile.onboarding_done === false ||
     (!profile.name && profile.onboarding_done !== true)
-  )
+  ))
   if (needsOnboarding) {
     return (
       <Onboarding

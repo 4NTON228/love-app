@@ -509,49 +509,50 @@ export default function Onboarding({ session, onComplete }) {
   // upsert используется везде — на случай если строки профиля ещё нет (новый OAuth-пользователь)
   async function saveStep2() {
     setSaving(true)
-    try {
-      await supabase.from('profiles').upsert({
-        id: session.user.id,
-        name: profileData.name.trim(),
-        avatar_url: profileData.avatar_url,
-      }, { onConflict: 'id' })
-    } catch (e) { console.warn('saveStep2:', e) }
+    const { error } = await supabase.from('profiles').upsert(
+      { id: session.user.id, name: profileData.name.trim(), avatar_url: profileData.avatar_url },
+      { onConflict: 'id' }
+    )
+    if (error) {
+      // Fallback: попробуем без avatar_url если колонка не та
+      await supabase.from('profiles').upsert(
+        { id: session.user.id, name: profileData.name.trim() },
+        { onConflict: 'id' }
+      )
+    }
     setSaving(false)
     setStep(3)
   }
 
   async function saveStep3() {
     setSaving(true)
-    try {
-      await supabase.from('profiles').upsert(
-        { id: session.user.id, birthday },
-        { onConflict: 'id' }
-      )
-    } catch (e) { console.warn('saveStep3:', e) }
+    await supabase.from('profiles').upsert(
+      { id: session.user.id, birthday },
+      { onConflict: 'id' }
+    ).catch(() => {})
     setSaving(false)
     setStep(4)
   }
 
   async function saveStep4() {
     setSaving(true)
-    try {
-      await supabase.from('profiles').upsert(
-        { id: session.user.id, couple_start_date: coupleStart || null },
-        { onConflict: 'id' }
-      )
-    } catch (e) { console.warn('saveStep4:', e) }
+    await supabase.from('profiles').upsert(
+      { id: session.user.id, couple_start_date: coupleStart || null },
+      { onConflict: 'id' }
+    ).catch(() => {})
     setSaving(false)
     setStep(5)
   }
 
   async function finish() {
     setSaving(true)
-    try {
-      await supabase.from('profiles').upsert(
-        { id: session.user.id, onboarding_done: true },
-        { onConflict: 'id' }
-      )
-    } catch (e) { console.warn('finish onboarding:', e) }
+    // localStorage fallback — работает даже если миграция ещё не запущена
+    localStorage.setItem(`ob_done_${session.user.id}`, '1')
+    const { error } = await supabase.from('profiles').upsert(
+      { id: session.user.id, onboarding_done: true },
+      { onConflict: 'id' }
+    )
+    if (error) console.warn('finish onboarding error:', error.code, error.message)
     setSaving(false)
     onComplete()
   }

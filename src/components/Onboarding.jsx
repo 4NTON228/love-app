@@ -508,31 +508,39 @@ export default function Onboarding({ session, onComplete }) {
 
   async function saveStep2() {
     setSaving(true)
-    await supabase.from('profiles').update({
-      name: profileData.name.trim(),
-      avatar_url: profileData.avatar_url,
-    }).eq('id', session.user.id)
+    try {
+      await supabase.from('profiles').update({
+        name: profileData.name.trim(),
+        avatar_url: profileData.avatar_url,
+      }).eq('id', session.user.id)
+    } catch (e) { console.warn('saveStep2:', e) }
     setSaving(false)
     setStep(3)
   }
 
   async function saveStep3() {
     setSaving(true)
-    await supabase.from('profiles').update({ birthday }).eq('id', session.user.id)
+    try {
+      await supabase.from('profiles').update({ birthday }).eq('id', session.user.id)
+    } catch (e) { console.warn('saveStep3:', e) }
     setSaving(false)
     setStep(4)
   }
 
   async function saveStep4() {
     setSaving(true)
-    await supabase.from('profiles').update({ couple_start_date: coupleStart || null }).eq('id', session.user.id)
+    try {
+      await supabase.from('profiles').update({ couple_start_date: coupleStart || null }).eq('id', session.user.id)
+    } catch (e) { console.warn('saveStep4:', e) }
     setSaving(false)
     setStep(5)
   }
 
   async function finish() {
     setSaving(true)
-    await supabase.from('profiles').update({ onboarding_done: true }).eq('id', session.user.id)
+    try {
+      await supabase.from('profiles').update({ onboarding_done: true }).eq('id', session.user.id)
+    } catch (e) { console.warn('finish onboarding:', e) }
     setSaving(false)
     onComplete()
   }

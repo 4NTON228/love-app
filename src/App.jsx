@@ -190,8 +190,14 @@ export default function App() {
     return <Auth />
   }
 
-  // Показываем онбординг если не пройден
-  if (profile && !profile.onboarding_done) {
+  // Показываем онбординг только новым пользователям (нет имени = точно новый)
+  // onboarding_done может быть undefined если миграция ещё не запущена — в таком случае
+  // проверяем по наличию имени чтобы не мешать существующим пользователям
+  const needsOnboarding = profile && (
+    profile.onboarding_done === false ||
+    (!profile.name && profile.onboarding_done !== true)
+  )
+  if (needsOnboarding) {
     return (
       <Onboarding
         session={session}

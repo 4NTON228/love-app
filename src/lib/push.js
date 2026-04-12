@@ -10,90 +10,98 @@ function urlBase64ToUint8Array(base64String) {
 }
 
 export async function subscribeToPush(userId) {
-  if (!('Notification' in window)) return false;
-  
+  if (!('Notification' in window) || !('serviceWorker' in navigator)) return false
+
   try {
-    console.log('📱 Запрашиваем разрешение...');
-    const permission = await Notification.requestPermission();
-    if (permission !== 'granted') {
-      console.log('❌ Нет разрешения');
-      return false;
-    }
-    
-    console.log('✅ Разрешение получено');
-    
-    const reg = await navigator.serviceWorker.ready;
+    const permission = await Notification.requestPermission()
+    if (permission !== 'granted') return false
 
-    // Всегда пересоздаём подписку, чтобы не было протухших дублей
-    let sub = await reg.pushManager.getSubscription();
-    if (sub) {
-      await sub.unsubscribe();
-    }
+    const reg = await navigator.serviceWorker.ready
 
-    const vapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
-    console.log('VAPID ключ:', vapidKey ? 'найден' : 'не найден');
-    
+    const vapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY
     if (!vapidKey) {
-      throw new Error('VAPID ключ не найден в переменных окружения');
+      console.warn('VAPID ключ не найден в .env')
+      return false
     }
-    
-    sub = await reg.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(vapidKey)
-    });
-    
-    console.log('✅ Подписка создана:', sub);
-    
-    // Upsert: обновляем если уже есть, иначе создаём
+
+    // Берём текущую подписку или создаём новую
+    let sub = await reg.pushManager.getSubscription()
+    if (!sub) {
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(vapidKey),
+      })
+    }
+
+    // Сохраняем в Supabase с таймаутом 8 секунд
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 8000)
+
     const { error } = await supabase
       .from('push_subscriptions')
-      .upsert({
-        user_id: userId,
-        subscription: sub.toJSON(),
-        updated_at: new Date().toISOString()
-      }, { onConflict: 'user_id' });
-    
-    if (error) throw error;
-    console.log('✅ Подписка сохранена в Supabase');
-    return true;
-    
+      .upsert(
+        { user_id: userId, subscription: sub.toJSON(), updated_at: new Date().toISOString() },
+        { onConflict: 'user_id' }
+      )
+
+    clearTimeout(timer)
+
+    if (error) {
+      // Если upsert не сработал — пробуем простой insert (без updated_at, для старых таблиц)
+      if (error.code === '42703') {
+        // Столбец updated_at не существует — вставляем без него
+        await supabase
+          .from('push_subscriptions')
+          .upsert(
+            { user_id: userId, subscription: sub.toJSON() },
+            { onConflict: 'user_id' }
+          )
+      } else if (error.code === '23505') {
+        // Дубликат — обновляем напрямую
+        await supabase
+          .from('push_subscriptions')
+          .update({ subscription: sub.toJSON() })
+          .eq('user_id', userId)
+      } else {
+        console.warn('Push subscription save error:', error.code, error.message)
+      }
+    }
+
+    console.log('✅ Push подписка сохранена')
+    return true
+
   } catch (err) {
-    console.error('❌ Ошибка подписки:', err);
-    return false;
+    if (err.name === 'AbortError') {
+      console.warn('Push subscription timeout — попробуй позже')
+    } else {
+      console.warn('Push subscription error:', err.message)
+    }
+    return false
   }
 }
 
-export async function sendPushNotification(title, body, recipientId, senderId) {
+export async function sendPushNotification(title, body, recipientId) {
   try {
-    console.log('📨 Отправка уведомления:', { title, body, recipientId });
-    
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (!session) {
-      console.error('❌ Нет активной сессии');
-      return;
-    }
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return
 
     const response = await fetch(
-      'https://bqyisdgwtgxxomukozko.supabase.co/functions/v1/send-notification',
+      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-notification`,
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
+          'Authorization': `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ title, body, recipientId })
+        body: JSON.stringify({ title, body, recipientId }),
       }
-    );
+    )
 
-    if (response.ok) {
-      const result = await response.json();
-      console.log('✅ Уведомление отправлено:', result);
-    } else {
-      const error = await response.text();
-      console.error('❌ Ошибка от Edge Function:', error);
+    if (!response.ok) {
+      const text = await response.text()
+      console.warn('Push notification error:', text)
     }
   } catch (err) {
-    console.error('❌ Ошибка при вызове Edge Function:', err);
+    console.warn('Push notification exception:', err.message)
   }
 }

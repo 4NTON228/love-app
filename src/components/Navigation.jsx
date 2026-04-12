@@ -151,6 +151,16 @@ function IconPerson({ active }) {
   )
 }
 
+function IconPremium({ active }) {
+  const s = active ? 'url(#nav-g)' : 'currentColor'
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke={s} strokeWidth="1.8"
+      strokeLinecap="round" strokeLinejoin="round" filter={active ? 'url(#nav-glow)' : 'none'}>
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+    </svg>
+  )
+}
+
 // Tabs shown in the main nav bar
 const MAIN_TABS = [
   { id: 'home',   label: 'Главная', Icon: IconHome   },
@@ -166,6 +176,7 @@ const MORE_ITEMS = [
   { id: 'moments',  label: 'Фото',      Icon: IconCamera   },
   { id: 'calendar', label: 'Дни',       Icon: IconCalendar },
   { id: 'plans',    label: 'Планы',     Icon: IconPlans    },
+  { id: 'premium',  label: 'Premium',   Icon: IconPremium  },
   { id: 'settings', label: 'Профиль',   Icon: IconPerson   },
 ]
 

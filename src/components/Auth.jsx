@@ -91,6 +91,18 @@ const STYLE = `
     padding:0; margin-top:14px; display:block; text-align:center; width:100%;
   }
   .auth-link:hover { color:white; }
+  .auth-consent {
+    display:flex; align-items:flex-start; gap:10px; margin:12px 0 4px;
+    cursor:pointer;
+  }
+  .auth-consent input[type="checkbox"] {
+    width:18px; height:18px; min-width:18px; margin-top:1px; cursor:pointer;
+    accent-color:#E8556A;
+  }
+  .auth-consent-text {
+    font-size:12px; color:rgba(255,255,255,0.7); line-height:1.5;
+  }
+  .auth-consent-text a { color:rgba(255,255,255,0.9); text-decoration:underline; }
 `
 
 export default function Auth() {
@@ -101,6 +113,7 @@ export default function Auth() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
+  const [consent, setConsent] = useState(false)
 
   function reset() { setError(null); setSuccess(null) }
 
@@ -246,7 +259,13 @@ export default function Auth() {
               <input className="auth-input" type="password" placeholder="••••••••"
                 value={confirm} onChange={e => setConfirm(e.target.value)} required autoComplete="new-password" />
             </div>
-            <button className="auth-btn" type="submit" disabled={loading}>
+            <label className="auth-consent">
+              <input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} />
+              <span className="auth-consent-text">
+                Я принимаю <a href="/privacy" target="_blank" rel="noopener noreferrer">Политику конфиденциальности</a> и <a href="/terms" target="_blank" rel="noopener noreferrer">Условия использования</a>, и даю согласие на обработку персональных данных
+              </span>
+            </label>
+            <button className="auth-btn" type="submit" disabled={loading || !consent}>
               {loading ? 'Создаём аккаунт...' : 'Создать аккаунт'}
             </button>
             <div className="auth-divider">или</div>

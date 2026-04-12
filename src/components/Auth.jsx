@@ -259,12 +259,6 @@ export default function Auth() {
               <input className="auth-input" type="password" placeholder="••••••••"
                 value={confirm} onChange={e => setConfirm(e.target.value)} required autoComplete="new-password" />
             </div>
-            <label className="auth-consent">
-              <input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} />
-              <span className="auth-consent-text">
-                Я принимаю <a href="/privacy" target="_blank" rel="noopener noreferrer">Политику конфиденциальности</a> и <a href="/terms" target="_blank" rel="noopener noreferrer">Условия использования</a>, и даю согласие на обработку персональных данных
-              </span>
-            </label>
             <button className="auth-btn" type="submit" disabled={loading || !consent}>
               {loading ? 'Создаём аккаунт...' : 'Создать аккаунт'}
             </button>
@@ -275,6 +269,12 @@ export default function Auth() {
             <button type="button" className="auth-btn-google" onClick={handleGoogle}>
               <GoogleIcon /> Зарегистрироваться через Google
             </button>
+            <label className="auth-consent">
+              <input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} />
+              <span className="auth-consent-text">
+                Регистрируясь, я принимаю <a href="/privacy.html" target="_blank" rel="noopener noreferrer">Политику конфиденциальности</a> и <a href="/terms.html" target="_blank" rel="noopener noreferrer">Условия использования</a>, и даю согласие на обработку персональных данных
+              </span>
+            </label>
           </form>
         )}
 

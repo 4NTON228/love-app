@@ -180,23 +180,15 @@ BEGIN
     EXECUTE $p$
       CREATE POLICY "letters_select" ON love_letters
         FOR SELECT USING (
-          sender_id = auth.uid()
-          OR recipient_id = auth.uid()
-          OR user_id = auth.uid()
+          user_id = auth.uid()
           OR user_id = get_partner_id()
         );
       CREATE POLICY "letters_insert" ON love_letters
-        FOR INSERT WITH CHECK (
-          COALESCE(sender_id, user_id) = auth.uid()
-        );
+        FOR INSERT WITH CHECK (user_id = auth.uid());
       CREATE POLICY "letters_update" ON love_letters
-        FOR UPDATE USING (
-          COALESCE(sender_id, user_id) = auth.uid()
-        );
+        FOR UPDATE USING (user_id = auth.uid());
       CREATE POLICY "letters_delete" ON love_letters
-        FOR DELETE USING (
-          COALESCE(sender_id, user_id) = auth.uid()
-        );
+        FOR DELETE USING (user_id = auth.uid());
     $p$;
   END IF;
 END $$;

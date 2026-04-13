@@ -696,9 +696,12 @@ export default function Home({ session, profile, onNavigate }) {
     }
 
     const today = new Date().toISOString().slice(0, 10)
-    const { data: evs } = await supabase.from('calendar_events')
+    const evsQ = supabase.from('calendar_events')
       .select('*').gte('event_date', today)
       .order('event_date', { ascending: true }).limit(1)
+    const { data: evs } = uids.length === 1
+      ? await evsQ.eq('user_id', uids[0])
+      : await evsQ.in('user_id', uids)
     if (evs?.length) setNextEvent(evs[0])
   }, [session?.user?.id, profile?.partner_id])
 

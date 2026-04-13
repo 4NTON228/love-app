@@ -924,13 +924,18 @@ export default function Chat({ session, profile, darkMode }) {
   const ROSE = '#C8334A'
   const GRAD = 'linear-gradient(135deg, #C8334A, #8B1A2C)'
   const uid = session?.user?.id
+  const pid = profile?.partner_id
+
+  // Фильтр только своей пары (uid + partner_id)
+  function applyPairFilter(query) {
+    if (pid) return query.or(`user_id.eq.${uid},user_id.eq.${pid}`)
+    return query.eq('user_id', uid)
+  }
 
   async function loadMessages() {
-    const { data } = await supabase
-      .from('messages')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(50)
+    const { data } = await applyPairFilter(
+      supabase.from('messages').select('*').order('created_at', { ascending: false }).limit(50)
+    )
     if (data && data.length) {
       setMessages(data.reverse())
     } else {
@@ -944,12 +949,10 @@ export default function Chat({ session, profile, darkMode }) {
     if (loadingMore || allLoaded || !messages.length) return
     setLoadingMore(true)
     const oldest = messages[0].created_at
-    const { data } = await supabase
-      .from('messages')
-      .select('*')
-      .lt('created_at', oldest)
-      .order('created_at', { ascending: false })
-      .limit(50)
+    const { data } = await applyPairFilter(
+      supabase.from('messages').select('*').lt('created_at', oldest)
+        .order('created_at', { ascending: false }).limit(50)
+    )
     if (!data || data.length < 50) setAllLoaded(true)
     if (data && data.length) {
       setMessages(prev => [...(data.reverse()), ...prev])
@@ -998,6 +1001,8 @@ export default function Chat({ session, profile, darkMode }) {
 
     const channel = supabase.channel('chat')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, p => {
+        // Игнорируем сообщения чужих пар
+        if (p.new.user_id !== uid && p.new.user_id !== pid) return
         setMessages(prev => {
           if (prev.find(m => m.id === p.new.id)) return prev
           return [...prev, p.new]
@@ -1012,6 +1017,7 @@ export default function Chat({ session, profile, darkMode }) {
         setMessages(prev => prev.filter(m => m.id !== p.old.id))
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, p => {
+        if (p.new.user_id !== uid && p.new.user_id !== pid) return
         setMessages(prev => prev.map(m => m.id === p.new.id ? p.new : m))
       })
       .subscribe()

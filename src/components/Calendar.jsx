@@ -85,6 +85,8 @@ function formatEventDate(dateStr) {
 }
 
 export default function Calendar({ session, profile }) {
+  const uid = session?.user?.id
+  const pid = profile?.partner_id
   const [events, setEvents] = useState([])
   const [showModal, setShowModal] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -101,7 +103,11 @@ export default function Calendar({ session, profile }) {
   useEffect(() => { loadEvents() }, [])
 
   async function loadEvents() {
-    const { data } = await supabase.from('calendar_events').select('*').order('event_date', { ascending: false })
+    const ids = [uid, pid].filter(Boolean)
+    const q = supabase.from('calendar_events').select('*').order('event_date', { ascending: false })
+    const { data } = ids.length === 1
+      ? await q.eq('user_id', ids[0])
+      : await q.in('user_id', ids)
     setEvents(data || [])
     setLoading(false)
   }

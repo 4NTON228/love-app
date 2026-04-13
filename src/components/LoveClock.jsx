@@ -17,7 +17,9 @@ function getRelationshipTime(start) {
   return { totalDays, years, months, weeks, days, hours, minutes, seconds }
 }
 
-export default function LoveClock() {
+export default function LoveClock({ session, profile }) {
+  const uid = session?.user?.id
+  const pid = profile?.partner_id
   const [time, setTime] = useState(getRelationshipTime(COUPLE_START))
   const [photos, setPhotos] = useState([])
   const canvasRef = useRef(null)
@@ -32,12 +34,16 @@ export default function LoveClock() {
     return () => clearInterval(id)
   }, [])
 
-  // Load moment photos
+  // Load moment photos (только своя пара)
   useEffect(() => {
-    supabase.from('moments').select('photo_url').not('photo_url', 'is', null).limit(12).then(({ data }) => {
+    if (!uid) return
+    const ids = [uid, pid].filter(Boolean)
+    const q = supabase.from('moments').select('photo_url').not('photo_url', 'is', null).limit(12)
+    const promise = ids.length === 1 ? q.eq('user_id', ids[0]) : q.in('user_id', ids)
+    promise.then(({ data }) => {
       if (data) setPhotos(data.map(m => m.photo_url).filter(Boolean))
     })
-  }, [])
+  }, [uid, pid])
 
   // Particle canvas
   useEffect(() => {

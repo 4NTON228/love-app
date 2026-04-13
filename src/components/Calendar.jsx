@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { sendPushNotification } from '../lib/push'
 
 /* ── SVG icons ── */
 function IcoTrash() {
@@ -136,7 +137,17 @@ export default function Calendar({ session, profile }) {
       const { error } = await supabase.from('calendar_events').insert({
         user_id: session.user.id, title, description, event_date: eventDate, emoji, photo_url: photoUrl
       })
-      if (!error) { resetForm(); setShowModal(false); loadEvents() }
+      if (!error) {
+        resetForm(); setShowModal(false); loadEvents()
+        if (profile?.partner_id) {
+          sendPushNotification(
+            profile?.name || 'Новое событие',
+            `${emoji || '📅'} ${title}`,
+            profile.partner_id,
+            session.user.id
+          ).catch(() => {})
+        }
+      }
     } catch (err) { console.error(err) }
     setSaving(false)
   }

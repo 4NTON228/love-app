@@ -282,22 +282,40 @@ const VoiceMessage = memo(function VoiceMessage({ url, isMine, dark, duration, t
   const svgW = WAVE_H.length * (BAR_W + BAR_GAP)
 
   function toggle() {
-    if (!audioRef.current) audioRef.current = new Audio(url)
     const a = audioRef.current
+    if (!a) return
     if (playing) { a.pause(); setPlaying(false) }
     else {
-      a.play().catch(() => {}); setPlaying(true)
-      a.ontimeupdate = () => setProgress(a.currentTime / (a.duration || 1))
-      a.onended = () => { setPlaying(false); setProgress(0) }
+      a.play().catch(err => console.error('audio play error:', err))
     }
   }
-  useEffect(() => () => audioRef.current?.pause(), [])
+  useEffect(() => {
+    const a = audioRef.current
+    if (!a) return
+    const onPlay    = () => setPlaying(true)
+    const onPause   = () => setPlaying(false)
+    const onEnded   = () => { setPlaying(false); setProgress(0) }
+    const onTimeUpd = () => setProgress(a.currentTime / (a.duration || 1))
+    a.addEventListener('play',       onPlay)
+    a.addEventListener('pause',      onPause)
+    a.addEventListener('ended',      onEnded)
+    a.addEventListener('timeupdate', onTimeUpd)
+    return () => {
+      a.pause()
+      a.removeEventListener('play',       onPlay)
+      a.removeEventListener('pause',      onPause)
+      a.removeEventListener('ended',      onEnded)
+      a.removeEventListener('timeupdate', onTimeUpd)
+    }
+  }, [])
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10,
       padding: '8px 14px 8px 10px', borderRadius: 18, minWidth: 220,
       background: isMine ? GRAD : (dark ? '#1E0A10' : '#fff'),
       border: isMine ? 'none' : '0.5px solid rgba(200,51,74,0.15)' }}>
+      {/* скрытый audio элемент — нужен для надёжного воспроизведения на iOS */}
+      <audio ref={audioRef} src={url} preload="none" playsInline style={{ display: 'none' }} />
       <button onClick={toggle} style={{ width: 36, height: 36, borderRadius: '50%',
         border: 'none', cursor: 'pointer', flexShrink: 0,
         background: isMine ? 'rgba(255,255,255,0.22)' : 'rgba(200,51,74,0.1)',
@@ -475,6 +493,7 @@ const Message = memo(({
   const bubbleRef   = useRef(null)
   const swipeStartX = useRef(0)
   const swipingRef  = useRef(false)
+  const isTouchRef  = useRef(false)
   const [swipeDx, setSwipeDx] = useState(0)
 
   const replyData = useMemo(() =>
@@ -562,13 +581,13 @@ const Message = memo(({
 
       <div
         ref={bubbleRef}
-        onTouchStart={e => { const t = e.touches[0]; startPress(t.clientX, t.clientY); onSwipeStart(e) }}
+        onTouchStart={e => { isTouchRef.current = true; const t = e.touches[0]; startPress(t.clientX, t.clientY); onSwipeStart(e) }}
         onTouchMove={e => { onMovePress(e); onSwipeMove(e) }}
-        onTouchEnd={() => { endPress(); handleTap(); onSwipeEnd() }}
-        onTouchCancel={() => { endPress(); onSwipeEnd() }}
-        onMouseDown={e => startPress(e.clientX, e.clientY)}
-        onMouseMove={onMovePress}
-        onMouseUp={() => { endPress(); handleTap() }}
+        onTouchEnd={() => { endPress(); handleTap(); onSwipeEnd(); setTimeout(() => { isTouchRef.current = false }, 500) }}
+        onTouchCancel={() => { endPress(); onSwipeEnd(); setTimeout(() => { isTouchRef.current = false }, 500) }}
+        onMouseDown={e => { if (!isTouchRef.current) startPress(e.clientX, e.clientY) }}
+        onMouseMove={e => { if (!isTouchRef.current) onMovePress(e) }}
+        onMouseUp={() => { if (!isTouchRef.current) { endPress(); handleTap() } }}
         onMouseLeave={endPress}
         onContextMenu={e => { e.preventDefault(); onLongPress(msg) }}
       >
@@ -1101,8 +1120,10 @@ export default function Chat({ session, profile, darkMode }) {
         if (replyTo) {
           msgData.reply_to_id = replyTo.id
         }
-        const { data: sent } = await supabase.from('messages').insert(msgData).select().single()
-        if (sent) setMessages(prev => prev.find(m => m.id === sent.id) ? prev : [...prev, sent])
+        const { error: insErr } = await supabase.from('messages').insert(msgData)
+        if (insErr) throw insErr
+        const { data: latest } = await supabase.from('messages').select('*').eq('user_id', uid).order('created_at', { ascending: false }).limit(1)
+        if (latest?.[0]) setMessages(prev => prev.find(m => m.id === latest[0].id) ? prev : [...prev, latest[0]])
         setReplyTo(null)
         scrollToBottom()
         if (partner?.id) {
@@ -1185,8 +1206,10 @@ export default function Chat({ session, profile, darkMode }) {
         setSending(true)
         try {
           const url = await upload(file, 'circles')
-          const { data: sent } = await supabase.from('messages').insert({ user_id: uid, video_url: url, is_video_circle: true }).select().single()
-          if (sent) setMessages(prev => prev.find(m => m.id === sent.id) ? prev : [...prev, sent])
+          const { error: insErr } = await supabase.from('messages').insert({ user_id: uid, video_url: url, is_video_circle: true })
+          if (insErr) throw insErr
+          const { data: latest } = await supabase.from('messages').select('*').eq('user_id', uid).eq('video_url', url).limit(1)
+          if (latest?.[0]) setMessages(prev => prev.find(m => m.id === latest[0].id) ? prev : [...prev, latest[0]])
           scrollToBottom()
           if (partner?.id) sendPushNotification(profile?.name || 'Сообщение', 'Видео-кружочек', partner.id, uid).catch(() => {})
         } catch (e) { console.error(e) }
@@ -1229,9 +1252,20 @@ export default function Chat({ session, profile, darkMode }) {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       voiceStream.current = stream
+
+      // iOS Safari поддерживает только audio/mp4, Android/Chrome — webm/opus
       const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-        ? 'audio/webm;codecs=opus' : 'audio/webm'
-      const rec = new MediaRecorder(stream, { mimeType: mime })
+        ? 'audio/webm;codecs=opus'
+        : MediaRecorder.isTypeSupported('audio/webm')
+          ? 'audio/webm'
+          : MediaRecorder.isTypeSupported('audio/mp4')
+            ? 'audio/mp4'
+            : ''
+
+      const rec = mime
+        ? new MediaRecorder(stream, { mimeType: mime })
+        : new MediaRecorder(stream)
+
       voiceRecRef.current = rec
       voiceChunks.current = []
       rec.ondataavailable = e => { if (e.data.size > 0) voiceChunks.current.push(e.data) }
@@ -1246,31 +1280,35 @@ export default function Chat({ session, profile, darkMode }) {
           voiceChunks.current = []
           setVoiceRec(false); setRecordSeconds(0); return
         }
-        const blob = new Blob(voiceChunks.current, { type: 'audio/webm' })
+        const mimeType = rec.mimeType || mime || 'audio/webm'
+        const blob = new Blob(voiceChunks.current, { type: mimeType })
         voiceChunks.current = []
         if (blob.size < 100) { setVoiceRec(false); setRecordSeconds(0); return }
-        const file = new File([blob], `voice-${Date.now()}.webm`, { type: 'audio/webm' })
+        const ext = mimeType.includes('mp4') ? 'mp4' : 'webm'
+        const file = new File([blob], `voice-${Date.now()}.${ext}`, { type: mimeType })
         setSending(true)
         try {
           const url = await upload(file, 'voices')
-          const { data: sent } = await supabase.from('messages').insert({ user_id: uid, audio_url: url, is_voice: true, duration: sec }).select().single()
-          if (sent) setMessages(prev => prev.find(m => m.id === sent.id) ? prev : [...prev, sent])
+          const { error: insErr } = await supabase.from('messages').insert({ user_id: uid, audio_url: url, is_voice: true, duration: sec })
+          if (insErr) throw insErr
+          const { data: latest } = await supabase.from('messages').select('*').eq('user_id', uid).eq('audio_url', url).limit(1)
+          if (latest?.[0]) setMessages(prev => prev.find(m => m.id === latest[0].id) ? prev : [...prev, latest[0]])
           scrollToBottom()
           if (partner?.id) sendPushNotification(profile?.name || 'Сообщение', 'Голосовое сообщение', partner.id, uid).catch(() => {})
-        } catch (e) { console.error(e) }
+        } catch (e) { console.error('voice send error:', e); alert('Ошибка отправки: ' + e.message) }
         broadcastRef.current?.send({ type: 'broadcast', event: 'recording', payload: { userId: uid, kind: null } })
         setSending(false)
         setVoiceRec(false)
         setRecordSeconds(0)
       }
-      rec.start(100)   // чанк каждые 100ms — не потеряем данные при быстром стопе
+      rec.start(100)
       broadcastRef.current?.send({ type: 'broadcast', event: 'recording', payload: { userId: uid, kind: 'voice' } })
       setVoiceRec(true)
       setRecordSeconds(0)
       voiceSecRef.current = 0
       clearInterval(recTimer.current)
       recTimer.current = setInterval(() => { voiceSecRef.current++; setRecordSeconds(s => s + 1) }, 1000)
-    } catch (e) { console.error(e); alert('Нет доступа к микрофону') }
+    } catch (e) { console.error(e); alert('Нет доступа к микрофону: ' + e.message) }
   }
 
   function stopVoice() {

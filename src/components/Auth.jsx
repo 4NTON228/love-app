@@ -121,7 +121,7 @@ export default function Auth() {
     e.preventDefault(); reset(); setLoading(true)
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) setError(
-      error.message === 'Invalid login credentials' ? 'Неверный email или пароль' :
+      error.message === 'Invalid login credentials' ? 'Неверный email или пароль. Если вы новый пользователь — перейдите на вкладку «Регистрация».' :
       error.message === 'Email not confirmed' ? 'Подтвердите email — письмо отправлено при регистрации' :
       error.message
     )

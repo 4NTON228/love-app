@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 
-const COUPLE_START = new Date('2025-10-17T00:00:00')
-
-function getRelationshipTime(start) {
+function getRelationshipTime(startDate) {
+  if (!startDate) return null
+  const start = new Date(startDate)
+  if (isNaN(start)) return null
   const now = new Date()
   const diff = now - start
+  if (diff < 0) return null
   const totalDays = Math.floor(diff / (1000 * 60 * 60 * 24))
   const years = Math.floor(totalDays / 365)
   const months = Math.floor((totalDays % 365) / 30)
@@ -20,19 +22,26 @@ function getRelationshipTime(start) {
 export default function LoveClock({ session, profile }) {
   const uid = session?.user?.id
   const pid = profile?.partner_id
-  const [time, setTime] = useState(getRelationshipTime(COUPLE_START))
+  const coupleStart = profile?.couple_start_date || null
+  const [time, setTime] = useState(() => getRelationshipTime(coupleStart))
   const [photos, setPhotos] = useState([])
   const canvasRef = useRef(null)
   const particlesRef = useRef([])
   const rafRef = useRef(null)
 
+  const [tick, setTick] = useState(0)
   const pad = n => String(n).padStart(2, '0')
 
-  // Live counter
+  // Always tick every second to keep clock hands live
   useEffect(() => {
-    const id = setInterval(() => setTime(getRelationshipTime(COUPLE_START)), 1000)
+    const id = setInterval(() => setTick(t => t + 1), 1000)
     return () => clearInterval(id)
   }, [])
+
+  // Update relationship time when coupleStart changes or tick fires
+  useEffect(() => {
+    setTime(coupleStart ? getRelationshipTime(coupleStart) : null)
+  }, [coupleStart, tick])
 
   // Load moment photos (только своя пара)
   useEffect(() => {
@@ -254,7 +263,12 @@ export default function LoveClock({ session, profile }) {
           </svg>
           Часы любви
         </div>
-        <div className="clock-subtitle">с 17 октября 2025 года</div>
+        <div className="clock-subtitle">
+          {coupleStart
+            ? `с ${new Date(coupleStart).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}`
+            : 'Часы вашей любви'
+          }
+        </div>
 
         {/* SVG Analog Clock */}
         <div className="clock-svg-wrap">
@@ -332,18 +346,25 @@ export default function LoveClock({ session, profile }) {
 
         {/* Live digital */}
         <div className="clock-live">
-          {pad(now.getHours())}:{pad(now.getMinutes())}:{pad(time.seconds)}
+          {pad(now.getHours())}:{pad(now.getMinutes())}:{pad(time?.seconds ?? 0)}
         </div>
-        <div className="clock-total">{time.totalDays} дней вместе</div>
+        {time ? (
+          <div className="clock-total">{time.totalDays} дней вместе</div>
+        ) : (
+          <div className="clock-total" style={{ fontSize: 13, opacity: 0.6 }}>
+            Укажи дату начала отношений в Настройках
+          </div>
+        )}
 
         {/* Breakdown grid */}
         <div className="clock-grid">
-          {time.years > 0 && (
+          {time && time.years > 0 && (
             <div className="clock-card" style={{ animationDelay: '0s' }}>
               <div className="clock-card-val">{time.years}</div>
               <div className="clock-card-lbl">лет</div>
             </div>
           )}
+          {time && <>
           <div className="clock-card" style={{ animationDelay: '0.05s' }}>
             <div className="clock-card-val">{time.months}</div>
             <div className="clock-card-lbl">месяцев</div>
@@ -364,6 +385,7 @@ export default function LoveClock({ session, profile }) {
             <div className="clock-card-val">{pad(time.minutes)}</div>
             <div className="clock-card-lbl">минут</div>
           </div>
+          </>}
         </div>
       </div>
     </>

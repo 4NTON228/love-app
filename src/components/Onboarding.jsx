@@ -500,13 +500,24 @@ export default function Onboarding({ session, onComplete, onSignOut }) {
 
   /* Загружаем текущий профиль (может быть частично заполнен) */
   useEffect(() => {
-    supabase.from('profiles').select('*').eq('id', session.user.id).single().then(({ data }) => {
+    supabase.from('profiles').select('*').eq('id', session.user.id).single().then(async ({ data }) => {
       if (data) {
         setProfileData({ name: data.name || '', avatar_url: data.avatar_url || null })
         setBirthday(data.birthday || '')
         setCoupleStart(data.couple_start_date || '')
-        setInviteCode(data.invite_code)
         setPartnerLinked(!!data.partner_id)
+
+        if (data.invite_code) {
+          setInviteCode(data.invite_code)
+        } else {
+          // Генерируем код приглашения если его ещё нет
+          const code = Math.random().toString(36).slice(2, 10).toUpperCase()
+          const { error } = await supabase
+            .from('profiles')
+            .update({ invite_code: code })
+            .eq('id', session.user.id)
+          if (!error) setInviteCode(code)
+        }
       }
     })
   }, [session.user.id])

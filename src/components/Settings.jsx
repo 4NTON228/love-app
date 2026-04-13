@@ -118,9 +118,19 @@ function PartnerSection({ profile }) {
   const [showQR, setShowQR] = useState(false)
   const [copied, setCopied] = useState(false)
   const [partnerProfile, setPartnerProfile] = useState(null)
+  const [inviteCode, setInviteCode] = useState(profile?.invite_code || null)
 
-  const inviteLink = profile?.invite_code
-    ? `${window.location.origin}/?invite=${profile.invite_code}`
+  // Генерируем invite_code если его нет
+  useEffect(() => {
+    if (!profile?.invite_code && profile?.id) {
+      const code = Math.random().toString(36).slice(2, 10).toUpperCase()
+      supabase.from('profiles').update({ invite_code: code }).eq('id', profile.id)
+        .then(({ error }) => { if (!error) setInviteCode(code) })
+    }
+  }, [profile?.id, profile?.invite_code])
+
+  const inviteLink = inviteCode
+    ? `${window.location.origin}/?invite=${inviteCode}`
     : null
 
   useEffect(() => {
@@ -227,6 +237,7 @@ function PartnerSection({ profile }) {
 export default function Settings({ session, profile, darkMode, toggleDarkMode, onProfileUpdate }) {
   const [name, setName] = useState(profile?.name || '')
   const [birthday, setBirthday] = useState(profile?.birthday || '')
+  const [coupleStart, setCoupleStart] = useState(profile?.couple_start_date || '')
   const [loveMessage, setLoveMessage] = useState('')
   const [saving, setSaving] = useState(false)
   const [savingAvatar, setSavingAvatar] = useState(false)
@@ -292,7 +303,11 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
 
   async function saveProfile() {
     setSaving(true)
-    await supabase.from('profiles').update({ name, birthday: birthday || null }).eq('id', session.user.id)
+    await supabase.from('profiles').update({
+      name,
+      birthday: birthday || null,
+      couple_start_date: coupleStart || null,
+    }).eq('id', session.user.id)
     onProfileUpdate?.()
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
@@ -648,6 +663,22 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
               type="date"
               value={birthday}
               onChange={e => setBirthday(e.target.value)}
+              style={{ width: '120px' }}
+            />
+          </div>
+          <div className="settings-row">
+            <span className="settings-row-icon" style={{ color: 'var(--rose, #C8334A)' }}>
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>
+              </svg>
+            </span>
+            <span className="settings-row-label">Вместе с</span>
+            <input
+              className="settings-input"
+              type="date"
+              value={coupleStart}
+              onChange={e => setCoupleStart(e.target.value)}
+              max={new Date().toISOString().slice(0, 10)}
               style={{ width: '120px' }}
             />
           </div>

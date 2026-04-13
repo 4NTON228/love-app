@@ -119,7 +119,9 @@ function Confetti({ active }) {
   )
 }
 
-export default function Plans({ session }) {
+export default function Plans({ session, profile }) {
+  const uid = session?.user?.id
+  const pid = profile?.partner_id
   const [plans, setPlans] = useState([])
   const [showModal, setShowModal] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -133,9 +135,13 @@ export default function Plans({ session }) {
   useEffect(() => { loadPlans() }, [])
 
   async function loadPlans() {
-    const { data } = await supabase.from('plans').select('*')
+    const ids = [uid, pid].filter(Boolean)
+    const q = supabase.from('plans').select('*')
       .order('completed', { ascending: true })
       .order('created_at', { ascending: false })
+    const { data } = ids.length === 1
+      ? await q.eq('user_id', ids[0])
+      : await q.in('user_id', ids)
     setPlans(data || [])
     setLoading(false)
   }

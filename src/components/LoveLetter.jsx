@@ -74,13 +74,14 @@ export default function LoveLetter({ session, profile }) {
   const loadLetters = useCallback(async () => {
     if (!myId) return
     setLoadingLetters(true)
-    const { data } = await supabase
-      .from('love_letters')
-      .select('*')
-      .order('created_at', { ascending: false })
+    const ids = [myId, partnerId].filter(Boolean)
+    const q = supabase.from('love_letters').select('*').order('created_at', { ascending: false })
+    const { data } = ids.length === 1
+      ? await q.eq('user_id', ids[0])
+      : await q.in('user_id', ids)
     setLetters(data || [])
     setLoadingLetters(false)
-  }, [myId])
+  }, [myId, partnerId])
 
   useEffect(() => {
     loadNames()

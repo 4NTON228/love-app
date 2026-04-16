@@ -138,7 +138,6 @@ export default function Plans({ session, profile }) {
   async function loadPlans() {
     const ids = [uid, pid].filter(Boolean)
     const q = supabase.from('plans').select('*')
-      .order('completed', { ascending: true })
       .order('created_at', { ascending: false })
     const { data } = ids.length === 1
       ? await q.eq('user_id', ids[0])
@@ -168,12 +167,17 @@ export default function Plans({ session, profile }) {
 
   async function toggleComplete(plan) {
     const newVal = !plan.completed
-    await supabase.from('plans').update({ completed: newVal }).eq('id', plan.id)
+    // Обновляем локально — без перезагрузки и перемигивания
+    setPlans(prev => prev.map(p => p.id === plan.id ? { ...p, completed: newVal } : p))
     if (newVal) {
       setConfetti(true)
       setTimeout(() => setConfetti(false), 2000)
     }
-    loadPlans()
+    const { error } = await supabase.from('plans').update({ completed: newVal }).eq('id', plan.id)
+    if (error) {
+      // Откатываем если не удалось
+      setPlans(prev => prev.map(p => p.id === plan.id ? { ...p, completed: !newVal } : p))
+    }
   }
 
   async function deletePlan(id) {

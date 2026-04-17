@@ -25,7 +25,7 @@ function IcoMailOpen() {
     </svg>
   )
 }
-function IcoPencil() {
+function _IcoPencil() {
   return (
     <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: 'middle', marginRight: 5 }}>
       <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
@@ -110,7 +110,7 @@ export default function LoveLetter({ session, profile }) {
     }, 1800)
   }
 
-  const today = new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
+  const _today = new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
 
   const rotations = [-2, 1, -1, 2, -1.5]
 

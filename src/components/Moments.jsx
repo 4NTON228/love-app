@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { sendPushNotification } from '../lib/push'
 
@@ -119,7 +119,7 @@ function StoriesViewer({ stories, startIdx, onClose }) {
     }
     rafRef.current = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(rafRef.current)
-  }, [idx, stories.length])
+  }, [idx, stories.length, onClose])
 
   function goNext() {
     cancelAnimationFrame(rafRef.current)

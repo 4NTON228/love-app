@@ -24,7 +24,7 @@ const PLANS = [
   { id: 'premium_yearly', label: 'Год', price: 2490, per: '207 ₽/мес', badge: 'Выгода 30%' },
 ]
 
-export default function Paywall({ onClose, session }) {
+export default function Paywall({ onClose, session: _session }) {
   const [plan, setPlan] = useState('premium_yearly')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)

@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 
+/* eslint-disable no-misleading-character-class */
 const EMOJI_RE = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{FE00}-\u{FE0F}\u{1F000}-\u{1FAFF}]/gu
+/* eslint-enable no-misleading-character-class */
 const WE_RE    = /\b(мы|нас|нам|наш|наша|наше|наши|нашу|нашего|нашей|нашим|нашими)\b/gi
 
 function calcWarmth(messages) {
@@ -12,10 +14,12 @@ function calcWarmth(messages) {
   const emojiDens = withEmoji / texts.length
   const withWe    = texts.filter(t => { WE_RE.lastIndex = 0; return WE_RE.test(t) }).length
   const weRatio   = withWe / texts.length
+  // Messages must be sorted ascending by created_at for correct RT calculation
   let totalRT = 0, rtSamples = 0
   for (let i = 1; i < messages.length; i++) {
     if (messages[i].user_id !== messages[i - 1].user_id) {
-      const diff = (new Date(messages[i - 1].created_at) - new Date(messages[i].created_at)) / 1000
+      // diff: time between consecutive messages from different users
+      const diff = (new Date(messages[i].created_at) - new Date(messages[i - 1].created_at)) / 1000
       if (diff > 0 && diff < 86400) { totalRT += diff; rtSamples++ }
     }
   }
@@ -168,10 +172,12 @@ export default function WarmthBarometer({ session, profile, darkMode }) {
       setLoading(false); return
     }
 
+    // ascending order required for correct response-time calculation in calcWarmth
     const { data: msgs } = await supabase.from('messages').select('user_id, text, created_at')
       .or(`user_id.eq.${userId},user_id.eq.${partnerId}`)
-      .order('created_at', { ascending: false }).limit(20)
-    if (msgs?.length > 0) setWarmth(calcWarmth(msgs))
+      .order('created_at', { ascending: true }).limit(50)
+    if (msgs && msgs.length >= 3) setWarmth(calcWarmth(msgs))
+    else if (msgs) setLoading(false)
     setLoading(false)
   }, [userId, partnerId])
 

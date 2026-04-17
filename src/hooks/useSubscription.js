@@ -18,7 +18,7 @@ export function useSubscription() {
     try {
       const c = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}')
       if (c.exp && c.exp > Date.now()) return c.active
-    } catch {}
+    } catch (_e) { /* ignore invalid cache */ }
     return false
   })
   const [loading, setLoading] = useState(true)
@@ -40,7 +40,7 @@ export function useSubscription() {
 
       // Кэшируем результат
       localStorage.setItem(CACHE_KEY, JSON.stringify({ active, exp: Date.now() + CACHE_TTL }))
-    } catch {
+    } catch (_e) {
       // При ошибке сети — не блокируем пользователя
     } finally {
       setLoading(false)

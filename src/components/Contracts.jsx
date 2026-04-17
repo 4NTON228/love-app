@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 
 // ── SVG Icons ────────────────────────────────────────────────
@@ -110,11 +110,7 @@ export default function Contracts({ session, profile, darkMode }) {
     period_days: 30,
   })
 
-  useEffect(() => {
-    loadContracts()
-  }, [])
-
-  async function loadContracts() {
+  const loadContracts = useCallback(async () => {
     setLoading(true)
     if (!profile?.partner_id) {
       setNoPartner(true)
@@ -130,7 +126,9 @@ export default function Contracts({ session, profile, darkMode }) {
 
     setContracts(data ?? [])
     setLoading(false)
-  }
+  }, [profile?.partner_id, session.user.id])
+
+  useEffect(() => { loadContracts() }, [loadContracts])
 
   async function createContract() {
     if (!form.title.trim() || !form.condition.trim() || saving) return
@@ -165,15 +163,20 @@ export default function Contracts({ session, profile, darkMode }) {
   }
 
   async function signContract(contractId) {
-    const { data, error: err } = await supabase
-      .from('contracts')
-      .update({ signed_by_partner: true })
-      .eq('id', contractId)
-      .select()
-      .single()
+    // Use RPC so status + expires_at are set atomically server-side
+    const { error: err } = await supabase
+      .rpc('sign_contract', { contract_id: contractId })
 
-    if (!err && data) {
-      setContracts(prev => prev.map(c => c.id === contractId ? data : c))
+    if (err) {
+      setError('Не удалось подписать контракт — попробуй снова')
+      return
+    }
+
+    // Refresh contract from DB after RPC
+    const { data: updated } = await supabase
+      .from('contracts').select('*').eq('id', contractId).single()
+    if (updated) {
+      setContracts(prev => prev.map(c => c.id === contractId ? updated : c))
     }
   }
 
@@ -188,7 +191,7 @@ export default function Contracts({ session, profile, darkMode }) {
     if (data) setContracts(prev => prev.map(c => c.id === contractId ? data : c))
   }
 
-  function useSuggestion(s) {
+  function applySuggestion(s) {
     setForm(f => ({ ...f, title: s.title, condition: s.condition }))
   }
 
@@ -578,7 +581,7 @@ export default function Contracts({ session, profile, darkMode }) {
               <div className="ct-suggestions-label">Шаблоны</div>
               <div className="ct-suggestions-scroll">
                 {CONTRACT_SUGGESTIONS.map(s => (
-                  <button key={s.title} className="ct-sug-chip" onClick={() => useSuggestion(s)}>
+                  <button key={s.title} className="ct-sug-chip" onClick={() => applySuggestion(s)}>
                     {s.title}
                   </button>
                 ))}

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, memo, useMemo } from 'react'
+import { useState, useEffect, useRef, memo, useMemo, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { sendPushNotification } from '../lib/push'
 
@@ -43,7 +43,7 @@ function fmtDuration(sec) {
   return `${mins}:${secs.toString().padStart(2, '0')}`
 }
 
-function fmtRecordTime(sec) {
+function _fmtRecordTime(sec) {
   const mins = Math.floor(sec / 60)
   const secs = sec % 60
   return `${mins}:${secs.toString().padStart(2, '0')}`
@@ -86,7 +86,7 @@ function needAvatar(msg, nextMsg, uid) {
   return false
 }
 
-function shouldShowAvatar(msg, nextMsg) {
+function _shouldShowAvatar(msg, nextMsg) {
   if (!nextMsg) return true
   if (nextMsg.user_id !== msg.user_id) return true
   if (diffDate(msg.created_at, nextMsg.created_at)) return true
@@ -191,7 +191,7 @@ const VideoCircle = memo(function VideoCircle({ url, isMine, time, readAt }) {
 
   return (
     <div
-      onTouchStart={e => { touchStart.current = Date.now() }}
+      onTouchStart={_e => { touchStart.current = Date.now() }}
       onTouchEnd={e => {
         const dur = Date.now() - touchStart.current
         if (dur < 400) { e.stopPropagation(); toggle() }
@@ -315,7 +315,7 @@ const VoiceMessage = memo(function VoiceMessage({ url, isMine, dark, duration, t
       background: isMine ? GRAD : (dark ? '#1E0A10' : '#fff'),
       border: isMine ? 'none' : '0.5px solid rgba(200,51,74,0.15)' }}>
       {/* скрытый audio элемент — нужен для надёжного воспроизведения на iOS */}
-      <audio ref={audioRef} src={url} preload="none" playsInline style={{ display: 'none' }} />
+      <audio ref={audioRef} src={url} preload="none" style={{ display: 'none' }} />
       <button onClick={toggle} style={{ width: 36, height: 36, borderRadius: '50%',
         border: 'none', cursor: 'pointer', flexShrink: 0,
         background: isMine ? 'rgba(255,255,255,0.22)' : 'rgba(200,51,74,0.1)',
@@ -385,7 +385,7 @@ const ReplyPreview = memo(function ReplyPreview({ msg, isMine, dark, uid, partne
   )
 })
 
-const Reactions = memo(({ reactions, uid, onReact, msgId, isMine, dark }) => {
+const Reactions = memo(function Reactions({ reactions, uid, onReact, msgId, isMine, dark }) {
   const valid = Object.entries(reactions).filter(([e]) => VALID_REACTIONS.has(e))
   if (valid.length === 0) return null
 
@@ -419,7 +419,7 @@ const Reactions = memo(({ reactions, uid, onReact, msgId, isMine, dark }) => {
   )
 })
 
-const TextBubble = memo(({ msg, isMine, dark, radius, bg, color, replyData, uid, partnerName, onPhotoOpen }) => {
+const TextBubble = memo(function TextBubble({ msg, isMine, dark, radius, bg, color, replyData, uid, partnerName, onPhotoOpen }) {
   const onlyPhoto = msg.photo_url && !msg.text
   return (
     <div style={{
@@ -479,12 +479,12 @@ const TextBubble = memo(({ msg, isMine, dark, radius, bg, color, replyData, uid,
   )
 })
 
-const Message = memo(({
-  msg, isMine, dark, uid, partnerName, partnerAvatar,
+const Message = memo(function Message({
+  msg, isMine, dark, uid, partnerName, partnerAvatar: _partnerAvatar,
   onLongPress, onReact, onReply, onPhotoOpen,
-  isFirst, isLast, showAv,
+  isFirst: _isFirst, isLast, showAv: _showAv,
   messages,
-}) => {
+}) {
   const readAt = msg.read_at || null
   const timerRef    = useRef(null)
   const movedRef    = useRef(false)
@@ -637,7 +637,7 @@ const PhotoLightbox = memo(function PhotoLightbox({ url, onClose }) {
     const fn = e => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', fn)
     return () => window.removeEventListener('keydown', fn)
-  }, [])
+  }, [onClose])
   return (
     <div onClick={onClose} style={{
       position: 'fixed', inset: 0, zIndex: 500,
@@ -663,7 +663,7 @@ const PhotoLightbox = memo(function PhotoLightbox({ url, onClose }) {
   )
 })
 
-const ContextMenu = memo(({ menu, dark, onClose, onEdit, onDelete, onPin, onCopy, onReply, onReact }) => {
+const ContextMenu = memo(function ContextMenu({ menu, dark, onClose, onEdit, onDelete, onPin, onCopy: _onCopy, onReply, onReact }) {
   if (!menu) return null
 
   const menuBg    = dark ? '#1E0A10' : '#fff'
@@ -778,12 +778,12 @@ const SearchOverlay = memo(function SearchOverlay({ messages, dark, onClose }) {
     return messages.filter(m => m.text?.toLowerCase().includes(q))
   }, [query, messages])
 
-  function goTo(i) {
+  const goTo = useCallback((i) => {
     const msg = results[i]; if (!msg) return
     setIdx(i)
     document.querySelector(`[data-msg-id="${msg.id}"]`)
       ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-  }
+  }, [results])
 
   useEffect(() => {
     const fn = e => {
@@ -793,7 +793,7 @@ const SearchOverlay = memo(function SearchOverlay({ messages, dark, onClose }) {
     }
     window.addEventListener('keydown', fn)
     return () => window.removeEventListener('keydown', fn)
-  }, [idx, results.length])
+  }, [idx, results.length, onClose, goTo])
 
   function highlight(text) {
     if (!text || !query.trim()) return text || ''
@@ -1028,6 +1028,7 @@ export default function Chat({ session, profile, darkMode }) {
       window.removeEventListener('focus', onFocus)
       document.removeEventListener('visibilitychange', onVisible)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uid])
 
   useEffect(() => {
@@ -1062,6 +1063,7 @@ export default function Chat({ session, profile, darkMode }) {
       supabase.removeChannel(typingChannel)
       supabase.removeChannel(bcChannel)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [partner?.id])
 
   // подключаем стрим к превью-видео ПОСЛЕ того как recording=true и элемент отрендерился
@@ -1363,7 +1365,7 @@ export default function Chat({ session, profile, darkMode }) {
     setCtxMenu({ msgId: msg.id, text: msg.text || '', isMe: msg.user_id === uid, isPinned: !!msg.is_pinned })
   }
 
-  function onDoubleTap(id) {
+  function _onDoubleTap(id) {
     addReact(id, '❤️')
   }
 
@@ -1499,7 +1501,7 @@ export default function Chat({ session, profile, darkMode }) {
           const isFirst = isFirstInGroup(msg, prevMsg)
           const isLast = isLastInGroup(msg, nextMsg)
           const showAv = needAvatar(msg, nextMsg, uid)
-          const replyMsg = msg.reply_to_id ? getReplyMessage(msg.reply_to_id) : null
+          const _replyMsg = msg.reply_to_id ? getReplyMessage(msg.reply_to_id) : null
 
           return (
             <div key={msg.id} data-msg-id={msg.id}>

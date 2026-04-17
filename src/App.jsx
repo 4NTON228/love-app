@@ -1,19 +1,20 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react'
 import { supabase } from './lib/supabase'
 import { subscribeToPush } from './lib/push'
 import Auth from './components/Auth'
 import Onboarding from './components/Onboarding'
 import Home from './components/Home'
-import Chat from './components/Chat'
-import Calendar from './components/Calendar'
-import Moments from './components/Moments'
-import Plans from './components/Plans'
-import LoveClock from './components/LoveClock'
-import LoveLetter from './components/LoveLetter'
-import Settings from './components/Settings'
-import AIAdvisor from './components/AIAdvisor'
-import Premium from './components/Premium'
 import Navigation from './components/Navigation'
+
+const Chat        = lazy(() => import('./components/Chat'))
+const Calendar    = lazy(() => import('./components/Calendar'))
+const Moments     = lazy(() => import('./components/Moments'))
+const Plans       = lazy(() => import('./components/Plans'))
+const LoveClock   = lazy(() => import('./components/LoveClock'))
+const LoveLetter  = lazy(() => import('./components/LoveLetter'))
+const Settings    = lazy(() => import('./components/Settings'))
+const AIAdvisor   = lazy(() => import('./components/AIAdvisor'))
+const Premium     = lazy(() => import('./components/Premium'))
 
 // Apply saved theme on load
 ;(function applyStoredTheme() {
@@ -35,7 +36,7 @@ import Navigation from './components/Navigation'
   try {
     const raw = localStorage.getItem('loveThemeData')
     if (raw) t = JSON.parse(raw)
-  } catch (_) {}
+  } catch (_e) { /* ignore invalid stored theme */ }
   if (!t) {
     const saved = localStorage.getItem('loveTheme')
     if (saved && THEMES[saved]) t = THEMES[saved]
@@ -277,9 +278,11 @@ export default function App() {
           paddingBottom: getPaddingBottom(),
         }}
       >
-        <div key={activeTab} className="tab-anim">
-          {renderTab()}
-        </div>
+        <Suspense fallback={null}>
+          <div key={activeTab} className="tab-anim">
+            {renderTab()}
+          </div>
+        </Suspense>
       </div>
       <Navigation activeTab={activeTab} setActiveTab={setActiveTab} />
     </div>

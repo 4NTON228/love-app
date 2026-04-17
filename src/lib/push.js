@@ -1,7 +1,7 @@
 import { supabase } from './supabase'
 
 function urlBase64ToUint8Array(base64String) {
-  const padding = '='.repeat((4 - base64String.length % 4) % 4)
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
   const rawData = window.atob(base64)
   const outputArray = new Uint8Array(rawData.length)
@@ -9,8 +9,14 @@ function urlBase64ToUint8Array(base64String) {
   return outputArray
 }
 
+const isPushSupported =
+  typeof window !== 'undefined' &&
+  'Notification' in window &&
+  'serviceWorker' in navigator &&
+  'PushManager' in window
+
 export async function subscribeToPush(userId) {
-  if (!('Notification' in window) || !('serviceWorker' in navigator)) return false
+  if (!isPushSupported) return false
 
   try {
     const permission = await Notification.requestPermission()
@@ -20,11 +26,10 @@ export async function subscribeToPush(userId) {
 
     const vapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY
     if (!vapidKey) {
-      console.warn('VAPID ключ не найден в .env')
+      console.warn('VAPID key missing — set VITE_VAPID_PUBLIC_KEY in .env')
       return false
     }
 
-    // Берём текущую подписку или создаём новую
     let sub = await reg.pushManager.getSubscription()
     if (!sub) {
       sub = await reg.pushManager.subscribe({
@@ -33,10 +38,6 @@ export async function subscribeToPush(userId) {
       })
     }
 
-    // Сохраняем в Supabase с таймаутом 8 секунд
-    const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), 8000)
-
     const { error } = await supabase
       .from('push_subscriptions')
       .upsert(
@@ -44,58 +45,50 @@ export async function subscribeToPush(userId) {
         { onConflict: 'user_id' }
       )
 
-    clearTimeout(timer)
-
     if (error) {
-      // Если upsert не сработал — пробуем простой insert (без updated_at, для старых таблиц)
+      // Fallback for tables without updated_at column
       if (error.code === '42703') {
-        // Столбец updated_at не существует — вставляем без него
         await supabase
           .from('push_subscriptions')
-          .upsert(
-            { user_id: userId, subscription: sub.toJSON() },
-            { onConflict: 'user_id' }
-          )
-      } else if (error.code === '23505') {
-        // Дубликат — обновляем напрямую
-        await supabase
-          .from('push_subscriptions')
-          .update({ subscription: sub.toJSON() })
-          .eq('user_id', userId)
+          .upsert({ user_id: userId, subscription: sub.toJSON() }, { onConflict: 'user_id' })
       } else {
         console.warn('Push subscription save error:', error.code, error.message)
       }
     }
 
-    console.log('✅ Push подписка сохранена')
     return true
-
   } catch (err) {
-    if (err.name === 'AbortError') {
-      console.warn('Push subscription timeout — попробуй позже')
-    } else {
-      console.warn('Push subscription error:', err.message)
-    }
+    console.warn('Push subscription error:', err.message)
     return false
   }
 }
 
+/**
+ * Send a push notification to the current user's partner.
+ * recipientId MUST be profile.partner_id — caller is responsible for validation.
+ */
 export async function sendPushNotification(title, body, recipientId) {
+  if (!recipientId) return
+
   try {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) return
 
-    const response = await fetch(
-      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-notification`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({ title, body, recipientId }),
-      }
-    )
+    // Safety: never send to self
+    if (recipientId === session.user.id) {
+      console.warn('sendPushNotification: recipientId matches sender — skipped')
+      return
+    }
+
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+    const response = await fetch(`${supabaseUrl}/functions/v1/send-notification`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ title, body, recipientId }),
+    })
 
     if (!response.ok) {
       const text = await response.text()

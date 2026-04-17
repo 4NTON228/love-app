@@ -17,7 +17,7 @@ import QRCode from 'qrcode'
 const TOTAL_STEPS = 5
 
 /* ── Утилиты ── */
-function pad(n) { return String(n).padStart(2, '0') }
+function _pad(n) { return String(n).padStart(2, '0') }
 
 /* ── Компонент шага прогресса ── */
 function StepDots({ step }) {
@@ -117,7 +117,7 @@ function StepProfile({ value, onChange, onNext }) {
         const { data } = supabase.storage.from('photos').getPublicUrl(path)
         onChange({ ...value, avatar_url: data.publicUrl })
       }
-    } catch (_) {}
+    } catch (_e) { /* ignore upload errors */ }
     finally {
       setUploading(false)
       URL.revokeObjectURL(previewUrl)
@@ -504,7 +504,7 @@ export default function Onboarding({ session, onComplete, onSignOut }) {
   const [coupleStart, setCoupleStart] = useState('')
   const [inviteCode, setInviteCode] = useState(null)
   const [partnerLinked, setPartnerLinked] = useState(false)
-  const [saving, setSaving] = useState(false)
+  const [_saving, setSaving] = useState(false)
 
   /* Загружаем текущий профиль (может быть частично заполнен) */
   useEffect(() => {

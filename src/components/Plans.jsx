@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { sendPushNotification } from '../lib/push'
 
@@ -133,9 +133,7 @@ export default function Plans({ session, profile }) {
   const [title, setTitle] = useState('')
   const [category, setCategory] = useState('dream')
 
-  useEffect(() => { loadPlans() }, [])
-
-  async function loadPlans() {
+  const loadPlans = useCallback(async () => {
     const ids = [uid, pid].filter(Boolean)
     const q = supabase.from('plans').select('*')
       .order('created_at', { ascending: false })
@@ -144,7 +142,9 @@ export default function Plans({ session, profile }) {
       : await q.in('user_id', ids)
     setPlans(data || [])
     setLoading(false)
-  }
+  }, [uid, pid])
+
+  useEffect(() => { loadPlans() }, [loadPlans])
 
   async function handleSubmit(e) {
     e.preventDefault()

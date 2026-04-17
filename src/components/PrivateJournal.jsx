@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 
 // ── SVG Icons ────────────────────────────────────────────────
@@ -12,7 +12,7 @@ function PenIcon({ size = 20 }) {
   )
 }
 
-function SparkIcon({ size = 18 }) {
+function _SparkIcon({ size = 18 }) {
   return (
     <svg viewBox="0 0 24 24" width={size} height={size} fill="none"
       stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
@@ -70,7 +70,7 @@ const MOOD_OPTIONS = [
   { value: 5, label: 'Отлично', color: '#2B8FD8' },
 ]
 
-const REFLECTION_PROMPTS = [
+const _REFLECTION_PROMPTS = [
   'Что именно вызывает это чувство?',
   'Что тебе сейчас больше всего нужно?',
   'Как бы ты описал это состояние в двух словах?',
@@ -84,7 +84,7 @@ function formatDate(iso) {
   return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })
 }
 
-export default function PrivateJournal({ session, profile, darkMode, onConvertToMessage }) {
+export default function PrivateJournal({ session, profile: _profile, darkMode, onConvertToMessage }) {
   const [entries, setEntries] = useState([])
   const [loading, setLoading] = useState(true)
   const [writing, setWriting] = useState(false)
@@ -95,11 +95,7 @@ export default function PrivateJournal({ session, profile, darkMode, onConvertTo
   const [expandedId, setExpandedId] = useState(null)
   const textareaRef = useRef(null)
 
-  useEffect(() => {
-    loadEntries()
-  }, [])
-
-  async function loadEntries() {
+  const loadEntries = useCallback(async () => {
     setLoading(true)
     const { data } = await supabase
       .from('private_journal')
@@ -109,7 +105,9 @@ export default function PrivateJournal({ session, profile, darkMode, onConvertTo
       .limit(50)
     setEntries(data ?? [])
     setLoading(false)
-  }
+  }, [session.user.id])
+
+  useEffect(() => { loadEntries() }, [loadEntries])
 
   async function save() {
     if (!text.trim() || saving) return

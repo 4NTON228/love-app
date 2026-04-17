@@ -90,7 +90,7 @@ export default function InsightsWidget({ session, profile, darkMode }) {
   const [aiText, setAiText]             = useState(null)
   const [generating, setGenerating]     = useState(false)
   const [loadingData, setLoadingData]   = useState(true)
-  const [error, setError]               = useState(null)
+  const [_error, setError]               = useState(null)
   const [tipIdx, setTipIdx]             = useState(() => Math.floor(Math.random() * PRESET_TIPS.length))
 
   // ── Загрузка данных и генерация статичных инсайтов ───────

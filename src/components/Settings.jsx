@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { subscribeToPush } from '../lib/push'
 import { validateImageFile, toast } from '../lib/helpers'
@@ -279,14 +279,14 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
     setPushLoading(false)
   }
 
-  async function loadLoveMessage() {
+  const loadLoveMessage = useCallback(async () => {
     if (!session?.user?.id) return
     const { data } = await supabase.from('couple_settings').select('love_message').eq('user_id', session.user.id).maybeSingle()
     if (data) setLoveMessage(data.love_message || '')
-  }
+  }, [session?.user?.id])
 
   // Load love message on mount
-  useEffect(() => { loadLoveMessage() }, [])
+  useEffect(() => { loadLoveMessage() }, [loadLoveMessage])
 
   async function handleAvatarChange(e) {
     const file = e.target.files[0]

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 
 // ── SVG Icons ────────────────────────────────────────────────
-function TranslateIcon({ size = 20 }) {
+function _TranslateIcon({ size = 20 }) {
   return (
     <svg viewBox="0 0 24 24" width={size} height={size} fill="none"
       stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
@@ -146,7 +146,7 @@ export default function EmotionTranslator({ session, profile, darkMode, initialT
         try {
           const body = await fnErr.context?.json?.()
           if (body?.error) detail = body.error
-        } catch (_) {}
+        } catch (_e) { /* ignore json parse error */ }
         throw new Error(detail)
       }
       if (data?.error) throw new Error(data.error)
@@ -185,7 +185,7 @@ export default function EmotionTranslator({ session, profile, darkMode, initialT
     setLoading(false)
   }
 
-  function useTemplate(t) {
+  function applyTemplate(t) {
     setSelectedTemplate(t)
     setInputText(t.example)
     setResult(null)
@@ -551,7 +551,7 @@ export default function EmotionTranslator({ session, profile, darkMode, initialT
             <button
               key={t.id}
               className={`et-tpl-chip${selectedTemplate?.id === t.id ? ' active' : ''}`}
-              onClick={() => useTemplate(t)}
+              onClick={() => applyTemplate(t)}
             >
               {t.label}
             </button>

@@ -157,6 +157,6 @@ export function filterByPair(query, uid, pid) {
  */
 export function revokeObjectUrl(url) {
   if (url && url.startsWith('blob:')) {
-    try { URL.revokeObjectURL(url) } catch (_) {}
+    try { URL.revokeObjectURL(url) } catch (_e) { /* ignore */ }
   }
 }

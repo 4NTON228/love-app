@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { sendPushNotification } from '../lib/push'
 
@@ -100,9 +100,7 @@ export default function Calendar({ session, profile }) {
   const [photo, setPhoto] = useState(null)
   const [photoPreview, setPhotoPreview] = useState(null)
 
-  useEffect(() => { loadEvents() }, [])
-
-  async function loadEvents() {
+  const loadEvents = useCallback(async () => {
     const ids = [uid, pid].filter(Boolean)
     const q = supabase.from('calendar_events').select('*').order('event_date', { ascending: false })
     const { data } = ids.length === 1
@@ -110,7 +108,9 @@ export default function Calendar({ session, profile }) {
       : await q.in('user_id', ids)
     setEvents(data || [])
     setLoading(false)
-  }
+  }, [uid, pid])
+
+  useEffect(() => { loadEvents() }, [loadEvents])
 
   async function uploadPhoto(file) {
     const ext = file.name.split('.').pop()
@@ -495,16 +495,15 @@ export default function Calendar({ session, profile }) {
   )
 }
 
-function EventCard({ event, idx, session, onDelete, onPhoto, past = false }) {
+function EventCard({ event, idx, session: _session, onDelete, onPhoto, past = false }) {
   const { day, month } = formatEventDate(event.event_date)
   const daysUntil = getDaysUntil(event.event_date)
   const daysAgo = Math.abs(daysUntil)
 
   let badgeText = ''
-  let badgeClass = ''
-  if (daysUntil === 0) { badgeText = 'Сегодня!'; badgeClass = 'today' }
-  else if (daysUntil > 0) { badgeText = `через ${daysUntil} дн`; badgeClass = '' }
-  else { badgeText = `${daysAgo} дн назад`; badgeClass = 'past-label' }
+  if (daysUntil === 0) { badgeText = 'Сегодня!' }
+  else if (daysUntil > 0) { badgeText = `через ${daysUntil} дн` }
+  else { badgeText = `${daysAgo} дн назад` }
 
   return (
     <div className="cal-event-card" style={{ animationDelay: `${idx * 0.05}s` }}>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 
 // COUPLE_START теперь берётся из profile.couple_start_date (динамически)
@@ -630,11 +630,13 @@ function mouseGlow(e) {
    MAIN COMPONENT
 ───────────────────────────────────────── */
 export default function Home({ session, profile, onNavigate }) {
-  const coupleStart = profile?.couple_start_date
-    ? new Date(profile.couple_start_date + 'T00:00:00')
-    : new Date('2025-10-17T00:00:00')
+  const coupleStart = useMemo(() =>
+    profile?.couple_start_date
+      ? new Date(profile.couple_start_date + 'T00:00:00')
+      : new Date('2025-10-17T00:00:00')
+  , [profile?.couple_start_date])
   const [time,           setTime]           = useState(getRelTime(coupleStart))
-  const [prevTime,       setPrevTime]       = useState(null)
+  const [_prevTime,      setPrevTime]       = useState(null)
   const [settings,       setSettings]       = useState(null)
   const [nextEvent,      setNextEvent]      = useState(null)
   const [countdown,      setCountdown]      = useState(null)
@@ -656,7 +658,7 @@ export default function Home({ session, profile, onNavigate }) {
       setTime(getRelTime(coupleStart))
     }, 1000)
     return () => clearInterval(id)
-  }, [profile?.couple_start_date])
+  }, [coupleStart])
 
   /* Meeting countdown */
   useEffect(() => {

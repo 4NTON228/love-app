@@ -165,15 +165,20 @@ export default function Contracts({ session, profile, darkMode }) {
   }
 
   async function signContract(contractId) {
+    // Use RPC so status + expires_at are set atomically server-side
     const { data, error: err } = await supabase
-      .from('contracts')
-      .update({ signed_by_partner: true })
-      .eq('id', contractId)
-      .select()
-      .single()
+      .rpc('sign_contract', { contract_id: contractId })
 
-    if (!err && data) {
-      setContracts(prev => prev.map(c => c.id === contractId ? data : c))
+    if (err) {
+      setError('Не удалось подписать контракт — попробуй снова')
+      return
+    }
+
+    // Refresh contract from DB after RPC
+    const { data: updated } = await supabase
+      .from('contracts').select('*').eq('id', contractId).single()
+    if (updated) {
+      setContracts(prev => prev.map(c => c.id === contractId ? updated : c))
     }
   }
 

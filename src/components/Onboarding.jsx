@@ -11,6 +11,7 @@
  */
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
+import { validateImageFile } from '../lib/helpers'
 import QRCode from 'qrcode'
 
 const TOTAL_STEPS = 5
@@ -103,16 +104,23 @@ function StepProfile({ value, onChange, onNext }) {
   async function handleAvatar(e) {
     const file = e.target.files[0]
     if (!file) return
-    setAvatarPreview(URL.createObjectURL(file))
+    const fileErr = validateImageFile(file)
+    if (fileErr) { alert(fileErr); return }
+    const previewUrl = URL.createObjectURL(file)
+    setAvatarPreview(previewUrl)
     setUploading(true)
     try {
-      const ext = file.name.split('.').pop()
+      const ext = file.type.split('/')[1] || 'jpg'
       const path = `avatars/${Date.now()}.${ext}`
-      await supabase.storage.from('photos').upload(path, file, { upsert: true })
-      const { data } = supabase.storage.from('photos').getPublicUrl(path)
-      onChange({ ...value, avatar_url: data.publicUrl, _avatarFile: file })
-    } finally {
+      const { error: upErr } = await supabase.storage.from('photos').upload(path, file, { upsert: true })
+      if (!upErr) {
+        const { data } = supabase.storage.from('photos').getPublicUrl(path)
+        onChange({ ...value, avatar_url: data.publicUrl })
+      }
+    } catch (_) {}
+    finally {
       setUploading(false)
+      URL.revokeObjectURL(previewUrl)
     }
   }
 
@@ -298,8 +306,8 @@ function StepPartner({ session, inviteCode, partnerAlreadyLinked, onFinish }) {
     if (code.trim().length < 4) return
     setSearching(true); setError(null); setFoundPartner(null)
     const { data, error: err } = await supabase
-      .rpc('find_profile_by_invite_code', { code: code.trim() })
-    const found = data?.[0] || null
+      .rpc('find_profile_by_invite_code', { code: code.trim().toLowerCase() })
+    const found = Array.isArray(data) ? data[0] : null
     if (err || !found) setError('Профиль не найден. Проверь код.')
     else if (found.id === session.user.id) setError('Это твой собственный код.')
     else setFoundPartner(found)
@@ -309,15 +317,15 @@ function StepPartner({ session, inviteCode, partnerAlreadyLinked, onFinish }) {
   async function connectPartner() {
     if (!foundPartner) return
     setConnecting(true)
-    try {
-      // Обновляем оба профиля
-      await supabase.from('profiles').update({ partner_id: foundPartner.id }).eq('id', session.user.id)
-      await supabase.from('profiles').update({ partner_id: session.user.id }).eq('id', foundPartner.id)
-      onFinish()
-    } catch (e) {
-      setError('Ошибка подключения. Попробуй снова.')
+    const { data, error: rpcErr } = await supabase
+      .rpc('connect_partner_by_invite', { p_invite_code: code.trim() })
+
+    if (rpcErr || data?.error) {
+      setError(data?.error ?? 'Ошибка подключения. Попробуй снова.')
       setConnecting(false)
+      return
     }
+    onFinish()
   }
 
   if (partnerAlreadyLinked) {

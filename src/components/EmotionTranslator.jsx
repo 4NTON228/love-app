@@ -201,28 +201,30 @@ export default function EmotionTranslator({ session, profile, darkMode, initialT
 
   async function sendToPartner() {
     if (!result?.rewritten || sending) return
+
+    const partnerId = profile?.partner_id
+    if (!partnerId) {
+      setError('Партнёр не подключён — сначала пригласи партнёра в Настройках')
+      return
+    }
+
     setSending(true)
     try {
       if (onSendToPartner) {
         await onSendToPartner(result.rewritten)
         setSent(true)
       } else {
-        // Direct insert to messages table
-        const { data: prof } = await supabase
-          .from('profiles')
-          .select('partner_id')
-          .eq('id', session.user.id)
-          .single()
-
-        if (prof?.partner_id) {
-          await supabase.from('messages').insert({
-            user_id: session.user.id,
-            text: result.rewritten,
-          })
-          setSent(true)
-        }
+        const { error: insErr } = await supabase.from('messages').insert({
+          user_id: session.user.id,
+          text: result.rewritten,
+        })
+        if (insErr) throw insErr
+        setSent(true)
       }
-    } catch (_) { /* silent */ }
+    } catch (e) {
+      setError('Не удалось отправить сообщение — попробуй снова')
+      console.error('[EmotionTranslator sendToPartner]', e)
+    }
     setSending(false)
   }
 

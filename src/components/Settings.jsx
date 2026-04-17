@@ -1,7 +1,11 @@
 import { useState, useRef, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { subscribeToPush } from '../lib/push'
+import { validateImageFile, toast } from '../lib/helpers'
 import QRCode from 'qrcode'
+
+const notifPermission = () =>
+  typeof Notification !== 'undefined' ? Notification.permission : 'default'
 
 /* ── Small SVG icons for settings rows ── */
 function IcoUser() {
@@ -244,12 +248,12 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
   const [saved, setSaved] = useState(false)
   const [avatarPreview, setAvatarPreview] = useState(profile?.avatar_url || null)
   const [activeTheme, setActiveTheme] = useState(localStorage.getItem('loveTheme') || 'rose')
-  const [pushEnabled, setPushEnabled] = useState(() => Notification?.permission === 'granted')
+  const [pushEnabled, setPushEnabled] = useState(() => notifPermission() === 'granted')
   const [pushLoading, setPushLoading] = useState(false)
   const fileRef = useRef(null)
 
   useEffect(() => {
-    setPushEnabled(Notification?.permission === 'granted')
+    setPushEnabled(notifPermission() === 'granted')
   }, [])
 
   async function togglePush() {
@@ -269,7 +273,7 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
         // Подписаться
         const result = await subscribeToPush(session.user.id)
         if (result) setPushEnabled(true)
-        else if (Notification?.permission === 'denied') alert('Разрешение на уведомления заблокировано. Включи в настройках браузера.')
+        else if (notifPermission() === 'denied') toast.error('Уведомления заблокированы — разреши их в настройках браузера')
       }
     } catch (e) { console.error(e) }
     setPushLoading(false)
@@ -281,36 +285,48 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
     if (data) setLoveMessage(data.love_message || '')
   }
 
-  // Load on mount
-  useState(() => { loadLoveMessage() })
+  // Load love message on mount
+  useEffect(() => { loadLoveMessage() }, [])
 
   async function handleAvatarChange(e) {
     const file = e.target.files[0]
     if (!file) return
+    const fileErr = validateImageFile(file)
+    if (fileErr) { toast.error(fileErr); return }
     setSavingAvatar(true)
     try {
-      const ext = file.name.split('.').pop()
+      const ext = file.type.split('/')[1] || 'jpg'
       const path = `avatars/${session.user.id}.${ext}`
-      await supabase.storage.from('photos').upload(path, file, { upsert: true })
+      const { error: upErr } = await supabase.storage.from('photos').upload(path, file, { upsert: true })
+      if (upErr) throw upErr
       const { data } = supabase.storage.from('photos').getPublicUrl(path)
       const url = data.publicUrl + '?t=' + Date.now()
       await supabase.from('profiles').update({ avatar_url: url }).eq('id', session.user.id)
       setAvatarPreview(url)
       onProfileUpdate?.()
-    } catch (err) { console.error(err) }
+      toast.success('Фото обновлено')
+    } catch (err) {
+      toast.error('Не удалось загрузить фото')
+      console.error(err)
+    }
     setSavingAvatar(false)
   }
 
   async function saveProfile() {
+    if (!name.trim()) { toast.error('Введи своё имя'); return }
     setSaving(true)
-    await supabase.from('profiles').update({
-      name,
+    const { error } = await supabase.from('profiles').update({
+      name: name.trim(),
       birthday: birthday || null,
       couple_start_date: coupleStart || null,
     }).eq('id', session.user.id)
-    onProfileUpdate?.()
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+    if (error) {
+      toast.error('Не удалось сохранить профиль')
+    } else {
+      onProfileUpdate?.()
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+    }
     setSaving(false)
   }
 

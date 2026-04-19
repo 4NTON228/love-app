@@ -1399,7 +1399,7 @@ export default function Chat({ session, profile, darkMode }) {
   }
 
   const pinnedMsg = messages.find(m => m.is_pinned)
-  const partnerName = partner?.name || (profile?.name === 'Антон' ? 'Эльвира' : 'Антон')
+  const partnerName = partner?.name || (pid ? 'Партнёр' : 'Партнёр не подключён')
   const partnerAvatar = partner?.avatar_url
 
   if (loading) {
@@ -1410,6 +1410,21 @@ export default function Chat({ session, profile, darkMode }) {
             <path d="M30 52C30 52 3 35 3 16C3 8 9.5 2 18 2C22.5 2 26.5 4.5 30 9C33.5 4.5 37.5 2 42 2C50.5 2 57 8 57 16C57 35 30 52 30 52Z" fill="url(#grad)" />
             <defs><linearGradient id="grad" x1="0" y1="0" x2="60" y2="56"><stop offset="0%" stopColor="#E8556A" /><stop offset="100%" stopColor="#C8334A" /></linearGradient></defs>
           </svg>
+        </div>
+      </div>
+    )
+  }
+
+  if (!pid) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        height: '100%', background: BG, padding: '40px 32px', textAlign: 'center', gap: 16 }}>
+        <div style={{ fontSize: 56 }}>💬</div>
+        <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, fontWeight: 600, color: INK }}>
+          Партнёр не подключён
+        </div>
+        <div style={{ fontSize: 14, color: MUTED, lineHeight: 1.5 }}>
+          Пригласите партнёра через настройки, чтобы начать общение
         </div>
       </div>
     )

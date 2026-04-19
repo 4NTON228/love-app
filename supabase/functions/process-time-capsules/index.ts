@@ -118,6 +118,17 @@ Deno.serve(async (req) => {
 })
 
 async function deliverCapsule(capsule: Record<string, unknown>) {
+  // Atomic claim: UPDATE only if is_sent is still false.
+  // Concurrent workers will get an empty result and skip — prevents double-delivery.
+  const { data: claimed } = await supabase
+    .from('time_capsules')
+    .update({ is_sent: true, sent_at: new Date().toISOString() })
+    .eq('id', capsule.id)
+    .eq('is_sent', false)
+    .select('id')
+
+  if (!claimed || claimed.length === 0) return // Another worker already claimed this
+
   // Insert as a special message (system type)
   const { error: msgErr } = await supabase.from('messages').insert({
     user_id: capsule.user_id,
@@ -126,14 +137,13 @@ async function deliverCapsule(capsule: Record<string, unknown>) {
 
   if (msgErr) {
     console.error('Failed to deliver capsule', capsule.id, msgErr)
+    // Roll back the claim so it can be retried
+    await supabase
+      .from('time_capsules')
+      .update({ is_sent: false, sent_at: null })
+      .eq('id', capsule.id)
     return
   }
-
-  // Mark as sent
-  await supabase
-    .from('time_capsules')
-    .update({ is_sent: true, sent_at: new Date().toISOString() })
-    .eq('id', capsule.id)
 
   // Send push to partner
   if (capsule.partner_id) {

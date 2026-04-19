@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { sendPushNotification } from '../lib/push'
 
@@ -305,6 +305,8 @@ function StoriesViewer({ stories, startIdx, onClose }) {
 }
 
 export default function Moments({ session, profile }) {
+  const uid = session?.user?.id
+  const pid = profile?.partner_id
   const [moments, setMoments] = useState([])
   const [showModal, setShowModal] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -319,13 +321,18 @@ export default function Moments({ session, profile }) {
   const [photo, setPhoto] = useState(null)
   const [photoPreview, setPhotoPreview] = useState(null)
 
-  useEffect(() => { loadMoments() }, [])
-
-  async function loadMoments() {
-    const { data } = await supabase.from('moments').select('*').order('created_at', { ascending: false })
+  const loadMoments = useCallback(async () => {
+    const ids = [uid, pid].filter(Boolean)
+    if (!ids.length) { setLoading(false); return }
+    const q = supabase.from('moments').select('*').order('created_at', { ascending: false })
+    const { data } = ids.length === 1
+      ? await q.eq('user_id', ids[0])
+      : await q.in('user_id', ids)
     setMoments(data || [])
     setLoading(false)
-  }
+  }, [uid, pid])
+
+  useEffect(() => { loadMoments() }, [loadMoments])
 
   async function uploadPhoto(file) {
     const fileExt = file.name.split('.').pop()

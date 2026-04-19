@@ -347,7 +347,10 @@ export default function Moments({ session, profile }) {
     const file = e.target.files[0]
     if (!file) return
     setPhoto(file)
-    setPhotoPreview(URL.createObjectURL(file))
+    setPhotoPreview(prev => {
+      if (prev?.startsWith('blob:')) URL.revokeObjectURL(prev)
+      return URL.createObjectURL(file)
+    })
   }
 
   async function handleSubmit(e) {
@@ -380,7 +383,8 @@ export default function Moments({ session, profile }) {
   }
 
   function resetForm() {
-    setTitle(''); setDescription(''); setMood('love'); setPhoto(null); setPhotoPreview(null)
+    setTitle(''); setDescription(''); setMood('love'); setPhoto(null)
+    setPhotoPreview(prev => { if (prev?.startsWith('blob:')) URL.revokeObjectURL(prev); return null })
   }
 
   function openStories(i) {

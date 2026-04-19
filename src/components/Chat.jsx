@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, memo, useMemo, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { sendPushNotification } from '../lib/push'
+import { useCrypto } from '../hooks/useCrypto'
+import { encryptMessage, safeDecryptMessage, isMessageEncrypted } from '../lib/crypto'
 
 const REACTIONS = ['❤️','🔥','😍','😂','👍','💔']
 const VALID_REACTIONS = new Set(REACTIONS)
@@ -420,7 +422,20 @@ const Reactions = memo(function Reactions({ reactions, uid, onReact, msgId, isMi
 })
 
 const TextBubble = memo(function TextBubble({ msg, isMine, dark, radius, bg, color, replyData, uid, partnerName, onPhotoOpen }) {
-  const onlyPhoto = msg.photo_url && !msg.text
+  const onlyPhoto = msg.photo_url && !msg.text && !msg._decryptFailed
+  if (msg._decryptFailed) {
+    return (
+      <div style={{
+        display: 'inline-flex', alignItems: 'center', gap: 6,
+        padding: '8px 12px', background: bg, borderRadius: radius,
+        border: '0.5px solid rgba(200,51,74,0.3)', maxWidth: '72vw',
+        fontSize: 13, color: dark ? 'rgba(245,232,234,0.5)' : 'rgba(28,10,14,0.45)',
+        fontStyle: 'italic',
+      }}>
+        🔒 Не удалось расшифровать сообщение
+      </div>
+    )
+  }
   return (
     <div style={{
       display: 'inline-block',
@@ -914,6 +929,32 @@ export default function Chat({ session, profile, darkMode }) {
   const voiceSecRef = useRef(0)
   const voiceCancelledRef = useRef(false)
 
+  // ── E2EE ────────────────────────────────────────────────────────────────────
+  const { roomKey } = useCrypto(session, profile)
+
+  // Enrich a raw DB message with decrypted text (mutates a copy, never original)
+  const decryptMsg = useCallback(async (m) => {
+    if (!isMessageEncrypted(m)) return m
+    if (!roomKey) return { ...m, _decryptFailed: false, _legacy: false }
+    const { ok, text } = await safeDecryptMessage(m.ciphertext, roomKey)
+    return ok
+      ? { ...m, text }          // text field now holds plaintext — no other component changes needed
+      : { ...m, text: null, _decryptFailed: true }
+  }, [roomKey])
+
+  const decryptBatch = useCallback(
+    (msgs) => Promise.all((msgs || []).map(decryptMsg)),
+    [decryptMsg],
+  )
+
+  // Re-decrypt all messages whenever roomKey becomes available
+  useEffect(() => {
+    if (!roomKey || !messages.length) return
+    decryptBatch(messages).then(setMessages)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roomKey])
+  // ─────────────────────────────────────────────────────────────────────────────
+
   const dark = darkMode
   const BG = dark ? '#200A10' : '#FBF0F2'
   const SURF = dark ? '#1E0A10' : '#FFFFFF'
@@ -936,11 +977,8 @@ export default function Chat({ session, profile, darkMode }) {
     const { data } = await applyPairFilter(
       supabase.from('messages').select('*').order('created_at', { ascending: false }).limit(50)
     )
-    if (data && data.length) {
-      setMessages(data.reverse())
-    } else {
-      setMessages([])
-    }
+    const raw = data ? data.reverse() : []
+    setMessages(await decryptBatch(raw))
     setLoading(false)
     setTimeout(scrollToBottom, 100)
   }
@@ -955,7 +993,8 @@ export default function Chat({ session, profile, darkMode }) {
     )
     if (!data || data.length < 50) setAllLoaded(true)
     if (data && data.length) {
-      setMessages(prev => [...(data.reverse()), ...prev])
+      const decrypted = await decryptBatch(data.reverse())
+      setMessages(prev => [...decrypted, ...prev])
     }
     setLoadingMore(false)
   }
@@ -1003,9 +1042,12 @@ export default function Chat({ session, profile, darkMode }) {
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, p => {
         // Игнорируем сообщения чужих пар
         if (p.new.user_id !== uid && p.new.user_id !== pid) return
-        setMessages(prev => {
-          if (prev.find(m => m.id === p.new.id)) return prev
-          return [...prev, p.new]
+        // Decrypt before adding to state
+        decryptMsg(p.new).then(decrypted => {
+          setMessages(prev => {
+            if (prev.find(m => m.id === decrypted.id)) return prev
+            return [...prev, decrypted]
+          })
         })
         // пометить прочитанным — СНАРУЖИ state updater
         if (p.new.user_id !== uid) {
@@ -1018,7 +1060,10 @@ export default function Chat({ session, profile, darkMode }) {
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, p => {
         if (p.new.user_id !== uid && p.new.user_id !== pid) return
-        setMessages(prev => prev.map(m => m.id === p.new.id ? p.new : m))
+        // Re-decrypt on edit
+        decryptMsg(p.new).then(decrypted => {
+          setMessages(prev => prev.map(m => m.id === decrypted.id ? decrypted : m))
+        })
       })
       .subscribe()
 
@@ -1114,23 +1159,36 @@ export default function Chat({ session, profile, darkMode }) {
           .eq('id', editingId)
         setEditingId(null)
       } else {
-        const msgData = {
-          user_id: uid,
-          text: newText.trim() || null,
-          photo_url: photoUrl
+        const plainText = newText.trim() || null
+        let msgData = { user_id: uid, photo_url: photoUrl }
+        if (replyTo) msgData.reply_to_id = replyTo.id
+
+        if (roomKey && plainText) {
+          // ── Encrypted send ──────────────────────────────────────────────
+          const ciphertext = await encryptMessage(plainText, roomKey)
+          msgData = { ...msgData, ciphertext, is_encrypted: true, text: null }
+        } else {
+          // ── Legacy plaintext send ───────────────────────────────────────
+          msgData.text = plainText
         }
-        if (replyTo) {
-          msgData.reply_to_id = replyTo.id
-        }
-        const { error: insErr } = await supabase.from('messages').insert(msgData)
+
+        const { data: inserted, error: insErr } = await supabase.from('messages').insert(msgData).select().single()
         if (insErr) throw insErr
-        const { data: latest } = await supabase.from('messages').select('*').eq('user_id', uid).order('created_at', { ascending: false }).limit(1)
-        if (latest?.[0]) setMessages(prev => prev.find(m => m.id === latest[0].id) ? prev : [...prev, latest[0]])
+
+        // Optimistic: add to local state immediately (with plaintext for our own display)
+        if (inserted) {
+          const localMsg = roomKey && plainText
+            ? { ...inserted, text: plainText }  // show our own message decrypted
+            : inserted
+          setMessages(prev => prev.find(m => m.id === localMsg.id) ? prev : [...prev, localMsg])
+        }
+
         setReplyTo(null)
         scrollToBottom()
         if (partner?.id) {
-          const body = photoUrl && !newText.trim() ? 'Фото' : newText.trim()
-          sendPushNotification(profile?.name || 'Сообщение', body, partner.id, uid).catch(() => {})
+          // Never send plaintext content in push — E2EE-safe generic notification
+          const pushBody = photoUrl && !plainText ? 'Фото' : 'Новое сообщение'
+          sendPushNotification(profile?.name || 'Сообщение', pushBody, partner.id, uid).catch(() => {})
         }
       }
       setNewText('')
@@ -1162,7 +1220,7 @@ export default function Chat({ session, profile, darkMode }) {
 
   function cancelPhoto() {
     setPhotoFile(null)
-    setPhotoPreview(null)
+    setPhotoPreview(prev => { if (prev?.startsWith('blob:')) URL.revokeObjectURL(prev); return null })
     if (photoRef.current) photoRef.current.value = ''
   }
 

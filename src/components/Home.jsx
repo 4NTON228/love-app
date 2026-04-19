@@ -678,12 +678,16 @@ export default function Home({ session, profile, onNavigate }) {
     const pid = profile?.partner_id
 
     if (pid) {
-      const { data } = await supabase.from('profiles').select('*').eq('id', pid).single()
+      const { data } = await supabase.from('profiles')
+        .select('id,name,avatar_url,birthday,public_key')
+        .eq('id', pid).single()
       setPartnerProfile(data)
     }
 
     const uids = [session.user.id, pid].filter(Boolean)
-    const { data: all } = await supabase.from('couple_settings').select('*').in('user_id', uids)
+    const { data: all } = await supabase.from('couple_settings')
+      .select('user_id,love_message,next_meeting,updated_at,created_at')
+      .in('user_id', uids)
     if (all?.length) {
       const my = all.find(s => s.user_id === session.user.id)
       const pt = all.find(s => s.user_id === pid)
@@ -702,7 +706,7 @@ export default function Home({ session, profile, onNavigate }) {
 
     const today = new Date().toISOString().slice(0, 10)
     const evsQ = supabase.from('calendar_events')
-      .select('*').gte('event_date', today)
+      .select('id,title,emoji,event_date,photo_url').gte('event_date', today)
       .order('event_date', { ascending: true }).limit(1)
     const { data: evs } = uids.length === 1
       ? await evsQ.eq('user_id', uids[0])

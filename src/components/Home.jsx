@@ -630,12 +630,14 @@ function mouseGlow(e) {
    MAIN COMPONENT
 ───────────────────────────────────────── */
 export default function Home({ session, profile, onNavigate }) {
+  const hasPartner = !!profile?.partner_id
+  const hasStartDate = !!profile?.couple_start_date
   const coupleStart = useMemo(() =>
     profile?.couple_start_date
       ? new Date(profile.couple_start_date + 'T00:00:00')
-      : new Date('2025-10-17T00:00:00')
+      : null
   , [profile?.couple_start_date])
-  const [time,           setTime]           = useState(getRelTime(coupleStart))
+  const [time,           setTime]           = useState(() => coupleStart ? getRelTime(coupleStart) : null)
   const [_prevTime,      setPrevTime]       = useState(null)
   const [settings,       setSettings]       = useState(null)
   const [nextEvent,      setNextEvent]      = useState(null)
@@ -651,8 +653,9 @@ export default function Home({ session, profile, onNavigate }) {
   const loveMsg   = settings?.love_message || 'Ты — лучшее, что случилось в моей жизни'
   const { out, done } = useTypewriter(loveMsg, 55)
 
-  /* Live counter — every second */
+  /* Live counter — every second (only when couple_start_date exists) */
   useEffect(() => {
+    if (!coupleStart) { setTime(null); return }
     const id = setInterval(() => {
       setPrevTime(t => t)
       setTime(getRelTime(coupleStart))
@@ -736,9 +739,9 @@ export default function Home({ session, profile, onNavigate }) {
     setSaving(false)
   }
 
-  const anniv  = getAnniv(coupleStart)
-  const myName = profile?.name || 'Антон'
-  const pName  = partnerProfile?.name || 'Эльвира'
+  const anniv  = coupleStart ? getAnniv(coupleStart) : { daysUntil: 0, progress: 0 }
+  const myName = profile?.name || ''
+  const pName  = partnerProfile?.name || ''
 
   return (
     <>
@@ -1238,79 +1241,146 @@ export default function Home({ session, profile, onNavigate }) {
           <ParticleField />
           <FloatingHearts />
 
-          <div className="av-row">
-            <AvatarRing
-              src={profile?.avatar_url}
-              name={myName}
-              birthday={profile?.birthday}
-              onClick={() => onNavigate?.('settings')}
-            />
-            <BinaryConnection />
-            <AvatarRing
-              src={partnerProfile?.avatar_url}
-              name={pName}
-              birthday={partnerProfile?.birthday}
-              onClick={() => setShowPartnerCard(true)}
-            />
-          </div>
+          {/* Avatar row: single avatar if no partner, pair if connected */}
+          {hasPartner ? (
+            <div className="av-row">
+              <AvatarRing
+                src={profile?.avatar_url}
+                name={myName}
+                birthday={profile?.birthday}
+                onClick={() => onNavigate?.('settings')}
+              />
+              <BinaryConnection />
+              <AvatarRing
+                src={partnerProfile?.avatar_url}
+                name={pName}
+                birthday={partnerProfile?.birthday}
+                onClick={() => setShowPartnerCard(true)}
+              />
+            </div>
+          ) : (
+            <div className="av-row" style={{ justifyContent: 'center' }}>
+              <AvatarRing
+                src={profile?.avatar_url}
+                name={myName}
+                birthday={profile?.birthday}
+                onClick={() => onNavigate?.('settings')}
+              />
+            </div>
+          )}
 
-          {showPartnerCard && (
+          {showPartnerCard && hasPartner && (
             <PartnerCard profile={partnerProfile} onClose={() => setShowPartnerCard(false)} />
           )}
 
-          {/* Day counter wrapped in orbital ring */}
-          <OrbitalRing progress={anniv.progress}>
-          <div style={{
-            background: 'rgba(0,0,0,0.28)',
-            backdropFilter: 'blur(28px)',
-            WebkitBackdropFilter: 'blur(28px)',
-            border: '1px solid rgba(255,255,255,0.1)',
-            borderRadius: 36,
-            padding: '28px 44px 20px',
-            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.1), 0 12px 40px rgba(0,0,0,0.4)',
-          }}>
-          <div className="day-counter">
-            <div className="day-number">
-              {String(time.totalDays).split('').map((d, i) => (
-                <GlowDigit key={`${i}-${d}`} value={d} />
-              ))}
-            </div>
-            <div className="day-label">
-              {time.totalDays === 1 ? 'день' : time.totalDays < 5 ? 'дня' : 'дней'} вместе
-            </div>
+          {/* Day counter — only when couple_start_date is set */}
+          {time && hasStartDate ? (
+            <OrbitalRing progress={anniv.progress}>
+            <div style={{
+              background: 'rgba(0,0,0,0.28)',
+              backdropFilter: 'blur(28px)',
+              WebkitBackdropFilter: 'blur(28px)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: 36,
+              padding: '28px 44px 20px',
+              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.1), 0 12px 40px rgba(0,0,0,0.4)',
+            }}>
+            <div className="day-counter">
+              <div className="day-number">
+                {String(time.totalDays).split('').map((d, i) => (
+                  <GlowDigit key={`${i}-${d}`} value={d} />
+                ))}
+              </div>
+              <div className="day-label">
+                {time.totalDays === 1 ? 'день' : time.totalDays < 5 ? 'дня' : 'дней'} вместе
+              </div>
 
-            {/* Breakdown */}
-            <div className="day-breakdown">
-              {time.years > 0 && (
+              {/* Breakdown */}
+              <div className="day-breakdown">
+                {time.years > 0 && (
+                  <div className="day-unit">
+                    <span className="day-unit-val">{time.years}</span>
+                    <span className="day-unit-lbl">лет</span>
+                  </div>
+                )}
                 <div className="day-unit">
-                  <span className="day-unit-val">{time.years}</span>
-                  <span className="day-unit-lbl">лет</span>
+                  <span className="day-unit-val">{time.months}</span>
+                  <span className="day-unit-lbl">мес</span>
                 </div>
+                <div className="day-unit">
+                  <span className="day-unit-val">{time.days}</span>
+                  <span className="day-unit-lbl">дн</span>
+                </div>
+              </div>
+
+              {/* Live clock */}
+              <div className="live-clock-bar">
+                <GlowDigit value={pad(time.hours)}   />
+                <span className="clock-sep">:</span>
+                <GlowDigit value={pad(time.minutes)} />
+                <span className="clock-sep">:</span>
+                <GlowDigit value={pad(time.seconds)} />
+              </div>
+            </div>
+            </div>
+            </OrbitalRing>
+          ) : (
+            <div style={{
+              background: 'rgba(0,0,0,0.28)',
+              backdropFilter: 'blur(28px)',
+              border: '1px solid rgba(255,255,255,0.15)',
+              borderRadius: 28,
+              padding: '24px 32px',
+              textAlign: 'center',
+              color: 'rgba(255,255,255,0.7)',
+              marginTop: 8,
+            }}>
+              {!hasPartner ? (
+                <>
+                  <div style={{ fontSize: 28, marginBottom: 8 }}>💑</div>
+                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, color: 'white', marginBottom: 6 }}>
+                    Партнёр не подключён
+                  </div>
+                  <div style={{ fontSize: 13, opacity: 0.7, marginBottom: 14 }}>
+                    Пригласите партнёра, чтобы начать
+                  </div>
+                  <button
+                    onClick={() => onNavigate?.('settings')}
+                    style={{
+                      background: 'rgba(200,51,74,0.8)', border: 'none', borderRadius: 14,
+                      padding: '10px 22px', color: 'white', fontSize: 14,
+                      fontFamily: 'var(--font-body)', fontWeight: 600, cursor: 'pointer',
+                    }}
+                  >
+                    Пригласить в настройках
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div style={{ fontSize: 28, marginBottom: 8 }}>📅</div>
+                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, color: 'white', marginBottom: 6 }}>
+                    Дата отношений не указана
+                  </div>
+                  <div style={{ fontSize: 13, opacity: 0.7, marginBottom: 14 }}>
+                    Укажите дату начала отношений в настройках
+                  </div>
+                  <button
+                    onClick={() => onNavigate?.('settings')}
+                    style={{
+                      background: 'rgba(200,51,74,0.8)', border: 'none', borderRadius: 14,
+                      padding: '10px 22px', color: 'white', fontSize: 14,
+                      fontFamily: 'var(--font-body)', fontWeight: 600, cursor: 'pointer',
+                    }}
+                  >
+                    Указать дату
+                  </button>
+                </>
               )}
-              <div className="day-unit">
-                <span className="day-unit-val">{time.months}</span>
-                <span className="day-unit-lbl">мес</span>
-              </div>
-              <div className="day-unit">
-                <span className="day-unit-val">{time.days}</span>
-                <span className="day-unit-lbl">дн</span>
-              </div>
             </div>
+          )}
 
-            {/* Live clock */}
-            <div className="live-clock-bar">
-              <GlowDigit value={pad(time.hours)}   />
-              <span className="clock-sep">:</span>
-              <GlowDigit value={pad(time.minutes)} />
-              <span className="clock-sep">:</span>
-              <GlowDigit value={pad(time.seconds)} />
-            </div>
-          </div>
-          </div>
-          </OrbitalRing>
-
-          {/* Heart progress bar */}
-          <HeartProgress progress={anniv.progress} daysUntil={anniv.daysUntil} />
+          {/* Heart progress bar — only when date is set */}
+          {hasStartDate && <HeartProgress progress={anniv.progress} daysUntil={anniv.daysUntil} />}
         </div>
 
         {/* ════════ CONTENT ════════ */}

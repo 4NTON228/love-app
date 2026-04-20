@@ -120,7 +120,7 @@ function StepProfile({ value, onChange, onNext }) {
     } catch (_e) { /* ignore upload errors */ }
     finally {
       setUploading(false)
-      URL.revokeObjectURL(previewUrl)
+      // Do NOT revoke previewUrl here — the img element still uses it as src
     }
   }
 
@@ -569,10 +569,15 @@ export default function Onboarding({ session, onComplete, onSignOut }) {
   }
 
   function finish() {
-    // Сразу записываем флаг и переходим — не ждём ответа от сервера
     localStorage.setItem(`ob_done_${session.user.id}`, '1')
+    // Attempt pending invite (covers case where user followed invite link → OAuth → onboarding)
+    const pendingInvite = localStorage.getItem('pendingInvite')
+    if (pendingInvite) {
+      supabase
+        .rpc('connect_partner_by_invite', { p_invite_code: pendingInvite.trim().toLowerCase() })
+        .then(({ error }) => { if (!error) localStorage.removeItem('pendingInvite') })
+    }
     onComplete()
-    // Сохраняем в БД в фоне (не блокируем UX)
     supabase.from('profiles').upsert(
       { id: session.user.id, onboarding_done: true },
       { onConflict: 'id' }

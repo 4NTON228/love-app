@@ -102,18 +102,18 @@ function formatBirthday(dateStr) {
 }
 
 const THEMES = [
-  { id: 'rose',      label: 'Роза',       a: '#C8334A', b: '#9C27B0' },
-  { id: 'cherry',    label: 'Вишня',      a: '#AD1457', b: '#4A0072' },
-  { id: 'violet',    label: 'Фиалка',     a: '#6A1B9A', b: '#1A0A2E' },
-  { id: 'lavender',  label: 'Лаванда',    a: '#7E57C2', b: '#EC407A' },
-  { id: 'ocean',     label: 'Океан',      a: '#0277BD', b: '#00838F' },
-  { id: 'sky',       label: 'Небо',       a: '#039BE5', b: '#B388FF' },
-  { id: 'forest',    label: 'Лес',        a: '#2E7D32', b: '#004D40' },
-  { id: 'northern',  label: 'Сияние',     a: '#00C853', b: '#00BCD4' },
-  { id: 'sunset',    label: 'Закат',      a: '#FF6F00', b: '#C62828' },
-  { id: 'fire',      label: 'Огонь',      a: '#D50000', b: '#FF6D00' },
-  { id: 'gold',      label: 'Золото',     a: '#F57F17', b: '#E65100' },
-  { id: 'night',     label: 'Ночь',       a: '#1A237E', b: '#0D0D1A' },
+  { id: 'rose',      label: 'Роза',       a: '#A8283C', b: '#6E1424' },
+  { id: 'cherry',    label: 'Вишня',      a: '#9B1B30', b: '#5C0E1A' },
+  { id: 'violet',    label: 'Фиалка',     a: '#5C2D7A', b: '#2A0F40' },
+  { id: 'lavender',  label: 'Лаванда',    a: '#6B4F9C', b: '#3A2060' },
+  { id: 'ocean',     label: 'Океан',      a: '#1B6B8A', b: '#0C3A50' },
+  { id: 'sky',       label: 'Небо',       a: '#1A6FA0', b: '#0D3D5C' },
+  { id: 'forest',    label: 'Лес',        a: '#2A6B3A', b: '#0F3820' },
+  { id: 'northern',  label: 'Сияние',     a: '#1A8070', b: '#0A4038' },
+  { id: 'sunset',    label: 'Закат',      a: '#B85020', b: '#7A2C10' },
+  { id: 'fire',      label: 'Огонь',      a: '#A82018', b: '#6E100C' },
+  { id: 'gold',      label: 'Золото',     a: '#9A7020', b: '#5C4010' },
+  { id: 'night',     label: 'Ночь',       a: '#2A3070', b: '#12163A' },
 ]
 
 /* ── Partner Invite Section ── */
@@ -180,7 +180,7 @@ function PartnerSection({ profile }) {
             </div>
             <div>
               <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>{partnerProfile.name}</div>
-              <div style={{ fontSize: 12, color: '#C8334A' }}>Подключён</div>
+              <div style={{ fontSize: 12, color: 'var(--rose, #A8283C)' }}>Подключён</div>
             </div>
           </div>
         </div>
@@ -192,35 +192,35 @@ function PartnerSection({ profile }) {
           </p>
 
           <div style={{
-            background: 'var(--surface-2, #FDF5F6)', borderRadius: 12, padding: '10px 12px',
+            background: 'var(--surface, #fff)', borderRadius: 10, padding: '10px 12px',
             fontSize: 12, color: 'var(--text-muted)', marginBottom: 12, wordBreak: 'break-all',
-            border: '1px solid rgba(200,51,74,0.1)',
+            border: '0.5px solid var(--border, rgba(0,0,0,0.08))',
           }}>
             {inviteLink}
           </div>
 
           <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
             <button onClick={copy} style={{
-              flex: 1, padding: '10px 0', borderRadius: 12,
-              border: '1.5px solid rgba(200,51,74,0.25)',
-              background: copied ? 'rgba(200,51,74,0.08)' : 'transparent',
-              color: '#C8334A', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              flex: 1, padding: '10px 0', borderRadius: 10,
+              border: '0.5px solid rgba(168,40,60,0.25)',
+              background: copied ? 'rgba(168,40,60,0.07)' : 'transparent',
+              color: 'var(--rose, #A8283C)', fontSize: 13, fontWeight: 500, cursor: 'pointer',
             }}>
               {copied ? '✓ Скопировано' : 'Скопировать'}
             </button>
             <button onClick={() => setShowQR(v => !v)} style={{
-              flex: 1, padding: '10px 0', borderRadius: 12,
-              border: '1.5px solid rgba(200,51,74,0.25)',
-              background: showQR ? 'rgba(200,51,74,0.08)' : 'transparent',
-              color: '#C8334A', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              flex: 1, padding: '10px 0', borderRadius: 10,
+              border: '0.5px solid rgba(168,40,60,0.25)',
+              background: showQR ? 'rgba(168,40,60,0.07)' : 'transparent',
+              color: 'var(--rose, #A8283C)', fontSize: 13, fontWeight: 500, cursor: 'pointer',
             }}>
               QR-код
             </button>
             {navigator.share && (
               <button onClick={() => navigator.share({ title: 'Love App', url: inviteLink })} style={{
-                flex: 1, padding: '10px 0', borderRadius: 12,
-                border: 'none', background: 'linear-gradient(135deg,#C8334A,#8B1A2C)',
-                color: 'white', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                flex: 1, padding: '10px 0', borderRadius: 10,
+                border: 'none', background: 'var(--rose, #A8283C)',
+                color: 'white', fontSize: 13, fontWeight: 500, cursor: 'pointer',
               }}>
                 Поделиться
               </button>
@@ -388,59 +388,43 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
       <style>{`
         .settings-wrap { padding: 0 0 120px; }
 
-        /* ── Premium Header ── */
-        @property --sring-a { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
-        @keyframes sRingRotate { to { --sring-a: 360deg; } }
-        @keyframes outerGlow {
-          0%,100% { box-shadow: 0 0 0 0 rgba(200,51,74,0.35), 0 0 50px rgba(200,51,74,0.5); }
-          50%      { box-shadow: 0 0 0 10px rgba(200,51,74,0), 0 0 60px rgba(200,51,74,0.7); }
-        }
-
+        /* ── Header ── */
         .settings-header {
-          background: linear-gradient(175deg, #0D0305 0%, #220810 38%, #46101F 68%, #2E0C18 100%);
-          padding: 76px 20px 40px;
-          border-radius: 0 0 40px 40px;
+          background: linear-gradient(170deg, #0C0B09 0%, #151210 40%, #1C1510 100%);
+          padding: 72px 20px 36px;
+          border-radius: 0 0 32px 32px;
           display: flex;
           flex-direction: column;
           align-items: center;
-          margin-bottom: 24px;
-          box-shadow: 0 20px 60px rgba(20,4,12,0.7), 0 4px 20px rgba(0,0,0,0.5);
+          margin-bottom: 20px;
           overflow: hidden;
           position: relative;
         }
         .settings-header::before {
           content: '';
           position: absolute;
-          top: -70px; left: 50%;
+          top: -60px; left: 50%;
           transform: translateX(-50%);
-          width: 320px; height: 280px;
-          background: radial-gradient(ellipse, rgba(200,51,74,0.45) 0%, transparent 68%);
-          pointer-events: none;
-        }
-        .settings-header::after {
-          content: '';
-          position: absolute;
-          bottom: 0; left: 0; right: 0;
-          height: 80px;
-          background: linear-gradient(to top, rgba(200,51,74,0.06), transparent);
+          width: 280px; height: 240px;
+          background: radial-gradient(ellipse, rgba(168,40,60,0.12) 0%, transparent 65%);
           pointer-events: none;
         }
 
         /* ── Avatar ring ── */
         .settings-av-ring {
-          width: 126px; height: 126px;
+          width: 110px; height: 110px;
           border-radius: 50%;
-          padding: 3px;
-          background: conic-gradient(from var(--sring-a), #FF8FA5 0%, #C8334A 30%, #8B1A2C 55%, #C8334A 75%, #FF8FA5 100%);
-          animation: sRingRotate 4s linear infinite, outerGlow 2.5s ease-in-out infinite;
+          padding: 2px;
+          background: rgba(168,40,60,0.3);
+          border: 0.5px solid rgba(168,40,60,0.2);
           position: relative; z-index: 1;
           flex-shrink: 0;
-          margin-bottom: 18px;
+          margin-bottom: 16px;
         }
         .settings-av-gap {
           width: 100%; height: 100%;
           border-radius: 50%;
-          background: #1A0608;
+          background: #110D0B;
           padding: 2px;
         }
         .settings-avatar-wrap {
@@ -459,21 +443,19 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
         .settings-avatar-btn {
           position: absolute;
           bottom: 2px; right: 2px;
-          background: linear-gradient(135deg, #D94060, #9B1A30);
-          border: 2.5px solid #1A0608;
+          background: var(--rose, #A8283C);
+          border: 2px solid #110D0B;
           border-radius: 50%;
-          width: 32px; height: 32px;
+          width: 28px; height: 28px;
           cursor: pointer;
-          box-shadow: 0 3px 14px rgba(139,26,44,0.55);
           display: flex; align-items: center; justify-content: center;
           color: white; z-index: 2;
         }
         .settings-header-name {
           font-family: var(--font-display);
-          font-size: 24px; font-weight: 700;
-          color: white; margin-bottom: 4px;
-          letter-spacing: -0.3px;
-          text-shadow: 0 2px 20px rgba(200,51,74,0.6);
+          font-size: 26px; font-weight: 300; font-style: italic;
+          color: rgba(237,233,226,0.9); margin-bottom: 4px;
+          letter-spacing: 0.3px;
           position: relative; z-index: 1;
         }
         .settings-header-sub {
@@ -500,12 +482,11 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
 
         /* ── Sections ── */
         .settings-section {
-          background: var(--bg-card);
-          border-radius: 24px;
-          margin: 0 14px 14px;
+          background: var(--surface, #fff);
+          border-radius: 14px;
+          margin: 0 16px 12px;
           overflow: hidden;
-          box-shadow: 0 2px 20px rgba(0,0,0,0.06), 0 1px 0 rgba(255,255,255,0.6);
-          border: 1px solid rgba(200,51,74,0.07);
+          border: 0.5px solid var(--border, rgba(0,0,0,0.07));
         }
         .settings-section-title {
           font-family: var(--font-body);
@@ -522,11 +503,12 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
         .app.dark .settings-row { border-top-color: rgba(255,255,255,0.05); }
         .settings-row-icon {
           flex-shrink: 0;
-          width: 38px; height: 38px;
-          border-radius: 12px;
+          width: 36px; height: 36px;
+          border-radius: 10px;
           display: flex; align-items: center; justify-content: center;
-          background: linear-gradient(135deg, rgba(200,51,74,0.13), rgba(139,26,44,0.08));
-          color: var(--rose, #C8334A);
+          background: rgba(168,40,60,0.07);
+          border: 0.5px solid rgba(168,40,60,0.1);
+          color: var(--rose, #A8283C);
         }
         .settings-row-label {
           flex: 1;
@@ -592,41 +574,41 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
           display: block;
           width: calc(100% - 28px);
           margin: 0 14px 14px;
-          background: linear-gradient(135deg, #D94060 0%, #9B1A30 100%);
-          color: white; border: none; border-radius: 20px;
-          padding: 16px;
-          font-family: var(--font-body); font-weight: 700; font-size: 15px;
-          cursor: pointer; letter-spacing: 0.3px;
-          box-shadow: 0 6px 28px rgba(139,26,44,0.38), inset 0 1px 0 rgba(255,255,255,0.2);
-          transition: transform 0.12s, box-shadow 0.12s;
+          background: var(--rose, #A8283C);
+          color: white; border: none; border-radius: 14px;
+          padding: 15px;
+          font-family: var(--font-body); font-weight: 500; font-size: 15px;
+          cursor: pointer; letter-spacing: 0.2px;
+          transition: opacity 0.2s, transform 0.15s;
         }
-        .settings-save-btn:active { transform: scale(0.97); box-shadow: 0 3px 14px rgba(139,26,44,0.3); }
-        .settings-save-btn.saved { background: linear-gradient(135deg, #22c55e, #16a34a); }
+        .settings-save-btn:active { transform: scale(0.98); opacity: 0.9; }
+        .settings-save-btn:disabled { opacity: 0.5; }
+        .settings-save-btn.saved { background: #2A7A4A; }
 
         /* ── Logout ── */
         .settings-logout-btn {
           display: block; width: calc(100% - 28px); margin: 0 14px;
-          background: rgba(200,51,74,0.05);
-          border: 1.5px solid rgba(200,51,74,0.2);
-          color: var(--rose, #C8334A);
-          border-radius: 20px; padding: 15px;
-          font-family: var(--font-body); font-weight: 600; font-size: 15px;
+          background: rgba(168,40,60,0.05);
+          border: 0.5px solid rgba(168,40,60,0.2);
+          color: var(--rose, #A8283C);
+          border-radius: 14px; padding: 15px;
+          font-family: var(--font-body); font-weight: 500; font-size: 15px;
           cursor: pointer; transition: background 0.15s;
         }
-        .settings-logout-btn:active { background: rgba(200,51,74,0.1); }
+        .settings-logout-btn:active { background: rgba(168,40,60,0.1); }
         .settings-delete-btn {
           display: block; width: calc(100% - 28px); margin: 10px 14px 0;
-          background: transparent; border: 1.5px solid rgba(150,20,20,0.25);
-          color: #B02020; border-radius: 20px; padding: 13px;
-          font-family: var(--font-body); font-weight: 500; font-size: 13px;
+          background: transparent; border: 0.5px solid rgba(150,20,20,0.2);
+          color: rgba(160,40,40,0.8); border-radius: 14px; padding: 13px;
+          font-family: var(--font-body); font-weight: 400; font-size: 13px;
           cursor: pointer; transition: background 0.15s;
         }
-        .settings-delete-btn:active { background: rgba(180,20,20,0.08); }
+        .settings-delete-btn:active { background: rgba(180,20,20,0.06); }
 
         /* ── Dark mode ── */
-        .app.dark .settings-section { background: rgba(20,6,12,0.95); border-color: rgba(200,51,74,0.1); box-shadow: 0 4px 24px rgba(0,0,0,0.35); }
-        .app.dark .settings-row-label { color: var(--ink, #F5E8EA); }
-        .app.dark .settings-input { color: var(--ink, #F5E8EA); }
+        .app.dark .settings-section { background: rgba(22,18,14,0.95); border-color: rgba(255,255,255,0.06); }
+        .app.dark .settings-row-label { color: rgba(237,233,226,0.85); }
+        .app.dark .settings-input { color: rgba(237,233,226,0.85); }
       `}</style>
 
       <div className="settings-wrap">
@@ -662,7 +644,7 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
         <div className="settings-section">
           <div className="settings-section-title">Профиль</div>
           <div className="settings-row">
-            <span className="settings-row-icon" style={{ color: 'var(--rose, #C8334A)' }}><IcoUser /></span>
+            <span className="settings-row-icon" style={{ color: 'var(--rose, #A8283C)' }}><IcoUser /></span>
             <span className="settings-row-label">Имя</span>
             <input
               className="settings-input"
@@ -672,7 +654,7 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
             />
           </div>
           <div className="settings-row">
-            <span className="settings-row-icon" style={{ color: 'var(--rose, #C8334A)' }}><IcoBirthday /></span>
+            <span className="settings-row-icon" style={{ color: 'var(--rose, #A8283C)' }}><IcoBirthday /></span>
             <span className="settings-row-label">День рождения</span>
             <input
               className="settings-input"
@@ -683,7 +665,7 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
             />
           </div>
           <div className="settings-row">
-            <span className="settings-row-icon" style={{ color: 'var(--rose, #C8334A)' }}>
+            <span className="settings-row-icon" style={{ color: 'var(--rose, #A8283C)' }}>
               <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>
               </svg>
@@ -734,7 +716,7 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
         <div className="settings-section">
           <div className="settings-section-title">Оформление</div>
           <div className="settings-row">
-            <span className="settings-row-icon" style={{ color: 'var(--rose, #C8334A)' }}>{darkMode ? <IcoMoon /> : <IcoSun />}</span>
+            <span className="settings-row-icon" style={{ color: 'var(--rose, #A8283C)' }}>{darkMode ? <IcoMoon /> : <IcoSun />}</span>
             <span className="settings-row-label">Тёмная тема</span>
             <button
               className={`settings-toggle${darkMode ? '' : ' off'}`}
@@ -744,7 +726,7 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
             </button>
           </div>
           <div className="settings-row">
-            <span className="settings-row-icon" style={{ color: 'var(--rose, #C8334A)' }}><IcoBell /></span>
+            <span className="settings-row-icon" style={{ color: 'var(--rose, #A8283C)' }}><IcoBell /></span>
             <span className="settings-row-label">Уведомления</span>
             <button
               className={`settings-toggle${pushEnabled ? '' : ' off'}`}

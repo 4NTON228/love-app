@@ -114,19 +114,21 @@ export default function App() {
     const { data } = await supabase.from('profiles').select('*').eq('id', userId).single()
     setProfile(data)
 
-    // Принимаем pending invite после входа
+    // Принимаем pending invite после входа — очищаем только при успехе
     const pendingInvite = localStorage.getItem('pendingInvite')
     if (pendingInvite && data && !data.partner_id) {
-      localStorage.removeItem('pendingInvite')
-      const { data: partnerArr } = await supabase
-        .rpc('find_profile_by_invite_code', { code: pendingInvite })
-      const partner = partnerArr?.[0] || null
-      if (partner && partner.id !== userId) {
-        await supabase.from('profiles').update({ partner_id: partner.id }).eq('id', userId)
-        await supabase.from('profiles').update({ partner_id: userId }).eq('id', partner.id)
-        // Перезагружаем профиль с обновлённым partner_id
-        const { data: updated } = await supabase.from('profiles').select('*').eq('id', userId).single()
-        setProfile(updated)
+      try {
+        const { data: rpcResult, error: rpcErr } = await supabase
+          .rpc('connect_partner_by_invite', { p_invite_code: pendingInvite.trim().toLowerCase() })
+        if (!rpcErr && !rpcResult?.error) {
+          localStorage.removeItem('pendingInvite')
+          const { data: updated } = await supabase.from('profiles').select('*').eq('id', userId).single()
+          setProfile(updated)
+          return
+        }
+        console.warn('Pending invite connect failed:', rpcErr?.message ?? rpcResult?.error)
+      } catch (e) {
+        console.warn('Pending invite exception:', e)
       }
     }
 

@@ -19,18 +19,18 @@ const Premium     = lazy(() => import('./components/Premium'))
 // Apply saved theme on load
 ;(function applyStoredTheme() {
   const THEMES = {
-    rose:     { a: '#E8466A', b: '#9C27B0' },
-    cherry:   { a: '#AD1457', b: '#4A0072' },
-    violet:   { a: '#6A1B9A', b: '#1A0A2E' },
-    lavender: { a: '#7E57C2', b: '#EC407A' },
-    ocean:    { a: '#0277BD', b: '#00838F' },
-    sky:      { a: '#039BE5', b: '#B388FF' },
-    forest:   { a: '#2E7D32', b: '#004D40' },
-    northern: { a: '#00C853', b: '#00BCD4' },
-    sunset:   { a: '#FF6F00', b: '#C62828' },
-    fire:     { a: '#D50000', b: '#FF6D00' },
-    gold:     { a: '#F57F17', b: '#E65100' },
-    night:    { a: '#1A237E', b: '#0D0D1A' },
+    rose:     { a: '#A8283C', b: '#6E1424' },
+    cherry:   { a: '#9B1B30', b: '#5C0E1A' },
+    violet:   { a: '#5C2D7A', b: '#2A0F40' },
+    lavender: { a: '#6B4F9C', b: '#3A2060' },
+    ocean:    { a: '#1B6B8A', b: '#0C3A50' },
+    sky:      { a: '#1A6FA0', b: '#0D3D5C' },
+    forest:   { a: '#2A6B3A', b: '#0F3820' },
+    northern: { a: '#1A8070', b: '#0A4038' },
+    sunset:   { a: '#B85020', b: '#7A2C10' },
+    fire:     { a: '#A82018', b: '#6E100C' },
+    gold:     { a: '#9A7020', b: '#5C4010' },
+    night:    { a: '#2A3070', b: '#12163A' },
   }
   let t = null
   try {
@@ -145,48 +145,31 @@ export default function App() {
         position: 'fixed',
         inset: 0,
         zIndex: 9999,
-        background: '#FBF0F2',
+        background: '#0E0C0A',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 20,
+        gap: 24,
       }}>
-        <div style={{ animation: 'heartbeat 1.4s ease-in-out infinite' }}>
-          <svg viewBox="0 0 60 56" width="80" height="75" fill="none">
-            <path d="M30 52C30 52 3 35 3 16C3 8 9.5 2 18 2C22.5 2 26.5 4.5 30 9C33.5 4.5 37.5 2 42 2C50.5 2 57 8 57 16C57 35 30 52 30 52Z"
-              fill="url(#lgload)"/>
-            <defs>
-              <linearGradient id="lgload" x1="0" y1="0" x2="60" y2="56" gradientUnits="userSpaceOnUse">
-                <stop offset="0%" stopColor="#E8556A"/>
-                <stop offset="100%" stopColor="#C8334A"/>
-              </linearGradient>
-            </defs>
-          </svg>
-        </div>
         <div style={{
           fontFamily: "'Cormorant Garamond', Georgia, serif",
           fontStyle: 'italic',
-          fontSize: 22,
-          color: '#C8334A',
-          letterSpacing: 1,
+          fontWeight: 300,
+          fontSize: 28,
+          color: 'rgba(237,233,226,0.9)',
+          letterSpacing: 2,
+          animation: 'ldFade 2s ease-in-out infinite',
         }}>
           Love App
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          {[0, 0.2, 0.4].map((delay, i) => (
-            <div key={i} style={{
-              width: 8,
-              height: 8,
-              borderRadius: '50%',
-              background: '#C8334A',
-              animation: `pulse 0.9s ${delay}s ease-in-out infinite`,
-            }}/>
-          ))}
-        </div>
+        <div style={{
+          width: 32, height: 1,
+          background: 'linear-gradient(90deg, transparent, rgba(168,40,60,0.6), transparent)',
+          animation: 'ldFade 2s ease-in-out 0.3s infinite',
+        }} />
         <style>{`
-          @keyframes heartbeat { 0%,100%{transform:scale(1)} 15%{transform:scale(1.3)} 30%{transform:scale(1.05)} 45%{transform:scale(1.2)} }
-          @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+          @keyframes ldFade { 0%,100%{opacity:0.5} 50%{opacity:1} }
         `}</style>
       </div>
     )
@@ -268,7 +251,7 @@ export default function App() {
 
   return (
     <div className={`app${darkMode ? ' dark' : ''}`}>
-      <div className="aurora-bg"><div className="aurora-blob3" /></div>
+      {darkMode && <div className="aurora-bg"><div className="aurora-blob3" /></div>}
 
       <div
         className="app-content"

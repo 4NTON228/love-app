@@ -243,6 +243,17 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
   const [birthday, setBirthday] = useState(profile?.birthday || '')
   const [coupleStart, setCoupleStart] = useState(profile?.couple_start_date || '')
   const [loveMessage, setLoveMessage] = useState('')
+  // Overwrite initial value with shared couples-table date once loaded
+  useEffect(() => {
+    if (!profile?.partner_id) return
+    supabase
+      .from('couples')
+      .select('couple_start_date')
+      .or(`user_a.eq.${session.user.id},user_b.eq.${session.user.id}`)
+      .eq('status', 'active')
+      .maybeSingle()
+      .then(({ data }) => { if (data?.couple_start_date) setCoupleStart(data.couple_start_date) })
+  }, [session.user.id, profile?.partner_id])
   const [saving, setSaving] = useState(false)
   const [savingAvatar, setSavingAvatar] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -315,18 +326,37 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
   async function saveProfile() {
     if (!name.trim()) { toast.error('Введи своё имя'); return }
     setSaving(true)
-    const { error } = await supabase.from('profiles').update({
-      name: name.trim(),
-      birthday: birthday || null,
-      couple_start_date: coupleStart || null,
-    }).eq('id', session.user.id)
-    if (error) {
-      toast.error('Не удалось сохранить профиль')
+
+    if (profile?.partner_id) {
+      // Paired: update name+birthday on profiles; couple_start_date goes to the shared
+      // couples row so both partners always see the same value.
+      const [profRes, dateRes] = await Promise.all([
+        supabase.from('profiles').update({ name: name.trim(), birthday: birthday || null }).eq('id', session.user.id),
+        supabase.rpc('set_couple_start_date', { p_date: coupleStart || null }),
+      ])
+      if (profRes.error || dateRes.error) {
+        toast.error('Не удалось сохранить профиль')
+      } else {
+        onProfileUpdate?.()
+        setSaved(true)
+        setTimeout(() => setSaved(false), 2000)
+      }
     } else {
-      onProfileUpdate?.()
-      setSaved(true)
-      setTimeout(() => setSaved(false), 2000)
+      // Not yet paired: no couples row — save everything including date to own profile
+      const { error } = await supabase.from('profiles').update({
+        name: name.trim(),
+        birthday: birthday || null,
+        couple_start_date: coupleStart || null,
+      }).eq('id', session.user.id)
+      if (error) {
+        toast.error('Не удалось сохранить профиль')
+      } else {
+        onProfileUpdate?.()
+        setSaved(true)
+        setTimeout(() => setSaved(false), 2000)
+      }
     }
+
     setSaving(false)
   }
 

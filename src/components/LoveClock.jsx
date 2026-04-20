@@ -22,7 +22,22 @@ function getRelationshipTime(startDate) {
 export default function LoveClock({ session, profile }) {
   const uid = session?.user?.id
   const pid = profile?.partner_id
-  const coupleStart = profile?.couple_start_date || null
+  const [sharedCoupleDate, setSharedCoupleDate] = useState(null)
+
+  // Fetch shared couple_start_date from couples table (single source of truth)
+  useEffect(() => {
+    if (!uid || !pid) return
+    supabase
+      .from('couples')
+      .select('couple_start_date')
+      .or(`user_a.eq.${uid},user_b.eq.${uid}`)
+      .eq('status', 'active')
+      .maybeSingle()
+      .then(({ data }) => setSharedCoupleDate(data?.couple_start_date ?? null))
+  }, [uid, pid])
+
+  // Shared date is authoritative; fall back to own profile for unpaired / pre-migration
+  const coupleStart = sharedCoupleDate ?? profile?.couple_start_date ?? null
   const [time, setTime] = useState(() => getRelationshipTime(coupleStart))
   const [photos, setPhotos] = useState([])
   const canvasRef = useRef(null)

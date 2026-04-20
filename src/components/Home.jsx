@@ -209,21 +209,21 @@ function formatBirthday(dateStr) {
    Avatar ring — clickable, CSS animated gradient
 ───────────────────────────────────────── */
 function AvatarRing({ src, name, birthday, onClick }) {
+  const [imgError, setImgError] = useState(false)
   return (
     <div
       style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7, cursor: 'pointer' }}
       onClick={onClick}
     >
-      {/* outer spinning gradient ring */}
       <div className="av-ring" style={{ transition: 'opacity 0.15s, transform 0.15s' }}
         onTouchStart={e => e.currentTarget.style.opacity = '0.75'}
         onTouchEnd={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = '' }}
       >
         <div className="av-gap">
           <div className="av-inner">
-            {src
+            {(src && !imgError)
               ? <img src={src} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
-                  onError={e => { e.currentTarget.style.display='none' }} />
+                  onError={() => setImgError(true)} />
               : <div className="av-initials-wrap">
                   <svg viewBox="0 0 40 40" width="36" height="36" fill="none">
                     <circle cx="20" cy="16" r="8" fill="rgba(139,26,44,0.7)"/>
@@ -262,10 +262,10 @@ function AvatarRing({ src, name, birthday, onClick }) {
 /* ─────────────────────────────────────────
    Partner card modal
 ───────────────────────────────────────── */
-function PartnerCard({ profile, onClose }) {
-  if (!profile) return null
-  const birthday = formatBirthday(profile.birthday)
-  const zodiac   = getZodiac(profile.birthday)
+function PartnerCard({ profile, loading, onClose }) {
+  const [cardImgError, setCardImgError] = useState(false)
+  const birthday = profile ? formatBirthday(profile.birthday) : null
+  const zodiac   = profile ? getZodiac(profile.birthday) : null
   return (
     <div
       style={{
@@ -281,7 +281,7 @@ function PartnerCard({ profile, onClose }) {
         style={{
           background: '#1A1714',
           borderRadius: 20,
-          padding: '32px 24px 28px',
+          padding: (loading || !profile) ? '48px 24px' : '32px 24px 28px',
           maxWidth: 300, width: '100%',
           boxShadow: '0 24px 80px rgba(0,0,0,0.7)',
           border: '0.5px solid rgba(255,255,255,0.08)',
@@ -290,6 +290,14 @@ function PartnerCard({ profile, onClose }) {
           animation: 'slideUp 0.28s ease both',
         }}
       >
+        {(loading || !profile) ? (
+          <div style={{
+            width: 32, height: 32, margin: '0 auto',
+            border: '2px solid rgba(200,51,74,0.2)', borderTopColor: '#C8334A',
+            borderRadius: '50%', animation: 'pcSpin 0.8s linear infinite',
+          }} />
+        ) : (
+        <>
         <button
           onClick={onClose}
           style={{
@@ -312,9 +320,9 @@ function PartnerCard({ profile, onClose }) {
           overflow: 'hidden', background: '#2A2420',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
-          {profile.avatar_url
+          {(profile.avatar_url && !cardImgError)
             ? <img src={profile.avatar_url} alt={profile.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                onError={e => { e.currentTarget.style.display='none' }} />
+                onError={() => setCardImgError(true)} />
             : <svg viewBox="0 0 40 40" width="44" height="44" fill="none">
                 <circle cx="20" cy="16" r="8" fill="rgba(139,26,44,0.7)"/>
                 <path d="M4 38c0-8.8 7.2-16 16-16s16 7.2 16 16" fill="rgba(139,26,44,0.5)"/>
@@ -347,6 +355,8 @@ function PartnerCard({ profile, onClose }) {
           }}>
             {zodiac}
           </div>
+        )}
+        </>
         )}
       </div>
     </div>
@@ -396,6 +406,7 @@ export default function Home({ session, profile, onNavigate }) {
   const [newMeet,        setNewMeet]        = useState('')
   const [saving,         setSaving]         = useState(false)
   const [showPartnerCard, setShowPartnerCard] = useState(false)
+  const [partnerLoading, setPartnerLoading] = useState(!!profile?.partner_id)
 
   const loveMsg   = settings?.love_message || 'Ты — лучшее, что случилось в моей жизни'
   const { out, done } = useTypewriter(loveMsg, 55)
@@ -425,10 +436,12 @@ export default function Home({ session, profile, onNavigate }) {
     const pid = profile?.partner_id
 
     if (pid) {
+      setPartnerLoading(true)
       const { data } = await supabase.from('profiles')
         .select('id,name,avatar_url,birthday,public_key')
         .eq('id', pid).single()
       setPartnerProfile(data)
+      setPartnerLoading(false)
     }
 
     const uids = [session.user.id, pid].filter(Boolean)
@@ -526,6 +539,14 @@ export default function Home({ session, profile, onNavigate }) {
           color: rgba(255,255,255,0.6);
           line-height: 1;
         }
+        .av-initials-wrap {
+          width: 100%; height: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        @keyframes avPulse { 0%,100%{opacity:0.25} 50%{opacity:0.55} }
+        @keyframes pcSpin  { to { transform: rotate(360deg); } }
 
         /* ── Counter digits ── */
         .glow-digit {
@@ -922,12 +943,21 @@ export default function Home({ session, profile, onNavigate }) {
                 onClick={() => onNavigate?.('settings')}
               />
               <BinaryConnection />
-              <AvatarRing
-                src={partnerProfile?.avatar_url}
-                name={pName}
-                birthday={partnerProfile?.birthday}
-                onClick={() => setShowPartnerCard(true)}
-              />
+              {partnerLoading ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7 }}>
+                  <div className="av-ring" style={{ opacity: 0.35, animation: 'avPulse 1.5s ease-in-out infinite' }}>
+                    <div className="av-gap"><div className="av-inner" /></div>
+                  </div>
+                  <span style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'rgba(255,255,255,0.25)' }}>...</span>
+                </div>
+              ) : (
+                <AvatarRing
+                  src={partnerProfile?.avatar_url}
+                  name={pName}
+                  birthday={partnerProfile?.birthday}
+                  onClick={() => setShowPartnerCard(true)}
+                />
+              )}
             </div>
           ) : (
             <div className="av-row" style={{ justifyContent: 'center' }}>
@@ -938,10 +968,6 @@ export default function Home({ session, profile, onNavigate }) {
                 onClick={() => onNavigate?.('settings')}
               />
             </div>
-          )}
-
-          {showPartnerCard && hasPartner && (
-            <PartnerCard profile={partnerProfile} onClose={() => setShowPartnerCard(false)} />
           )}
 
           {/* Day counter — only when couple_start_date is set */}
@@ -1186,6 +1212,13 @@ export default function Home({ session, profile, onNavigate }) {
 
         </div>
       </div>
+      {showPartnerCard && (
+        <PartnerCard
+          profile={partnerProfile}
+          loading={partnerLoading}
+          onClose={() => setShowPartnerCard(false)}
+        />
+      )}
     </>
   )
 }

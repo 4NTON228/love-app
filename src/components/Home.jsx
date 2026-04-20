@@ -72,319 +72,71 @@ function useTypewriter(text, speed = 55) {
   return { out, done }
 }
 
-/* ─────────────────────────────────────────
-   Background floating layer — NO emoji,
-   all CSS/SVG shapes
-───────────────────────────────────────── */
+/* FloatingLayer removed — replaced with clean premium background */
 
-// 4-pointed sparkle star path
-const SPARK = 'M10 0 L11.2 8.8 L20 10 L11.2 11.2 L10 20 L8.8 11.2 L0 10 L8.8 8.8 Z'
-
-// Heart SVG path (20×18 viewBox)
-const HEART_PATH = 'M10 16.5 C10 16.5 1.5 10.5 1.5 5 C1.5 2.5 3.6 0.5 6 0.5 C7.5 0.5 8.8 1.3 10 2.8 C11.2 1.3 12.5 0.5 14 0.5 C16.4 0.5 18.5 2.5 18.5 5 C18.5 10.5 10 16.5 10 16.5 Z'
-
-// Static pre-computed positions so we never re-randomise on render
-const FLOATERS = [
-  // bokeh circles
-  { id: 'b1', type: 'bokeh', x: 8,  y: 18, s: 28, o: 0.10, dur: 20, del: 0   },
-  { id: 'b2', type: 'bokeh', x: 82, y: 40, s: 36, o: 0.08, dur: 26, del: 4   },
-  { id: 'b3', type: 'bokeh', x: 45, y: 72, s: 22, o: 0.12, dur: 18, del: 8   },
-  { id: 'b4', type: 'bokeh', x: 92, y: 12, s: 18, o: 0.09, dur: 22, del: 1   },
-  { id: 'b5', type: 'bokeh', x: 28, y: 88, s: 30, o: 0.07, dur: 30, del: 12  },
-  { id: 'b6', type: 'bokeh', x: 68, y: 65, s: 24, o: 0.10, dur: 24, del: 6   },
-  // SVG hearts
-  { id: 'h1', type: 'heart', x: 14, y: 28, s: 10, o: 0.18, dur: 14, del: 2   },
-  { id: 'h2', type: 'heart', x: 88, y: 58, s: 8,  o: 0.15, dur: 20, del: 6   },
-  { id: 'h3', type: 'heart', x: 55, y: 12, s: 12, o: 0.12, dur: 17, del: 9   },
-  { id: 'h4', type: 'heart', x: 72, y: 82, s: 9,  o: 0.18, dur: 13, del: 3   },
-  { id: 'h5', type: 'heart', x: 5,  y: 62, s: 7,  o: 0.22, dur: 22, del: 11  },
-  { id: 'h6', type: 'heart', x: 38, y: 48, s: 11, o: 0.12, dur: 16, del: 5   },
-  // 4-pointed sparkles
-  { id: 's1', type: 'spark', x: 30, y: 8,  s: 8,  o: 0.28, dur: 7,  del: 1   },
-  { id: 's2', type: 'spark', x: 64, y: 32, s: 6,  o: 0.22, dur: 9,  del: 4   },
-  { id: 's3', type: 'spark', x: 90, y: 68, s: 7,  o: 0.18, dur: 8,  del: 7   },
-  { id: 's4', type: 'spark', x: 48, y: 90, s: 5,  o: 0.30, dur: 10, del: 3   },
-  { id: 's5', type: 'spark', x: 18, y: 50, s: 9,  o: 0.20, dur: 6,  del: 9   },
-]
-
-function FloatingLayer() {
-  return (
-    <div aria-hidden style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0, overflow: 'hidden' }}>
-      <style>{`
-        @keyframes floatBob {
-          0%,100% { transform: translateY(0) scale(1); }
-          50%      { transform: translateY(-18px) scale(1.06); }
-        }
-        @keyframes sparkPulse {
-          0%,100% { transform: scale(1) rotate(0deg); }
-          50%      { transform: scale(1.4) rotate(45deg); }
-        }
-      `}</style>
-      {FLOATERS.map(f => {
-        const base = {
-          position: 'absolute',
-          left:  `${f.x}%`,
-          top:   `${f.y}%`,
-          opacity: f.o,
-          animationName:           f.type === 'spark' ? 'sparkPulse' : 'floatBob',
-          animationDuration:       `${f.dur}s`,
-          animationDelay:          `${f.del}s`,
-          animationTimingFunction: 'ease-in-out',
-          animationIterationCount: 'infinite',
-        }
-
-        if (f.type === 'bokeh') return (
-          <div key={f.id} style={{
-            ...base,
-            width:  f.s,
-            height: f.s,
-            borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(255,107,138,0.9) 0%, transparent 70%)',
-            filter: `blur(${f.s * 0.45}px)`,
-          }} />
-        )
-
-        if (f.type === 'heart') return (
-          <svg key={f.id} style={{ ...base, width: f.s, height: f.s * 0.9 }}
-            viewBox="0 0 20 18" fill="rgba(200,51,74,0.7)">
-            <path d={HEART_PATH} />
-          </svg>
-        )
-
-        // sparkle
-        return (
-          <svg key={f.id} style={{ ...base, width: f.s, height: f.s }}
-            viewBox="0 0 20 20" fill="rgba(255,200,220,0.9)">
-            <path d={SPARK} />
-          </svg>
-        )
-      })}
-    </div>
-  )
-}
+/* FloatingHearts removed */
 
 /* ─────────────────────────────────────────
-   Floating hearts rising from bottom
-───────────────────────────────────────── */
-function FloatingHearts() {
-  const [hearts, setHearts] = useState([])
-  useEffect(() => {
-    const spawn = () => {
-      const h = {
-        id: Date.now() + Math.random(),
-        left: 10 + Math.random() * 80,
-        dur: 6 + Math.random() * 6,
-        size: 8 + Math.random() * 10,
-        delay: Math.random() * 2,
-      }
-      setHearts(prev => [...prev.slice(-8), h])
-    }
-    spawn(); spawn()
-    const id = setInterval(spawn, 1800)
-    return () => clearInterval(id)
-  }, [])
-  return (
-    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
-      {hearts.map(h => (
-        <div key={h.id} style={{
-          position: 'absolute', bottom: 0, left: `${h.left}%`,
-          animation: `floatUp ${h.dur}s ${h.delay}s linear forwards`,
-          opacity: 0,
-        }}>
-          <svg width={h.size} viewBox="0 0 34 30" fill="rgba(255,255,255,0.5)">
-            <path d="M17 28C17 28 1 18 1 7.5C1 3.5 4.5 0.5 8.5 0.5C11.5 0.5 14 2 17 5C20 2 22.5 0.5 25.5 0.5C29.5 0.5 33 3.5 33 7.5C33 18 17 28 17 28Z"/>
-          </svg>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-/* ─────────────────────────────────────────
-   SVG gradient heart between avatars — bright, high-contrast
+   Minimal heart divider between avatars
 ───────────────────────────────────────── */
 function CentreHeart() {
   return (
-    <div style={{
-      width: 60, height: 56,
-      filter: 'drop-shadow(0 0 18px rgba(255,45,85,0.95)) drop-shadow(0 0 6px rgba(255,255,255,0.4))',
-      animation: 'heartbeatBig 1.4s cubic-bezier(0.37,0,0.63,1) infinite',
-      flexShrink: 0,
-    }}>
-      <svg width="60" height="56" viewBox="0 0 60 56" fill="none" aria-hidden>
-        <defs>
-          <linearGradient id="hg" x1="0" y1="0" x2="60" y2="56" gradientUnits="userSpaceOnUse">
-            <stop offset="0%"   stopColor="#E8556A" />
-            <stop offset="50%"  stopColor="#FF2D55" />
-            <stop offset="100%" stopColor="#D10043" />
-          </linearGradient>
-        </defs>
-        {/* Bright solid fill heart */}
+    <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <svg width="20" height="18" viewBox="0 0 20 18" fill="none" aria-hidden>
         <path
-          d="M30 52 C30 52 3 35 3 16 C3 8 9.5 2 18 2 C22.5 2 26.5 4.5 30 9 C33.5 4.5 37.5 2 42 2 C50.5 2 57 8 57 16 C57 35 30 52 30 52 Z"
-          fill="url(#hg)"
+          d="M10 16.5C10 16.5 1.5 10.5 1.5 5C1.5 2.5 3.6 0.5 6 0.5C7.5 0.5 8.8 1.3 10 2.8C11.2 1.3 12.5 0.5 14 0.5C16.4 0.5 18.5 2.5 18.5 5C18.5 10.5 10 16.5 10 16.5Z"
+          fill="rgba(168,40,60,0.55)"
         />
-        {/* White highlight for depth */}
-        <path
-          d="M16 9 C13 12 12 16 13 20"
-          stroke="rgba(255,255,255,0.55)"
-          strokeWidth="3"
-          strokeLinecap="round"
-          fill="none"
-        />
-        <style>{`
-          @keyframes heartbeatBig {
-            0%,100% { transform: scale(1); }
-            20%      { transform: scale(1.35); }
-            40%      { transform: scale(1.05); }
-            60%      { transform: scale(1.22); }
-            80%      { transform: scale(1); }
-          }
-        `}</style>
       </svg>
     </div>
   )
 }
 
 /* ─────────────────────────────────────────
-   SVG heart outline progress bar
-   Draws around the heart stroke gradually
+   Anniversary progress bar — minimal line
 ───────────────────────────────────────── */
 function HeartProgress({ progress, daysUntil }) {
-  // Heart outline path in a 100×90 viewBox
-  const heartOutline = 'M50 82 C50 82 6 55 6 25 C6 12 15 4 26 4 C33 4 40 8 50 16 C60 8 67 4 74 4 C85 4 94 12 94 25 C94 55 50 82 50 82 Z'
-  const pathLen = 230 // approximate path length for this shape
-  const filled  = pathLen * (progress / 100)
-
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, marginTop: 20 }}>
-      <div style={{ position: 'relative', width: 110, height: 100 }}>
-        <svg viewBox="0 0 100 90" width="110" height="99" overflow="visible">
-          <defs>
-            <linearGradient id="hpg" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%"   stopColor="rgba(255,255,255,0.25)" />
-              <stop offset="100%" stopColor="rgba(255,255,255,0.08)" />
-            </linearGradient>
-            <linearGradient id="hpf" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%"   stopColor="#fff8b0" />
-              <stop offset="50%"  stopColor="#ffd6e0" />
-              <stop offset="100%" stopColor="#ffffff" />
-            </linearGradient>
-          </defs>
-          {/* background heart */}
-          <path d={heartOutline} fill="url(#hpg)" stroke="rgba(255,255,255,0.15)" strokeWidth="2" />
-          {/* animated progress stroke */}
-          <path
-            d={heartOutline}
-            fill="none"
-            stroke="url(#hpf)"
-            strokeWidth="4"
-            strokeLinecap="round"
-            strokeDasharray={`${filled} ${pathLen}`}
-            style={{ transition: 'stroke-dasharray 1.2s ease', filter: 'drop-shadow(0 0 4px rgba(255,230,230,0.6))' }}
-          />
-        </svg>
-        {/* percentage inside */}
+    <div style={{ width: '100%', maxWidth: 220, margin: '18px auto 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+      <div style={{ width: '100%', height: 2, background: 'rgba(255,255,255,0.1)', borderRadius: 99, overflow: 'hidden' }}>
         <div style={{
-          position: 'absolute', inset: 0,
-          display: 'flex', flexDirection: 'column',
-          alignItems: 'center', justifyContent: 'center',
-          paddingTop: 6,
-        }}>
-          <span style={{ fontFamily: 'var(--font-display)', fontSize: 17, fontWeight: 700, color: 'white', lineHeight: 1 }}>
-            {Math.round(progress)}%
-          </span>
-        </div>
+          height: '100%',
+          width: `${progress}%`,
+          background: 'rgba(255,255,255,0.5)',
+          borderRadius: 99,
+          transition: 'width 1.2s ease',
+        }} />
       </div>
       <span style={{
         fontFamily: 'var(--font-body)',
-        fontSize: 12,
-        color: 'rgba(255,255,255,0.65)',
-        textAlign: 'center',
+        fontSize: 11,
+        fontWeight: 300,
+        color: 'rgba(255,255,255,0.4)',
+        letterSpacing: 0.4,
       }}>
-        {daysUntil === 0 ? 'Сегодня годовщина!' : `до годовщины ${daysUntil} дн`}
+        {daysUntil === 0 ? 'Сегодня годовщина' : `до годовщины ${daysUntil} дн`}
       </span>
     </div>
   )
 }
 
-/* ─────────────────────────────────────────
-   Floating particle field
-───────────────────────────────────────── */
-const PARTICLES = [
-  { left: '8%',  top: '12%', s: 1.0, d: 0,   dur: 7  },
-  { left: '88%', top: '8%',  s: 0.7, d: 1.2, dur: 9  },
-  { left: '20%', top: '75%', s: 0.8, d: 0.6, dur: 8  },
-  { left: '78%', top: '70%', s: 0.6, d: 2.1, dur: 11 },
-  { left: '50%', top: '5%',  s: 0.5, d: 0.3, dur: 6  },
-  { left: '35%', top: '85%', s: 0.9, d: 1.8, dur: 10 },
-  { left: '92%', top: '40%', s: 0.6, d: 0.9, dur: 8  },
-  { left: '5%',  top: '55%', s: 0.7, d: 1.5, dur: 9  },
-  { left: '65%', top: '20%', s: 0.5, d: 2.5, dur: 12 },
-  { left: '15%', top: '38%', s: 0.8, d: 0.4, dur: 7  },
-]
-function ParticleField() {
-  return (
-    <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: 0 }}>
-      <style>{`
-        @keyframes particleFloat {
-          0%, 100% { transform: translateY(0) scale(var(--ps, 1)); opacity: 0.4; }
-          50%       { transform: translateY(-18px) scale(calc(var(--ps,1)*1.15)); opacity: 0.8; }
-        }
-        .particle-heart { position: absolute; animation: particleFloat var(--pd,8s) ease-in-out var(--pdelay,0s) infinite; }
-      `}</style>
-      {PARTICLES.map((p, i) => (
-        <div key={i} className="particle-heart"
-          style={{ left: p.left, top: p.top, '--ps': p.s, '--pd': p.dur+'s', '--pdelay': p.d+'s' }}>
-          <svg viewBox="0 0 16 14" width={Math.round(10*p.s)} height={Math.round(9*p.s)} fill="none">
-            <path d="M8 12.5S1 8.5 1 4C1 2 2.5.5 4.5.5c1 0 2 .6 3.5 2C9.5 1.1 10.5.5 11.5.5 13.5.5 15 2 15 4 15 8.5 8 12.5 8 12.5Z"
-              fill="rgba(255,255,255,0.55)" />
-          </svg>
-        </div>
-      ))}
-    </div>
-  )
-}
+/* ParticleField removed */
 
 /* ─────────────────────────────────────────
-   Binary star connection between avatars
+   Clean divider between avatars
 ───────────────────────────────────────── */
 function BinaryConnection() {
   return (
-    <div style={{ position: 'relative', width: 80, height: 84, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <style>{`
-        @keyframes orbTrack {
-          0%, 100% { left:4px;  top:50%; transform:translateY(-50%) scale(0.85); opacity:0.6; }
-          25%      { left:28%; top:28%; transform:translateY(0)      scale(1.1);  opacity:1; }
-          50%      { left:50%; top:50%; transform:translateY(-50%)    scale(1.2);  opacity:1; }
-          75%      { left:72%; top:28%; transform:translateY(0)      scale(1.1);  opacity:1; }
-        }
-        @keyframes connPulse {
-          0%,100% { opacity:0.15; } 50% { opacity:0.4; }
-        }
-        .orb-dot {
-          position:absolute;
-          width:8px; height:8px; border-radius:50%;
-          background:white;
-          box-shadow:0 0 10px 3px rgba(255,255,255,0.7),0 0 20px 6px rgba(200,51,74,0.3);
-          animation:orbTrack 3s ease-in-out infinite;
-          pointer-events:none;
-        }
-      `}</style>
-      <svg viewBox="0 0 80 84" width="80" height="84" style={{ position:'absolute', inset:0 }}>
-        <path d="M 0 42 Q 40 16 80 42" stroke="rgba(255,255,255,0.25)" strokeWidth="1.5" fill="none"
-          strokeDasharray="4 3" style={{ animation:'connPulse 2s ease-in-out infinite' }} />
-        <path d="M 0 42 Q 40 68 80 42" stroke="rgba(255,255,255,0.1)" strokeWidth="1" fill="none"
-          strokeDasharray="3 4" style={{ animation:'connPulse 2.5s ease-in-out 0.5s infinite' }} />
-      </svg>
-      <div className="orb-dot" />
-      <div style={{ position:'relative', zIndex:2 }}><CentreHeart /></div>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 60, gap: 6 }}>
+      <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.12)' }} />
+      <CentreHeart />
+      <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.12)' }} />
     </div>
   )
 }
 
 /* ─────────────────────────────────────────
-   Orbital progress ring around day counter
+   Orbital ring — clean, no glow
 ───────────────────────────────────────── */
 function OrbitalRing({ progress, children }) {
   const r = 118
@@ -392,23 +144,17 @@ function OrbitalRing({ progress, children }) {
   const filled = circ * (progress / 100)
   const angle = -Math.PI / 2 + (progress / 100) * 2 * Math.PI
   return (
-    <div style={{ position:'relative', display:'inline-flex', alignItems:'center', justifyContent:'center' }}>
+    <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
       <svg viewBox="0 0 260 260" width="260" height="260"
-        style={{ position:'absolute', top:'50%', left:'50%', transform:'translate(-50%,-50%)', pointerEvents:'none' }}>
-        <defs>
-          <linearGradient id="orbGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%"   stopColor="rgba(255,255,255,0.05)" />
-            <stop offset="50%"  stopColor="rgba(255,255,255,0.55)" />
-            <stop offset="100%" stopColor="rgba(255,200,220,0.2)" />
-          </linearGradient>
-        </defs>
-        <circle cx="130" cy="130" r={r} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="1.5"/>
-        <circle cx="130" cy="130" r={r} fill="none" stroke="url(#orbGrad)" strokeWidth="2"
+        style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', pointerEvents: 'none' }}>
+        <circle cx="130" cy="130" r={r} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="1"/>
+        <circle cx="130" cy="130" r={r} fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="1.5"
           strokeDasharray={`${filled} ${circ}`} strokeLinecap="round" transform="rotate(-90 130 130)"
-          style={{ transition:'stroke-dasharray 2s ease', filter:'drop-shadow(0 0 5px rgba(255,200,220,0.5))' }}/>
-        <circle cx={130 + r * Math.cos(angle)} cy={130 + r * Math.sin(angle)}
-          r="5" fill="white"
-          style={{ filter:'drop-shadow(0 0 8px rgba(255,255,255,0.95))' }}/>
+          style={{ transition: 'stroke-dasharray 2s ease' }}/>
+        <circle
+          cx={130 + r * Math.cos(angle)}
+          cy={130 + r * Math.sin(angle)}
+          r="3.5" fill="rgba(255,255,255,0.7)" />
       </svg>
       {children}
     </div>
@@ -416,7 +162,7 @@ function OrbitalRing({ progress, children }) {
 }
 
 /* ─────────────────────────────────────────
-   Glow digit — premium counter display
+   Counter digit — clean, no glow
 ───────────────────────────────────────── */
 function GlowDigit({ value, prevValue }) {
   const changed = value !== prevValue
@@ -532,15 +278,15 @@ function PartnerCard({ profile, onClose }) {
       <div
         onClick={e => e.stopPropagation()}
         style={{
-          background: 'linear-gradient(160deg, #200A10 0%, #3D1520 60%, #4A2030 100%)',
-          borderRadius: 24,
+          background: '#1A1714',
+          borderRadius: 20,
           padding: '32px 24px 28px',
           maxWidth: 300, width: '100%',
-          boxShadow: '0 24px 80px rgba(0,0,0,0.6)',
-          border: '1px solid rgba(200,51,74,0.2)',
+          boxShadow: '0 24px 80px rgba(0,0,0,0.7)',
+          border: '0.5px solid rgba(255,255,255,0.08)',
           textAlign: 'center',
           position: 'relative',
-          animation: 'slideUp 0.3s cubic-bezier(0.34,1.56,0.64,1) both',
+          animation: 'slideUp 0.28s ease both',
         }}
       >
         <button
@@ -560,10 +306,9 @@ function PartnerCard({ profile, onClose }) {
 
         {/* Avatar */}
         <div style={{
-          width: 88, height: 88, borderRadius: '50%', margin: '0 auto 16px',
-          border: '3px solid rgba(255,255,255,0.25)',
-          boxShadow: '0 0 20px rgba(200,51,74,0.3)',
-          overflow: 'hidden', background: 'var(--blush-2, #F2D0D6)',
+          width: 80, height: 80, borderRadius: '50%', margin: '0 auto 16px',
+          border: '1px solid rgba(255,255,255,0.12)',
+          overflow: 'hidden', background: '#2A2420',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
           {profile.avatar_url
@@ -751,45 +496,22 @@ export default function Home({ session, profile, onNavigate }) {
     <>
       <style>{`
         /* ── Avatar rings ── */
-        @property --ring-a {
-          syntax: '<angle>';
-          initial-value: 0deg;
-          inherits: false;
-        }
         .av-ring {
-          width: 84px; height: 84px;
+          width: 76px; height: 76px;
           border-radius: 50%;
-          padding: 2.5px;
-          background: conic-gradient(from var(--ring-a),
-            #E8556A, #8B1A2C, #8B1A2C, #8B1A2C, #E8556A);
-          animation: ringRotate 4s linear infinite;
+          padding: 1.5px;
+          background: rgba(255,255,255,0.2);
         }
-        @keyframes ringRotate { to { --ring-a: 360deg; } }
-
-        /* Fallback for browsers without @property */
-        @supports not (background: conic-gradient(from 0deg, red, blue)) {
-          .av-ring {
-            background: linear-gradient(135deg, #E8556A, #8B1A2C, #8B1A2C, #8B1A2C);
-            background-size: 300% 300%;
-            animation: gradShift 4s ease infinite;
-          }
-        }
-        @keyframes gradShift {
-          0%   { background-position: 0% 50%; }
-          50%  { background-position: 100% 50%; }
-          100% { background-position: 0% 50%; }
-        }
-
         .av-gap {
           width: 100%; height: 100%;
           border-radius: 50%;
           padding: 2px;
-          background: var(--theme-gradient, linear-gradient(160deg, #C8334A 0%, #8B1A2C 100%));
+          background: rgba(255,255,255,0.08);
         }
         .av-inner {
           width: 100%; height: 100%;
           border-radius: 50%;
-          background: var(--blush-2, #F2D0D6);
+          background: #2A2420;
           overflow: hidden;
           display: flex;
           align-items: center;
@@ -797,22 +519,18 @@ export default function Home({ session, profile, onNavigate }) {
         }
         .av-initials {
           font-family: var(--font-display);
-          font-size: 26px;
-          font-weight: 600;
-          color: #8B1A2C;
+          font-size: 24px;
+          font-weight: 400;
+          color: rgba(255,255,255,0.6);
           line-height: 1;
-          /* SVG-style person silhouette as text fallback */
         }
 
-        /* ── Glow digits ── */
+        /* ── Counter digits ── */
         .glow-digit {
           display: inline-block;
-          font-family: 'Courier New', 'SF Mono', monospace;
-          text-shadow:
-            0 0 10px rgba(255,200,220,0.8),
-            0 0 22px rgba(255,150,200,0.5),
-            0 0 40px rgba(139,26,44,0.3);
-          animation: digitFlip 0.35s cubic-bezier(0.34,1.56,0.64,1) both;
+          font-family: 'DM Sans', -apple-system, sans-serif;
+          font-weight: 300;
+          animation: digitFlip 0.28s ease both;
         }
         @keyframes digitFlip {
           from { opacity: 0.4; transform: scaleY(0.7) translateY(-4px); }
@@ -829,47 +547,41 @@ export default function Home({ session, profile, onNavigate }) {
 
         /* ── Hero banner ── */
         .home-banner {
-          background: linear-gradient(175deg, #0D0305 0%, #220810 35%, #46101F 65%, #2E0C18 100%);
-          background-size: 200% 200%;
-          animation: gradientShift 10s ease infinite;
-          border-radius: 0 0 36px 36px;
-          padding: 56px 20px 28px;
+          background: linear-gradient(170deg, #0C0B09 0%, #16120D 40%, #1E1610 100%);
+          border-radius: 0 0 28px 28px;
+          padding: 52px 20px 28px;
           display: flex;
           flex-direction: column;
           align-items: center;
           position: relative;
           z-index: 1;
-          box-shadow: 0 16px 60px rgba(14,3,8,0.75), 0 4px 20px rgba(0,0,0,0.5);
+          box-shadow: 0 8px 32px rgba(0,0,0,0.3);
           overflow: hidden;
         }
-        /* radial glow + shimmer overlay */
         .home-banner::after {
           content: '';
-          position: absolute;
-          inset: 0;
+          position: absolute; inset: 0;
           border-radius: inherit;
-          background:
-            radial-gradient(ellipse at 50% 0%, rgba(200,51,74,0.4) 0%, transparent 60%),
-            linear-gradient(135deg, rgba(255,255,255,0.07) 0%, transparent 50%);
+          background: radial-gradient(ellipse at 50% 0%, rgba(168,40,60,0.12) 0%, transparent 55%);
           pointer-events: none;
         }
 
         /* ── Avatar row ── */
-        .av-row { display: flex; align-items: center; gap: 20px; margin-bottom: 28px; }
+        .av-row { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
 
         /* ── Day counter ── */
         .day-counter { text-align: center; color: white; }
         .day-number {
           font-family: var(--font-display);
-          font-size: clamp(60px, 15vw, 88px);
-          font-weight: 700;
+          font-size: clamp(56px, 15vw, 80px);
+          font-weight: 300;
           line-height: 1;
-          letter-spacing: -3px;
-          animation: countIn 0.7s cubic-bezier(0.34,1.56,0.64,1) both;
+          letter-spacing: -2px;
+          animation: countIn 0.5s ease both;
         }
         @keyframes countIn {
-          from { opacity:0; transform: scale(0.65); }
-          to   { opacity:1; transform: scale(1); }
+          from { opacity: 0; transform: translateY(8px); }
+          to   { opacity: 1; transform: translateY(0); }
         }
         .day-label {
           font-size: 17px;
@@ -888,9 +600,8 @@ export default function Home({ session, profile, onNavigate }) {
         .day-unit-val {
           font-family: var(--font-display);
           font-size: 20px;
-          font-weight: 700;
-          color: white;
-          text-shadow: 0 0 14px rgba(255,180,210,0.6);
+          font-weight: 400;
+          color: rgba(255,255,255,0.85);
         }
         .day-unit-lbl {
           font-family: var(--font-body);
@@ -903,20 +614,19 @@ export default function Home({ session, profile, onNavigate }) {
 
         /* Live clock bar */
         .live-clock-bar {
-          margin-top: 16px;
+          margin-top: 14px;
           display: flex;
           gap: 1px;
           align-items: center;
           justify-content: center;
-          background: rgba(255,255,255,0.06);
-          border: 1px solid rgba(255,255,255,0.12);
-          border-radius: 16px;
-          padding: 9px 22px;
-          letter-spacing: 4px;
-          font-size: 22px;
-          color: white;
-          font-weight: 700;
-          box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+          background: rgba(255,255,255,0.04);
+          border: 0.5px solid rgba(255,255,255,0.1);
+          border-radius: 12px;
+          padding: 8px 20px;
+          letter-spacing: 3px;
+          font-size: 18px;
+          color: rgba(255,255,255,0.7);
+          font-weight: 300;
         }
         .clock-sep {
           opacity: 0.5;
@@ -939,60 +649,45 @@ export default function Home({ session, profile, onNavigate }) {
         /* ── Cards ── */
         .hc {
           background: var(--surface, #ffffff);
-          border-radius: 24px;
-          border: 1px solid rgba(200,51,74,0.09);
+          border-radius: 18px;
+          border: 0.5px solid var(--border, rgba(0,0,0,0.07));
           padding: 20px;
-          box-shadow: 0 4px 28px rgba(0,0,0,0.07), 0 1px 0 rgba(255,255,255,0.9);
-          animation: slideUp 0.5s ease both;
+          box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+          animation: slideUp 0.4s ease both;
           position: relative; overflow: hidden;
         }
         .app.dark .hc {
-          background: #150509;
-          border-color: rgba(200,51,74,0.14);
-          box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+          background: #151412;
+          border-color: rgba(255,255,255,0.05);
+          box-shadow: 0 4px 24px rgba(0,0,0,0.4);
         }
-        /* Mouse glow effect */
-        .hc::after {
-          content: ''; position: absolute; inset: 0; border-radius: inherit;
-          background: radial-gradient(circle at var(--mx, 50%) var(--my, 50%), rgba(200,51,74,0.07), transparent 60%);
-          opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 0;
-        }
-        .hc:hover::after { opacity: 1; }
-        /* Ripple */
         .ripple-el {
           position: absolute; border-radius: 50%;
           width: 60px; height: 60px; margin-left: -30px; margin-top: -30px;
-          background: rgba(200,51,74,0.2);
+          background: rgba(168,40,60,0.12);
           transform: scale(0); animation: ripple 0.6s ease-out forwards;
           pointer-events: none; z-index: 1;
         }
         .hc-title {
           font-family: var(--font-body);
-          font-size: 11px;
-          font-weight: 700;
+          font-size: 10px;
+          font-weight: 500;
           text-transform: uppercase;
-          letter-spacing: 1.2px;
+          letter-spacing: 1px;
           color: var(--text-muted);
-          margin-bottom: 12px;
+          margin-bottom: 14px;
         }
 
         /* ── Love message ── */
         .love-card {
-          background: linear-gradient(150deg, #C8334A 0%, #8B1A2C 55%, #8B1A2C 100%);
-          border-radius: 22px;
+          background: linear-gradient(150deg, #1A0E0A 0%, #241410 100%);
+          border-radius: 18px;
+          border: 0.5px solid rgba(168,40,60,0.2);
           padding: 20px;
           color: white;
           position: relative;
-          box-shadow: 0 8px 32px rgba(139,26,44,0.32);
-          animation: slideUp 0.5s ease both;
-        }
-        .love-card::before {
-          content: '';
-          position: absolute;
-          inset: 0;
-          border-radius: inherit;
-          border: 1px solid rgba(255,255,255,0.12);
-          pointer-events: none;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+          animation: slideUp 0.4s ease both;
         }
         .love-text {
           font-family: var(--font-display);
@@ -1050,173 +745,149 @@ export default function Home({ session, profile, onNavigate }) {
         .action-grid {
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 12px;
+          gap: 10px;
         }
         .action-btn {
-          background: var(--bg-card);
-          border: 1px solid rgba(200,51,74,0.08);
-          border-radius: 20px;
+          background: var(--surface, #fff);
+          border: 0.5px solid var(--border, rgba(0,0,0,0.07));
+          border-radius: 16px;
           padding: 18px 12px 14px;
           display: flex;
           flex-direction: column;
           align-items: center;
           gap: 10px;
           cursor: pointer;
-          box-shadow: var(--shadow);
-          transition: transform 0.15s, box-shadow 0.15s;
-          position: relative;
-          overflow: hidden;
+          box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+          transition: opacity 0.15s, transform 0.15s;
         }
-        .action-btn::before {
-          content: '';
-          position: absolute;
-          inset: 0;
-          background: linear-gradient(135deg, rgba(200,51,74,0.04) 0%, transparent 100%);
-          pointer-events: none;
-        }
-        .action-btn:active {
-          transform: scale(0.94);
-          box-shadow: 0 2px 8px rgba(139,26,44,0.12);
-        }
+        .action-btn:active { opacity: 0.7; transform: scale(0.96); }
         .action-btn-icon {
-          width: 50px; height: 50px;
-          border-radius: 17px;
-          background: linear-gradient(135deg, rgba(200,51,74,0.14) 0%, rgba(139,26,44,0.09) 100%);
+          width: 44px; height: 44px;
+          border-radius: 14px;
+          background: rgba(168,40,60,0.07);
           display: flex;
           align-items: center;
           justify-content: center;
-          color: var(--rose, #C8334A);
-          box-shadow: 0 4px 16px rgba(200,51,74,0.14), inset 0 1px 0 rgba(255,255,255,0.3);
-          transition: transform 0.2s ease, box-shadow 0.2s ease;
+          color: var(--rose, #A8283C);
         }
-        .action-btn:hover .action-btn-icon { transform: scale(1.1) rotate(-3deg); }
         .action-btn-label {
           font-family: var(--font-body);
           font-size: 12px;
-          font-weight: 700;
+          font-weight: 400;
           color: var(--text);
           text-align: center;
-          line-height: 1.3;
+          line-height: 1.4;
         }
-        .app.dark .action-btn { background: var(--surface-2, #1E0A10); border-color: rgba(200,51,74,0.12); }
-        .app.dark .action-btn-label { color: var(--ink, #F5E8EA); }
-        .app.dark .action-btn-icon { background: rgba(200,51,74,0.15); }
+        .app.dark .action-btn { background: #1A1916; border-color: rgba(255,255,255,0.05); }
+        .app.dark .action-btn-label { color: var(--ink); }
+        .app.dark .action-btn-icon { background: rgba(168,40,60,0.12); }
 
         /* ── Meeting countdown ── */
-        .meet-values { display: flex; gap: 10px; justify-content: center; }
+        .meet-values { display: flex; gap: 8px; justify-content: center; }
         .meet-unit {
           display: flex;
           flex-direction: column;
           align-items: center;
-          background: linear-gradient(135deg, var(--blush, #FBF0F2) 0%, var(--blush-2, #F2D0D6) 100%);
-          border-radius: 16px;
+          background: var(--blush, #F6F3EE);
+          border: 0.5px solid var(--border);
+          border-radius: 12px;
           padding: 12px 14px;
-          min-width: 58px;
-          box-shadow: inset 0 1px 0 rgba(255,255,255,0.8), 0 2px 8px rgba(139,26,44,0.08);
+          min-width: 56px;
         }
-        .app.dark .meet-unit { background: rgba(139,26,44,0.12); box-shadow: none; }
+        .app.dark .meet-unit { background: #1A1916; }
         .meet-num {
           font-family: var(--font-display);
-          font-size: 28px;
-          font-weight: 700;
-          color: #8B1A2C;
+          font-size: 26px;
+          font-weight: 400;
+          color: var(--rose, #A8283C);
           line-height: 1;
-          text-shadow: 0 1px 0 rgba(255,255,255,0.6);
         }
-        .app.dark .meet-num { color: var(--rose-light, #E8556A); text-shadow: none; }
+        .app.dark .meet-num { color: var(--rose-light, #CF5568); }
         .meet-lbl {
           font-family: var(--font-body);
           font-size: 10px;
-          color: #8B1A2C;
-          opacity: 0.7;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
+          color: var(--muted);
+          letter-spacing: 0.4px;
           margin-top: 3px;
         }
-        .app.dark .meet-lbl { color: var(--rose-light, #E8556A); }
 
         /* ── Next event ── */
         .event-row { display: flex; align-items: center; gap: 14px; }
         .event-emoji-block {
-          width: 48px; height: 48px;
-          border-radius: 16px;
-          background: linear-gradient(135deg, rgba(200,51,74,0.12) 0%, rgba(139,26,44,0.08) 100%);
+          width: 44px; height: 44px;
+          border-radius: 12px;
+          background: rgba(168,40,60,0.07);
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 24px;
+          font-size: 22px;
           flex-shrink: 0;
         }
         .event-info { flex: 1; min-width: 0; }
         .event-name {
           font-family: var(--font-body);
-          font-weight: 700;
+          font-weight: 500;
           font-size: 15px;
           color: var(--text);
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
         }
-        .app.dark .event-name { color: var(--ink, #F5E8EA); }
-        .event-date { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+        .app.dark .event-name { color: var(--ink); }
+        .event-date { font-size: 12px; color: var(--text-muted); margin-top: 2px; font-weight: 300; }
         .event-badge {
-          background: linear-gradient(135deg, #C8334A, #8B1A2C);
+          background: var(--rose, #A8283C);
           color: white;
-          border-radius: 12px;
-          padding: 6px 12px;
+          border-radius: 10px;
+          padding: 5px 10px;
           font-size: 12px;
-          font-weight: 700;
+          font-weight: 500;
           font-family: var(--font-body);
           white-space: nowrap;
           flex-shrink: 0;
-          box-shadow: 0 3px 12px rgba(139,26,44,0.3);
         }
 
         /* ── Buttons ── */
         .btn-primary {
-          background: linear-gradient(135deg, #C8334A, #8B1A2C);
+          background: var(--rose, #A8283C);
           color: white;
           border: none;
-          border-radius: 13px;
+          border-radius: 11px;
           padding: 11px 22px;
           font-family: var(--font-body);
-          font-weight: 700;
+          font-weight: 500;
           font-size: 14px;
           cursor: pointer;
-          box-shadow: 0 4px 16px rgba(139,26,44,0.3), inset 0 1px 0 rgba(255,255,255,0.15);
-          transition: transform 0.12s, box-shadow 0.12s;
+          transition: opacity 0.15s, transform 0.12s;
         }
-        .btn-primary:active {
-          transform: scale(0.96);
-          box-shadow: 0 2px 8px rgba(139,26,44,0.25);
-        }
+        .btn-primary:active { opacity: 0.85; transform: scale(0.97); }
         .btn-ghost {
           background: rgba(0,0,0,0.05);
           border: none;
-          border-radius: 13px;
+          border-radius: 11px;
           padding: 11px 18px;
           font-family: var(--font-body);
-          font-weight: 600;
+          font-weight: 400;
           font-size: 14px;
           color: var(--text-muted);
           cursor: pointer;
         }
-        .app.dark .btn-ghost { background: rgba(255,255,255,0.08); }
+        .app.dark .btn-ghost { background: rgba(255,255,255,0.07); }
         .btn-outline-sm {
           background: transparent;
-          border: 1.5px solid rgba(139,26,44,0.3);
-          color: #8B1A2C;
-          border-radius: 11px;
+          border: 0.5px solid rgba(168,40,60,0.3);
+          color: var(--rose, #A8283C);
+          border-radius: 10px;
           padding: 7px 16px;
           font-family: var(--font-body);
           font-size: 12px;
-          font-weight: 600;
+          font-weight: 400;
           cursor: pointer;
           margin-top: 10px;
           transition: background 0.15s;
         }
-        .btn-outline-sm:active { background: rgba(139,26,44,0.08); }
-        .app.dark .btn-outline-sm { border-color: rgba(247,168,196,0.3); color: var(--rose-light, #E8556A); }
+        .btn-outline-sm:active { background: rgba(168,40,60,0.06); }
+        .app.dark .btn-outline-sm { border-color: rgba(207,85,104,0.3); color: var(--rose-light, #CF5568); }
 
         /* date input override */
         input[type='datetime-local'] {
@@ -1235,15 +906,9 @@ export default function Home({ session, profile, onNavigate }) {
         .app.dark input[type='datetime-local'] { background: #3A3050; border-color: #3A3050; color: var(--ink, #F5E8EA); }
       `}</style>
 
-      <FloatingLayer />
-
       <div className="home-wrap">
         {/* ════════ HERO BANNER ════════ */}
         <div className="home-banner">
-          {/* Avatars + Heart */}
-          {/* Floating particle hearts */}
-          <ParticleField />
-          <FloatingHearts />
 
           {/* Avatar row: single avatar if no partner, pair if connected */}
           {hasPartner ? (
@@ -1281,13 +946,12 @@ export default function Home({ session, profile, onNavigate }) {
           {time && hasStartDate ? (
             <OrbitalRing progress={anniv.progress}>
             <div style={{
-              background: 'rgba(0,0,0,0.28)',
-              backdropFilter: 'blur(28px)',
-              WebkitBackdropFilter: 'blur(28px)',
-              border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: 36,
-              padding: '28px 44px 20px',
-              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.1), 0 12px 40px rgba(0,0,0,0.4)',
+              background: 'rgba(0,0,0,0.3)',
+              backdropFilter: 'blur(24px)',
+              WebkitBackdropFilter: 'blur(24px)',
+              border: '0.5px solid rgba(255,255,255,0.08)',
+              borderRadius: 28,
+              padding: '24px 40px 18px',
             }}>
             <div className="day-counter">
               <div className="day-number">
@@ -1330,30 +994,29 @@ export default function Home({ session, profile, onNavigate }) {
             </OrbitalRing>
           ) : (
             <div style={{
-              background: 'rgba(0,0,0,0.28)',
-              backdropFilter: 'blur(28px)',
-              border: '1px solid rgba(255,255,255,0.15)',
-              borderRadius: 28,
-              padding: '24px 32px',
+              background: 'rgba(0,0,0,0.3)',
+              backdropFilter: 'blur(20px)',
+              border: '0.5px solid rgba(255,255,255,0.08)',
+              borderRadius: 20,
+              padding: '24px 28px',
               textAlign: 'center',
-              color: 'rgba(255,255,255,0.7)',
+              color: 'rgba(255,255,255,0.6)',
               marginTop: 8,
             }}>
               {!hasPartner ? (
                 <>
-                  <div style={{ fontSize: 28, marginBottom: 8 }}>💑</div>
-                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, color: 'white', marginBottom: 6 }}>
+                  <div style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 17, fontWeight: 400, color: 'rgba(255,255,255,0.75)', marginBottom: 6 }}>
                     Партнёр не подключён
                   </div>
-                  <div style={{ fontSize: 13, opacity: 0.7, marginBottom: 14 }}>
+                  <div style={{ fontSize: 13, fontWeight: 300, color: 'rgba(255,255,255,0.4)', marginBottom: 16, lineHeight: 1.5 }}>
                     Пригласите партнёра, чтобы начать
                   </div>
                   <button
                     onClick={() => onNavigate?.('settings')}
                     style={{
-                      background: 'rgba(200,51,74,0.8)', border: 'none', borderRadius: 14,
-                      padding: '10px 22px', color: 'white', fontSize: 14,
-                      fontFamily: 'var(--font-body)', fontWeight: 600, cursor: 'pointer',
+                      background: 'rgba(168,40,60,0.7)', border: '0.5px solid rgba(168,40,60,0.4)', borderRadius: 10,
+                      padding: '9px 20px', color: 'white', fontSize: 13,
+                      fontFamily: 'var(--font-body)', fontWeight: 400, cursor: 'pointer',
                     }}
                   >
                     Пригласить в настройках
@@ -1361,19 +1024,18 @@ export default function Home({ session, profile, onNavigate }) {
                 </>
               ) : (
                 <>
-                  <div style={{ fontSize: 28, marginBottom: 8 }}>📅</div>
-                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, color: 'white', marginBottom: 6 }}>
+                  <div style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 17, fontWeight: 400, color: 'rgba(255,255,255,0.75)', marginBottom: 6 }}>
                     Дата отношений не указана
                   </div>
-                  <div style={{ fontSize: 13, opacity: 0.7, marginBottom: 14 }}>
+                  <div style={{ fontSize: 13, fontWeight: 300, color: 'rgba(255,255,255,0.4)', marginBottom: 16, lineHeight: 1.5 }}>
                     Укажите дату начала отношений в настройках
                   </div>
                   <button
                     onClick={() => onNavigate?.('settings')}
                     style={{
-                      background: 'rgba(200,51,74,0.8)', border: 'none', borderRadius: 14,
-                      padding: '10px 22px', color: 'white', fontSize: 14,
-                      fontFamily: 'var(--font-body)', fontWeight: 600, cursor: 'pointer',
+                      background: 'rgba(168,40,60,0.7)', border: '0.5px solid rgba(168,40,60,0.4)', borderRadius: 10,
+                      padding: '9px 20px', color: 'white', fontSize: 13,
+                      fontFamily: 'var(--font-body)', fontWeight: 400, cursor: 'pointer',
                     }}
                   >
                     Указать дату

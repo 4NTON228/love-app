@@ -2,111 +2,71 @@ import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 
 const STYLE = `
-  .auth-bg::before {
-    content:''; position:absolute; width:300px; height:300px; border-radius:50%;
-    background:radial-gradient(circle,rgba(255,255,255,0.12) 0%,transparent 70%);
-    top:-80px; right:-80px; animation:pulse 4s ease-in-out infinite; pointer-events:none;
+  .auth-tabs {
+    display:flex; gap:0; margin-bottom:24px;
+    background:rgba(255,255,255,0.05); border-radius:10px; padding:3px;
   }
-  .auth-bg::after {
-    content:''; position:absolute; width:200px; height:200px; border-radius:50%;
-    background:radial-gradient(circle,rgba(255,255,255,0.08) 0%,transparent 70%);
-    bottom:-50px; left:-50px; animation:pulse 5s ease-in-out 1s infinite; pointer-events:none;
-  }
-  .auth-card {
-    width:100%; max-width:340px;
-    background:rgba(255,255,255,0.15); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
-    border:0.5px solid rgba(255,255,255,0.3); border-radius:24px;
-    padding:32px 24px 28px; box-shadow:0 8px 40px rgba(139,26,44,0.3);
-    position:relative; z-index:1;
-  }
-  .auth-title {
-    font-family:var(--font-display); font-size:34px; font-weight:600;
-    color:white; text-align:center; margin-bottom:4px; font-style:italic;
-  }
-  .auth-subtitle { font-size:14px; color:rgba(255,255,255,0.75); text-align:center; margin-bottom:20px; }
-  .auth-tabs { display:flex; gap:0; margin-bottom:20px; background:rgba(0,0,0,0.2); border-radius:12px; padding:3px; }
   .auth-tab {
-    flex:1; padding:9px; border:none; background:transparent; color:rgba(255,255,255,0.6);
-    font-family:var(--font-body); font-size:14px; font-weight:500; cursor:pointer;
-    border-radius:10px; transition:all 0.2s;
+    flex:1; padding:9px; border:none; background:transparent;
+    color:rgba(255,255,255,0.35);
+    font-family:var(--font-body); font-size:13px; font-weight:400; cursor:pointer;
+    border-radius:8px; transition:all 0.2s;
   }
-  .auth-tab.active { background:rgba(255,255,255,0.2); color:white; }
-  .auth-field { margin-bottom:14px; }
-  .auth-label {
-    display:block; font-size:12px; font-weight:500; color:rgba(255,255,255,0.8);
-    letter-spacing:0.5px; text-transform:uppercase; margin-bottom:6px;
+  .auth-tab.active {
+    background:rgba(255,255,255,0.09);
+    color:rgba(237,233,226,0.9);
   }
-  .auth-input {
-    width:100%; background:rgba(255,255,255,0.15); backdrop-filter:blur(10px);
-    border:0.5px solid rgba(255,255,255,0.25); border-radius:14px;
-    padding:13px 16px; font-size:15px; color:white; outline:none;
-    transition:border-color 0.2s,box-shadow 0.2s;
-  }
-  .auth-input::placeholder { color:rgba(255,255,255,0.4); }
-  .auth-input:focus { border-color:rgba(255,255,255,0.6); box-shadow:0 0 0 3px rgba(255,255,255,0.12); }
-  .auth-error {
-    background:rgba(255,100,100,0.15); border:0.5px solid rgba(255,100,100,0.4);
-    border-radius:12px; padding:10px 14px; font-size:13px; color:#FFB3B3;
-    margin-bottom:14px; text-align:center;
-  }
-  .auth-success {
-    background:rgba(100,255,150,0.12); border:0.5px solid rgba(100,255,150,0.3);
-    border-radius:12px; padding:12px 14px; font-size:13px; color:#B3FFD0;
-    margin-bottom:14px; text-align:center; line-height:1.5;
-  }
-  .auth-btn {
-    width:100%; background:white; color:#C8334A; border:none; border-radius:14px;
-    padding:14px; font-size:15px; font-weight:600; cursor:pointer;
-    margin-top:8px; transition:transform 0.15s,opacity 0.15s;
-    box-shadow:0 4px 20px rgba(0,0,0,0.15);
-  }
-  .auth-btn:active { transform:scale(0.97); opacity:0.92; }
-  .auth-btn:disabled { opacity:0.7; }
   .auth-btn-google {
-    width:100%; background:rgba(255,255,255,0.12); color:white;
-    border:0.5px solid rgba(255,255,255,0.3); border-radius:14px;
-    padding:13px; font-size:14px; font-weight:500; cursor:pointer;
+    width:100%; background:rgba(255,255,255,0.06); color:rgba(237,233,226,0.75);
+    border:0.5px solid rgba(255,255,255,0.1); border-radius:12px;
+    padding:13px; font-size:13px; font-weight:400; cursor:pointer;
     margin-top:10px; display:flex; align-items:center; justify-content:center; gap:10px;
     transition:background 0.2s;
   }
-  .auth-btn-google:hover { background:rgba(255,255,255,0.2); }
+  .auth-btn-google:hover { background:rgba(255,255,255,0.1); }
   .auth-btn-vk {
-    width:100%; background:#0077FF; color:white;
-    border:none; border-radius:14px;
-    padding:13px; font-size:14px; font-weight:600; cursor:pointer;
+    width:100%; background:rgba(0,119,255,0.18); color:rgba(180,210,255,0.9);
+    border:0.5px solid rgba(0,119,255,0.25); border-radius:12px;
+    padding:13px; font-size:13px; font-weight:400; cursor:pointer;
     margin-top:10px; display:flex; align-items:center; justify-content:center; gap:10px;
     transition:opacity 0.2s;
   }
-  .auth-btn-vk:hover { opacity:0.9; }
+  .auth-btn-vk:hover { opacity:0.85; }
   .auth-divider {
     display:flex; align-items:center; gap:10px; margin:14px 0 6px;
-    color:rgba(255,255,255,0.35); font-size:12px;
+    color:rgba(255,255,255,0.2); font-size:11px; letter-spacing:0.5px;
   }
   .auth-divider::before,.auth-divider::after {
-    content:''; flex:1; height:0.5px; background:rgba(255,255,255,0.2);
+    content:''; flex:1; height:0.5px; background:rgba(255,255,255,0.08);
   }
   .auth-link {
-    background:none; border:none; color:rgba(255,255,255,0.7);
-    font-size:13px; cursor:pointer; text-decoration:underline;
+    background:none; border:none; color:rgba(255,255,255,0.35);
+    font-size:12px; cursor:pointer; text-decoration:none;
     padding:0; margin-top:14px; display:block; text-align:center; width:100%;
+    transition:color 0.2s;
   }
-  .auth-link:hover { color:white; }
+  .auth-link:hover { color:rgba(255,255,255,0.6); }
+  .auth-success {
+    background:rgba(50,160,90,0.1); border:0.5px solid rgba(50,160,90,0.25);
+    border-radius:10px; padding:12px 14px; font-size:13px;
+    color:rgba(160,220,180,0.9);
+    margin-bottom:12px; text-align:center; line-height:1.5;
+  }
   .auth-consent {
-    display:flex; align-items:flex-start; gap:10px; margin:12px 0 4px;
-    cursor:pointer;
+    display:flex; align-items:flex-start; gap:10px; margin:12px 0 4px; cursor:pointer;
   }
   .auth-consent input[type="checkbox"] {
-    width:18px; height:18px; min-width:18px; margin-top:1px; cursor:pointer;
-    accent-color:#E8556A;
+    width:16px; height:16px; min-width:16px; margin-top:2px; cursor:pointer;
+    accent-color:#A8283C;
   }
   .auth-consent-text {
-    font-size:12px; color:rgba(255,255,255,0.7); line-height:1.5;
+    font-size:11px; color:rgba(255,255,255,0.3); line-height:1.6;
   }
-  .auth-consent-text a { color:rgba(255,255,255,0.9); text-decoration:underline; }
+  .auth-consent-text a { color:rgba(255,255,255,0.5); text-decoration:underline; }
 `
 
 export default function Auth() {
-  const [tab, setTab] = useState('login') // 'login' | 'register' | 'reset'
+  const [tab, setTab] = useState('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
@@ -135,9 +95,7 @@ export default function Auth() {
     setLoading(true)
     const { error } = await supabase.auth.signUp({
       email, password,
-      options: {
-        emailRedirectTo: window.location.origin,
-      }
+      options: { emailRedirectTo: window.location.origin }
     })
     if (error) setError(error.message)
     else setSuccess('Письмо с подтверждением отправлено на ' + email + '. Проверьте почту (и папку «Спам»).')
@@ -156,7 +114,6 @@ export default function Auth() {
 
   function handleVK() {
     reset()
-    // Редирект на Edge Function → она редиректит на VK OAuth
     const vkAuthUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/vk-auth?action=login`
     window.location.href = vkAuthUrl
   }
@@ -171,13 +128,13 @@ export default function Auth() {
   }
 
   const VKIcon = () => (
-    <svg width="20" height="12" viewBox="0 0 20 12" fill="white">
+    <svg width="20" height="12" viewBox="0 0 20 12" fill="rgba(180,210,255,0.8)">
       <path d="M10.6 12c-5.9 0-9.3-4-9.4-10.7H4c.1 4.9 2.2 7 3.9 7.4V1.3h2.8v4.3c1.7-.2 3.5-2.2 4.1-4.3H17c-.5 2.6-2.3 4.6-3.7 5.4 1.4.7 3.4 2.4 4.2 5.3h-3.1c-.6-1.9-2.1-3.4-4.1-3.6V12h-.7z"/>
     </svg>
   )
 
   const GoogleIcon = () => (
-    <svg width="18" height="18" viewBox="0 0 48 48">
+    <svg width="16" height="16" viewBox="0 0 48 48">
       <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
       <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
       <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
@@ -189,27 +146,38 @@ export default function Auth() {
     <div className="auth-bg">
       <style>{STYLE}</style>
 
-      <div className="auth-logo-wrap" style={{ marginBottom: 24, animation: 'heartbeat 1.5s ease-in-out infinite' }}>
-        <svg viewBox="0 0 60 56" width="64" height="60" fill="none">
-          <path d="M30 52C30 52 3 35 3 16C3 8 9.5 2 18 2C22.5 2 26.5 4.5 30 9C33.5 4.5 37.5 2 42 2C50.5 2 57 8 57 16C57 35 30 52 30 52Z"
-            fill="rgba(255,255,255,0.9)" />
-        </svg>
+      {/* Wordmark — no heartbeat, no decoration */}
+      <div className="auth-logo-wrap">
+        <div style={{
+          fontFamily: 'var(--font-display)',
+          fontSize: 13,
+          fontWeight: 400,
+          letterSpacing: 4,
+          textTransform: 'uppercase',
+          color: 'rgba(237,233,226,0.35)',
+        }}>
+          Love App
+        </div>
       </div>
 
       <div className="auth-card">
-        <h1 className="auth-title">Love App</h1>
+        <h1 className="auth-title">
+          {tab === 'reset' ? 'Восстановление' : 'Добро пожаловать'}
+        </h1>
         <p className="auth-subtitle">
-          {tab === 'reset' ? 'Восстановление пароля' : 'Наша история любви'}
+          {tab === 'reset' ? 'Укажите ваш email' : 'Ваша личная история'}
         </p>
 
         {tab !== 'reset' && (
           <div className="auth-tabs">
-            <button className={`auth-tab ${tab === 'login' ? 'active' : ''}`} onClick={() => { setTab('login'); reset() }}>Вход</button>
-            <button className={`auth-tab ${tab === 'register' ? 'active' : ''}`} onClick={() => { setTab('register'); reset() }}>Регистрация</button>
+            <button className={`auth-tab${tab === 'login' ? ' active' : ''}`}
+              onClick={() => { setTab('login'); reset() }}>Вход</button>
+            <button className={`auth-tab${tab === 'register' ? ' active' : ''}`}
+              onClick={() => { setTab('register'); reset() }}>Регистрация</button>
           </div>
         )}
 
-        {error && <div className="auth-error">{error}</div>}
+        {error   && <div className="auth-error">{error}</div>}
         {success && <div className="auth-success">{success}</div>}
 
         {/* LOGIN */}
@@ -226,7 +194,7 @@ export default function Auth() {
                 value={password} onChange={e => setPassword(e.target.value)} required autoComplete="current-password" />
             </div>
             <button className="auth-btn" type="submit" disabled={loading}>
-              {loading ? 'Входим...' : 'Войти'}
+              {loading ? 'Входим…' : 'Войти'}
             </button>
             <div className="auth-divider">или</div>
             <button type="button" className="auth-btn-vk" onClick={handleVK}>
@@ -260,7 +228,7 @@ export default function Auth() {
                 value={confirm} onChange={e => setConfirm(e.target.value)} required autoComplete="new-password" />
             </div>
             <button className="auth-btn" type="submit" disabled={loading || !consent}>
-              {loading ? 'Создаём аккаунт...' : 'Создать аккаунт'}
+              {loading ? 'Создаём аккаунт…' : 'Создать аккаунт'}
             </button>
             <div className="auth-divider">или</div>
             <button type="button" className="auth-btn-vk" onClick={handleVK}>
@@ -272,7 +240,10 @@ export default function Auth() {
             <label className="auth-consent">
               <input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} />
               <span className="auth-consent-text">
-                Регистрируясь, я принимаю <a href="/privacy.html" target="_blank" rel="noopener noreferrer">Политику конфиденциальности</a> и <a href="/terms.html" target="_blank" rel="noopener noreferrer">Условия использования</a>, и даю согласие на обработку персональных данных
+                Регистрируясь, я принимаю{' '}
+                <a href="/privacy.html" target="_blank" rel="noopener noreferrer">Политику конфиденциальности</a>{' '}
+                и <a href="/terms.html" target="_blank" rel="noopener noreferrer">Условия использования</a>,
+                и даю согласие на обработку персональных данных
               </span>
             </label>
           </form>
@@ -287,7 +258,7 @@ export default function Auth() {
                 value={email} onChange={e => setEmail(e.target.value)} required autoComplete="email" />
             </div>
             <button className="auth-btn" type="submit" disabled={loading}>
-              {loading ? 'Отправляем...' : 'Отправить письмо'}
+              {loading ? 'Отправляем…' : 'Отправить письмо'}
             </button>
             <button type="button" className="auth-link" onClick={() => { setTab('login'); reset() }}>
               Вернуться ко входу

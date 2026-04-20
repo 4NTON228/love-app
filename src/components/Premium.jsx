@@ -74,149 +74,138 @@ export default function Premium({ session }) {
   }
 
   return (
-    <div style={{ minHeight: '100dvh', background: 'var(--page-bg,#FBF0F2)', paddingBottom: 100 }}>
+    <div style={{ minHeight: '100dvh', background: 'var(--bg,#F6F3EE)', paddingBottom: 100 }}>
       <style>{`
         /* ── Hero ── */
         .pm-hero {
-          background: linear-gradient(175deg, #080206 0%, #1A0610 35%, #3D0E1C 65%, #1A0610 100%);
-          padding: 64px 24px 48px;
+          background: linear-gradient(170deg, #0C0B09 0%, #151210 40%, #1C1510 100%);
+          padding: 60px 24px 44px;
           text-align: center;
           position: relative;
           overflow: hidden;
         }
         .pm-hero::before {
           content:'';
-          position:absolute; top:-80px; left:50%; transform:translateX(-50%);
-          width:380px; height:380px;
-          background:radial-gradient(ellipse, rgba(200,51,74,0.28) 0%, transparent 65%);
-          pointer-events:none;
-        }
-        .pm-hero::after {
-          content:'';
-          position:absolute; bottom:-40px; right:-40px;
-          width:200px; height:200px;
-          background:radial-gradient(ellipse, rgba(140,20,50,0.18) 0%, transparent 65%);
+          position:absolute; top:-60px; left:50%; transform:translateX(-50%);
+          width:300px; height:300px;
+          background:radial-gradient(ellipse, rgba(168,40,60,0.15) 0%, transparent 65%);
           pointer-events:none;
         }
         .pm-crown {
           display:inline-flex; align-items:center; justify-content:center;
-          width:56px; height:56px; border-radius:50%;
-          background:linear-gradient(135deg,rgba(200,51,74,0.25),rgba(120,10,40,0.4));
-          border:0.5px solid rgba(200,51,74,0.35);
-          margin-bottom:18px; position:relative;
+          width:48px; height:48px; border-radius:50%;
+          background:rgba(168,40,60,0.1);
+          border:0.5px solid rgba(168,40,60,0.2);
+          margin-bottom:16px; position:relative;
         }
         .pm-hero-title {
           font-family:var(--font-display,'Cormorant Garamond',Georgia,serif);
-          font-size:38px; font-style:italic; font-weight:600;
-          color:white; line-height:1.15; margin-bottom:10px; position:relative;
+          font-size:34px; font-style:italic; font-weight:300;
+          color:rgba(237,233,226,0.9); line-height:1.2; margin-bottom:10px; position:relative;
         }
-        .pm-hero-title span { color:rgba(255,140,160,0.9); }
+        .pm-hero-title span { color:rgba(207,85,104,0.9); }
         .pm-hero-sub {
-          font-size:14px; color:rgba(255,255,255,0.45);
-          letter-spacing:0.3px; position:relative;
+          font-size:13px; color:rgba(255,255,255,0.3);
+          letter-spacing:0.3px; position:relative; font-weight:300;
         }
         /* ── Active banner ── */
         .pm-active {
           margin:16px 16px 0;
-          background:linear-gradient(135deg,rgba(30,140,70,0.12),rgba(20,100,50,0.08));
-          border:0.5px solid rgba(50,180,90,0.3);
-          border-radius:18px; padding:16px 18px;
+          background:rgba(50,160,90,0.06);
+          border:0.5px solid rgba(50,160,90,0.2);
+          border-radius:14px; padding:14px 16px;
           display:flex; align-items:center; gap:12px;
         }
         .pm-active-dot {
-          width:10px; height:10px; border-radius:50%; background:#32C864;
-          box-shadow:0 0 8px rgba(50,200,100,0.6); flex-shrink:0;
+          width:8px; height:8px; border-radius:50%; background:#32C864; flex-shrink:0;
         }
         /* ── Section ── */
         .pm-section { padding:28px 16px 0; }
         .pm-label {
-          font-size:11px; font-weight:700; letter-spacing:1.5px;
-          color:rgba(200,51,74,0.7); text-transform:uppercase; margin-bottom:16px;
+          font-size:10px; font-weight:500; letter-spacing:1.2px;
+          color:var(--muted); text-transform:uppercase; margin-bottom:14px;
         }
         /* ── Feature cards ── */
-        .pm-features { display:flex; flex-direction:column; gap:2px; }
+        .pm-features { display:flex; flex-direction:column; gap:1px; }
         .pm-feat {
           display:flex; align-items:center; gap:14px;
           padding:14px 16px;
-          background:white;
-          border-bottom:0.5px solid rgba(200,51,74,0.06);
+          background:var(--surface,#fff);
+          border-bottom:0.5px solid var(--border,rgba(0,0,0,0.06));
         }
-        .pm-feat:first-child { border-radius:18px 18px 0 0; }
-        .pm-feat:last-child  { border-radius:0 0 18px 18px; border-bottom:none; }
-        .app.dark .pm-feat { background:#1E0A10; border-bottom-color:rgba(200,51,74,0.1); }
+        .pm-feat:first-child { border-radius:14px 14px 0 0; }
+        .pm-feat:last-child  { border-radius:0 0 14px 14px; border-bottom:none; }
         .pm-feat-icon {
-          width:38px; height:38px; border-radius:10px; flex-shrink:0;
-          background:linear-gradient(135deg,rgba(200,51,74,0.1),rgba(200,51,74,0.05));
-          border:0.5px solid rgba(200,51,74,0.15);
+          width:36px; height:36px; border-radius:10px; flex-shrink:0;
+          background:rgba(168,40,60,0.07);
+          border:0.5px solid rgba(168,40,60,0.1);
           display:flex; align-items:center; justify-content:center;
-          color:#C8334A;
+          color:var(--rose,#A8283C);
         }
-        .pm-feat-title { font-size:14px; font-weight:600; color:var(--text,#1C0A0E); margin-bottom:2px; }
-        .pm-feat-desc  { font-size:12px; color:var(--text-muted,#9A6070); line-height:1.4; }
+        .pm-feat-title { font-size:14px; font-weight:500; color:var(--text); margin-bottom:2px; }
+        .pm-feat-desc  { font-size:12px; color:var(--text-muted); line-height:1.4; font-weight:300; }
         /* ── Plans ── */
         .pm-plans { display:flex; gap:10px; padding:0 16px; }
         .pm-plan {
-          flex:1; border-radius:20px; padding:20px 14px; cursor:pointer;
-          border:1.5px solid rgba(200,51,74,0.12);
-          background:white; text-align:center;
-          transition:border-color 0.2s, box-shadow 0.2s;
+          flex:1; border-radius:16px; padding:20px 12px; cursor:pointer;
+          border:0.5px solid var(--border,rgba(0,0,0,0.07));
+          background:var(--surface,#fff); text-align:center;
+          transition:border-color 0.2s;
           position:relative;
         }
-        .app.dark .pm-plan { background:#1E0A10; }
         .pm-plan.sel {
-          border-color:#C8334A;
-          box-shadow:0 0 0 3px rgba(200,51,74,0.1);
+          border-color:var(--rose,#A8283C);
+          background:rgba(168,40,60,0.03);
         }
         .pm-plan-badge {
           position:absolute; top:-10px; left:50%; transform:translateX(-50%);
-          background:linear-gradient(135deg,#C8334A,#8B1A2C);
-          color:white; font-size:9px; font-weight:800; letter-spacing:0.5px;
+          background:var(--rose,#A8283C);
+          color:white; font-size:9px; font-weight:600; letter-spacing:0.5px;
           padding:3px 10px; border-radius:20px; white-space:nowrap; text-transform:uppercase;
         }
-        .pm-plan-label { font-size:12px; color:var(--text-muted,#9A6070); margin-bottom:8px; font-weight:500; }
+        .pm-plan-label { font-size:11px; color:var(--text-muted); margin-bottom:8px; font-weight:400; }
         .pm-plan-price {
           font-family:var(--font-display,'Cormorant Garamond',Georgia,serif);
-          font-size:30px; font-weight:700; color:var(--text,#1C0A0E);
+          font-size:28px; font-weight:400; color:var(--text);
           line-height:1; margin-bottom:2px;
         }
-        .pm-plan-price sup { font-size:14px; font-weight:500; vertical-align:top; margin-top:6px; }
-        .pm-plan-per { font-size:11px; color:#C8334A; font-weight:600; margin-top:5px; }
-        .pm-plan-save { font-size:10px; color:var(--text-muted,#9A6070); margin-top:2px; }
+        .pm-plan-price sup { font-size:13px; font-weight:400; vertical-align:top; margin-top:5px; }
+        .pm-plan-per { font-size:11px; color:var(--rose,#A8283C); font-weight:400; margin-top:5px; }
+        .pm-plan-save { font-size:10px; color:var(--text-muted); margin-top:2px; font-weight:300; }
         /* ── CTA ── */
         .pm-cta { padding:20px 16px 0; }
         .pm-btn {
-          width:100%; padding:17px; border:none; border-radius:18px;
-          font-size:15px; font-weight:700; letter-spacing:0.4px;
-          background:linear-gradient(135deg, #C8334A 0%, #8B1A2C 100%);
+          width:100%; padding:15px; border:none; border-radius:14px;
+          font-size:15px; font-weight:500; letter-spacing:0.2px;
+          background:var(--rose,#A8283C);
           color:white; cursor:pointer;
-          box-shadow:0 10px 40px rgba(200,51,74,0.3), inset 0 1px 0 rgba(255,255,255,0.15);
           transition:opacity 0.2s, transform 0.15s;
         }
-        .pm-btn:active { transform:scale(0.98); opacity:0.95; }
-        .pm-btn:disabled { opacity:0.55; }
+        .pm-btn:active { transform:scale(0.98); opacity:0.9; }
+        .pm-btn:disabled { opacity:0.5; }
         .pm-note {
-          text-align:center; font-size:11px; color:#B0808C;
-          margin-top:14px; line-height:1.7;
+          text-align:center; font-size:11px; color:var(--muted);
+          margin-top:14px; line-height:1.7; font-weight:300;
         }
         .pm-error {
-          margin:12px 0 0; background:rgba(200,30,30,0.07);
-          border:0.5px solid rgba(200,30,30,0.25); border-radius:12px;
+          margin:12px 0 0; background:rgba(200,30,30,0.06);
+          border:0.5px solid rgba(200,30,30,0.2); border-radius:10px;
           padding:10px 14px; font-size:13px; color:#A03030; text-align:center;
         }
         .pm-divider {
           display:flex; align-items:center; gap:12px;
-          padding:0 16px; margin-top:28px; margin-bottom:4px;
+          padding:0 16px; margin-top:24px; margin-bottom:4px;
         }
         .pm-divider::before, .pm-divider::after {
-          content:''; flex:1; height:0.5px; background:rgba(200,51,74,0.12);
+          content:''; flex:1; height:0.5px; background:var(--border,rgba(0,0,0,0.07));
         }
-        .pm-divider-text { font-size:10px; color:rgba(200,51,74,0.5); letter-spacing:1px; text-transform:uppercase; white-space:nowrap; }
+        .pm-divider-text { font-size:10px; color:var(--muted); letter-spacing:1px; text-transform:uppercase; white-space:nowrap; }
       `}</style>
 
       {/* Hero */}
       <div className="pm-hero">
         <div className="pm-crown">
-          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="rgba(255,140,160,0.9)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="rgba(207,85,104,0.8)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
           </svg>
         </div>

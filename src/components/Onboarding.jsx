@@ -276,7 +276,7 @@ function StepRelationship({ value, onChange, onNext, onSkip }) {
 }
 
 /* ── Шаг 5: Подключение партнёра ── */
-function StepPartner({ session, inviteCode, partnerAlreadyLinked, onFinish }) {
+function StepPartner({ session, inviteCode, partnerAlreadyLinked, pendingInvite, onFinish }) {
   const [mode, setMode] = useState('invite')  // 'invite' | 'enter'
   const [code, setCode] = useState('')
   const [qrUrl, setQrUrl] = useState(null)
@@ -285,6 +285,27 @@ function StepPartner({ session, inviteCode, partnerAlreadyLinked, onFinish }) {
   const [connecting, setConnecting] = useState(false)
   const [error, setError] = useState(null)
   const [copied, setCopied] = useState(false)
+  const [autoPhase, setAutoPhase] = useState(pendingInvite ? 'connecting' : null)
+  const [autoRetry, setAutoRetry] = useState(0)
+
+  // Auto-connect when arriving via invite link — awaited, not fire-and-forget
+  useEffect(() => {
+    if (!pendingInvite) return
+    let cancelled = false
+    setAutoPhase('connecting')
+    ;(async () => {
+      const { data, error: rpcErr } = await supabase
+        .rpc('connect_partner_by_invite', { p_invite_code: pendingInvite.trim().toLowerCase() })
+      if (cancelled) return
+      if (!rpcErr && !data?.error) {
+        localStorage.removeItem('pendingInvite')
+        setAutoPhase('success')
+      } else {
+        setAutoPhase('error')
+      }
+    })()
+    return () => { cancelled = true }
+  }, [pendingInvite, autoRetry])
 
   const inviteLink = `${window.location.origin}/?invite=${inviteCode}`
 
@@ -326,6 +347,70 @@ function StepPartner({ session, inviteCode, partnerAlreadyLinked, onFinish }) {
       return
     }
     onFinish()
+  }
+
+  if (pendingInvite && autoPhase === 'connecting') {
+    return (
+      <div style={{ textAlign: 'center', paddingTop: 60 }}>
+        <div style={{
+          width: 48, height: 48, margin: '0 auto 24px',
+          border: '3px solid rgba(200,51,74,0.2)', borderTopColor: '#C8334A',
+          borderRadius: '50%', animation: 'spin 0.8s linear infinite',
+        }} />
+        <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 24, color: 'var(--text)', marginBottom: 8 }}>
+          Подключаем партнёра...
+        </h2>
+        <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>Устанавливаем связь</p>
+      </div>
+    )
+  }
+
+  if (pendingInvite && autoPhase === 'success') {
+    return (
+      <div style={{ textAlign: 'center', paddingTop: 20 }}>
+        <div style={{ marginBottom: 16 }}>
+          <svg viewBox="0 0 60 56" width="70" height="65" fill="none">
+            <path d="M30 52C30 52 3 35 3 16C3 8 9.5 2 18 2C22.5 2 26.5 4.5 30 9C33.5 4.5 37.5 2 42 2C50.5 2 57 8 57 16C57 35 30 52 30 52Z" fill="#C8334A"/>
+          </svg>
+        </div>
+        <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 26, color: 'var(--text)', marginBottom: 8 }}>
+          Партнёр подключён!
+        </h2>
+        <p style={{ color: 'var(--text-muted)', marginBottom: 32 }}>Всё готово к использованию</p>
+        <NextBtn onClick={onFinish} label="Открыть приложение →" />
+      </div>
+    )
+  }
+
+  if (pendingInvite && autoPhase === 'error') {
+    return (
+      <div style={{ textAlign: 'center', paddingTop: 40 }}>
+        <div style={{ fontSize: 48, marginBottom: 16 }}>⚠️</div>
+        <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 24, color: 'var(--text)', marginBottom: 8 }}>
+          Не удалось подключиться
+        </h2>
+        <p style={{ color: 'var(--text-muted)', fontSize: 14, marginBottom: 28 }}>
+          Возможно, приглашение уже использовано или истекло
+        </p>
+        <button
+          onClick={() => setAutoRetry(k => k + 1)}
+          style={{
+            width: '100%', padding: '13px', border: 'none', borderRadius: 16,
+            background: 'linear-gradient(135deg,#C8334A,#8B1A2C)',
+            color: 'white', fontSize: 16, fontWeight: 700, cursor: 'pointer',
+            boxShadow: '0 6px 24px rgba(200,51,74,0.35)', marginBottom: 12,
+          }}
+        >
+          Попробовать снова
+        </button>
+        <button onClick={onFinish} style={{
+          width: '100%', padding: 12, border: 'none',
+          background: 'none', color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer',
+        }}>
+          Пропустить — подключу партнёра позже
+        </button>
+      </div>
+    )
   }
 
   if (partnerAlreadyLinked) {
@@ -505,6 +590,7 @@ export default function Onboarding({ session, onComplete, onSignOut }) {
   const [inviteCode, setInviteCode] = useState(null)
   const [partnerLinked, setPartnerLinked] = useState(false)
   const [_saving, setSaving] = useState(false)
+  const [pendingInvite] = useState(() => localStorage.getItem('pendingInvite'))
 
   /* Загружаем текущий профиль (может быть частично заполнен) */
   useEffect(() => {
@@ -570,13 +656,6 @@ export default function Onboarding({ session, onComplete, onSignOut }) {
 
   function finish() {
     localStorage.setItem(`ob_done_${session.user.id}`, '1')
-    // Attempt pending invite (covers case where user followed invite link → OAuth → onboarding)
-    const pendingInvite = localStorage.getItem('pendingInvite')
-    if (pendingInvite) {
-      supabase
-        .rpc('connect_partner_by_invite', { p_invite_code: pendingInvite.trim().toLowerCase() })
-        .then(({ error }) => { if (!error) localStorage.removeItem('pendingInvite') })
-    }
     onComplete()
     supabase.from('profiles').upsert(
       { id: session.user.id, onboarding_done: true },
@@ -657,6 +736,7 @@ export default function Onboarding({ session, onComplete, onSignOut }) {
             session={session}
             inviteCode={inviteCode}
             partnerAlreadyLinked={partnerLinked}
+            pendingInvite={pendingInvite}
             onFinish={finish}
           />
         )}

@@ -236,10 +236,10 @@ function AvatarRing({ src, name, birthday, onClick }) {
       </div>
       <span style={{
         fontFamily: 'var(--font-body)',
-        fontSize: 12,
-        fontWeight: 700,
-        color: 'white',
-        textShadow: '0 1px 4px rgba(0,0,0,0.5)',
+        fontSize: 11,
+        fontWeight: 400,
+        color: 'rgba(255,255,255,0.8)',
+        letterSpacing: 0.3,
       }}>
         {name}
       </span>
@@ -247,9 +247,10 @@ function AvatarRing({ src, name, birthday, onClick }) {
         <span style={{
           fontFamily: 'var(--font-body)',
           fontSize: 10,
-          color: 'rgba(255,255,255,0.65)',
-          textShadow: '0 1px 3px rgba(0,0,0,0.4)',
-          marginTop: -4,
+          fontWeight: 300,
+          color: 'rgba(255,255,255,0.4)',
+          letterSpacing: 0.2,
+          marginTop: -3,
         }}>
           {formatBirthday(birthday)}
         </span>
@@ -321,7 +322,7 @@ function PartnerCard({ profile, onClose }) {
           }
         </div>
 
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, color: 'white', marginBottom: 4 }}>
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 300, fontStyle: 'italic', color: 'rgba(237,233,226,0.9)', marginBottom: 4 }}>
           {profile.name || 'Партнёр'}
         </div>
 
@@ -334,14 +335,15 @@ function PartnerCard({ profile, onClose }) {
         {zodiac && (
           <div style={{
             display: 'inline-block',
-            background: 'rgba(200,51,74,0.15)',
-            border: '1px solid rgba(200,51,74,0.3)',
+            background: 'rgba(168,40,60,0.1)',
+            border: '0.5px solid rgba(168,40,60,0.25)',
             borderRadius: 20,
-            padding: '6px 18px',
+            padding: '5px 16px',
             fontFamily: 'var(--font-body)',
-            fontSize: 13,
-            fontWeight: 600,
-            color: 'var(--rose-light, #E8556A)',
+            fontSize: 12,
+            fontWeight: 400,
+            color: 'rgba(207,85,104,0.9)',
+            letterSpacing: 0.3,
           }}>
             {zodiac}
           </div>

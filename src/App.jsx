@@ -114,7 +114,8 @@ export default function App() {
     const { data } = await supabase.from('profiles').select('*').eq('id', userId).single()
     setProfile(data)
 
-    // Принимаем pending invite после входа — очищаем только при успехе
+    // Принимаем pending invite для уже прошедших онбординг пользователей.
+    // Для новых пользователей это handled в StepPartner во время онбординга.
     const pendingInvite = localStorage.getItem('pendingInvite')
     if (pendingInvite && data && !data.partner_id) {
       try {
@@ -124,9 +125,9 @@ export default function App() {
           localStorage.removeItem('pendingInvite')
           const { data: updated } = await supabase.from('profiles').select('*').eq('id', userId).single()
           setProfile(updated)
-          return
+        } else {
+          console.warn('Pending invite connect failed:', rpcErr?.message ?? rpcResult?.error)
         }
-        console.warn('Pending invite connect failed:', rpcErr?.message ?? rpcResult?.error)
       } catch (e) {
         console.warn('Pending invite exception:', e)
       }

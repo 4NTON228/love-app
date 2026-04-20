@@ -387,6 +387,23 @@ function mouseGlow(e) {
    MAIN COMPONENT
 ───────────────────────────────────────── */
 export default function Home({ session, profile, onNavigate }) {
+  // All useState declarations first
+  const [time,             setTime]           = useState(null)
+  const [_prevTime,        setPrevTime]       = useState(null)
+  const [settings,         setSettings]       = useState(null)
+  const [nextEvent,        setNextEvent]      = useState(null)
+  const [countdown,        setCountdown]      = useState(null)
+  const [partnerProfile,   setPartnerProfile] = useState(null)
+  const [editMsg,          setEditMsg]        = useState(false)
+  const [editMeet,         setEditMeet]       = useState(false)
+  const [newMsg,           setNewMsg]         = useState('')
+  const [newMeet,          setNewMeet]        = useState('')
+  const [saving,           setSaving]         = useState(false)
+  const [showPartnerCard,  setShowPartnerCard] = useState(false)
+  const [partnerLoading,   setPartnerLoading] = useState(!!profile?.partner_id)
+  const [sharedCoupleDate, setSharedCoupleDate] = useState(null)
+
+  // Derived values — must come after all useState so sharedCoupleDate is declared
   const hasPartner = !!profile?.partner_id
   // Shared date from couples table is authoritative; fall back to own profile for
   // unpaired users (inviter before partner joins) and pre-migration rows.
@@ -397,20 +414,6 @@ export default function Home({ session, profile, onNavigate }) {
       ? new Date(effectiveCoupleDate + 'T00:00:00')
       : null
   , [effectiveCoupleDate])
-  const [time,           setTime]           = useState(() => coupleStart ? getRelTime(coupleStart) : null)
-  const [_prevTime,      setPrevTime]       = useState(null)
-  const [settings,       setSettings]       = useState(null)
-  const [nextEvent,      setNextEvent]      = useState(null)
-  const [countdown,      setCountdown]      = useState(null)
-  const [partnerProfile, setPartnerProfile] = useState(null)
-  const [editMsg,        setEditMsg]        = useState(false)
-  const [editMeet,       setEditMeet]       = useState(false)
-  const [newMsg,         setNewMsg]         = useState('')
-  const [newMeet,        setNewMeet]        = useState('')
-  const [saving,         setSaving]         = useState(false)
-  const [showPartnerCard, setShowPartnerCard] = useState(false)
-  const [partnerLoading, setPartnerLoading] = useState(!!profile?.partner_id)
-  const [sharedCoupleDate, setSharedCoupleDate] = useState(null)
 
   const loveMsg   = settings?.love_message || 'Ты — лучшее, что случилось в моей жизни'
   const { out, done } = useTypewriter(loveMsg, 55)

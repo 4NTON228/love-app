@@ -287,6 +287,10 @@ function StepPartner({ session, inviteCode, partnerAlreadyLinked, pendingInvite,
   const [copied, setCopied] = useState(false)
   const [autoPhase, setAutoPhase] = useState(pendingInvite ? 'connecting' : null)
   const [autoRetry, setAutoRetry] = useState(0)
+  const [autoResult, setAutoResult] = useState(null)   // RPC return payload
+  const [dateChoice, setDateChoice] = useState(null)    // date the invited user picked
+  const [editingDate, setEditingDate] = useState(false)
+  const [savingDate, setSavingDate] = useState(false)
 
   // Auto-connect when arriving via invite link — awaited, not fire-and-forget
   useEffect(() => {
@@ -299,6 +303,8 @@ function StepPartner({ session, inviteCode, partnerAlreadyLinked, pendingInvite,
       if (cancelled) return
       if (!rpcErr && !data?.error) {
         localStorage.removeItem('pendingInvite')
+        setAutoResult(data)
+        setDateChoice(data?.couple_start_date || null)
         setAutoPhase('success')
       } else {
         setAutoPhase('error')
@@ -306,6 +312,14 @@ function StepPartner({ session, inviteCode, partnerAlreadyLinked, pendingInvite,
     })()
     return () => { cancelled = true }
   }, [pendingInvite, autoRetry])
+
+  async function confirmDate() {
+    if (!dateChoice) { onFinish(); return }
+    setSavingDate(true)
+    await supabase.rpc('set_couple_start_date', { p_date: dateChoice }).catch(() => {})
+    setSavingDate(false)
+    onFinish()
+  }
 
   const inviteLink = `${window.location.origin}/?invite=${inviteCode}`
 
@@ -366,6 +380,7 @@ function StepPartner({ session, inviteCode, partnerAlreadyLinked, pendingInvite,
   }
 
   if (pendingInvite && autoPhase === 'success') {
+    const proposed = autoResult?.couple_start_date
     return (
       <div style={{ textAlign: 'center', paddingTop: 20 }}>
         <div style={{ marginBottom: 16 }}>
@@ -376,8 +391,60 @@ function StepPartner({ session, inviteCode, partnerAlreadyLinked, pendingInvite,
         <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 26, color: 'var(--text)', marginBottom: 8 }}>
           Партнёр подключён!
         </h2>
-        <p style={{ color: 'var(--text-muted)', marginBottom: 32 }}>Всё готово к использованию</p>
-        <NextBtn onClick={onFinish} label="Открыть приложение →" />
+
+        {proposed ? (
+          <div style={{ marginBottom: 28 }}>
+            <p style={{ color: 'var(--text-muted)', fontSize: 14, marginBottom: 16 }}>
+              Партнёр предложил дату начала отношений:
+            </p>
+            <div style={{
+              background: 'rgba(200,51,74,0.06)', border: '1px solid rgba(200,51,74,0.15)',
+              borderRadius: 14, padding: '14px 20px', marginBottom: 16, display: 'inline-block',
+              fontFamily: 'var(--font-display)', fontSize: 20, color: '#C8334A',
+            }}>
+              {new Date(proposed + 'T00:00:00').toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}
+            </div>
+
+            {editingDate ? (
+              <div style={{ marginBottom: 12 }}>
+                <input
+                  type="date"
+                  value={dateChoice || ''}
+                  onChange={e => setDateChoice(e.target.value)}
+                  max={new Date().toISOString().slice(0, 10)}
+                  style={{
+                    width: '100%', padding: '12px 14px', borderRadius: 12,
+                    border: '1.5px solid rgba(200,51,74,0.2)',
+                    background: 'var(--surface-2, #FDF5F6)',
+                    fontSize: 15, color: 'var(--text)', outline: 'none', marginBottom: 10,
+                  }}
+                />
+                <button onClick={() => setEditingDate(false)} style={{
+                  background: 'none', border: 'none', color: 'var(--text-muted)',
+                  fontSize: 13, cursor: 'pointer', marginBottom: 8,
+                }}>
+                  Использовать предложенную дату
+                </button>
+              </div>
+            ) : (
+              <div>
+                <button onClick={() => setEditingDate(true)} style={{
+                  background: 'none', border: 'none',
+                  color: 'rgba(200,51,74,0.7)', fontSize: 13,
+                  cursor: 'pointer', textDecoration: 'underline', marginBottom: 16,
+                }}>
+                  Изменить дату
+                </button>
+              </div>
+            )}
+            <NextBtn onClick={confirmDate} label="Подтвердить и открыть →" loading={savingDate} />
+          </div>
+        ) : (
+          <div style={{ marginBottom: 28 }}>
+            <p style={{ color: 'var(--text-muted)', marginBottom: 32 }}>Всё готово к использованию</p>
+            <NextBtn onClick={onFinish} label="Открыть приложение →" />
+          </div>
+        )}
       </div>
     )
   }
@@ -592,6 +659,11 @@ export default function Onboarding({ session, onComplete, onSignOut }) {
   const [_saving, setSaving] = useState(false)
   const [pendingInvite] = useState(() => localStorage.getItem('pendingInvite'))
 
+  // Invited users never see Step 4 — date is proposed by inviter and confirmed in Step 5
+  useEffect(() => {
+    if (step === 4 && pendingInvite) setStep(5)
+  }, [step, pendingInvite])
+
   /* Загружаем текущий профиль (может быть частично заполнен) */
   useEffect(() => {
     supabase.from('profiles').select('*').eq('id', session.user.id).single().then(async ({ data }) => {
@@ -641,7 +713,8 @@ export default function Onboarding({ session, onComplete, onSignOut }) {
       { onConflict: 'id' }
     ).catch(() => {})
     setSaving(false)
-    setStep(4)
+    // Invited users skip Step 4 — the inviter's proposed date is confirmed in Step 5
+    setStep(pendingInvite ? 5 : 4)
   }
 
   async function saveStep4() {
@@ -718,7 +791,7 @@ export default function Onboarding({ session, onComplete, onSignOut }) {
             value={birthday}
             onChange={setBirthday}
             onNext={saveStep3}
-            onSkip={() => setStep(4)}
+            onSkip={() => setStep(pendingInvite ? 5 : 4)}
           />
         )}
 

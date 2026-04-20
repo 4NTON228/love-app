@@ -388,12 +388,15 @@ function mouseGlow(e) {
 ───────────────────────────────────────── */
 export default function Home({ session, profile, onNavigate }) {
   const hasPartner = !!profile?.partner_id
-  const hasStartDate = !!profile?.couple_start_date
+  // Shared date from couples table is authoritative; fall back to own profile for
+  // unpaired users (inviter before partner joins) and pre-migration rows.
+  const effectiveCoupleDate = sharedCoupleDate ?? profile?.couple_start_date ?? null
+  const hasStartDate = !!effectiveCoupleDate
   const coupleStart = useMemo(() =>
-    profile?.couple_start_date
-      ? new Date(profile.couple_start_date + 'T00:00:00')
+    effectiveCoupleDate
+      ? new Date(effectiveCoupleDate + 'T00:00:00')
       : null
-  , [profile?.couple_start_date])
+  , [effectiveCoupleDate])
   const [time,           setTime]           = useState(() => coupleStart ? getRelTime(coupleStart) : null)
   const [_prevTime,      setPrevTime]       = useState(null)
   const [settings,       setSettings]       = useState(null)
@@ -407,6 +410,7 @@ export default function Home({ session, profile, onNavigate }) {
   const [saving,         setSaving]         = useState(false)
   const [showPartnerCard, setShowPartnerCard] = useState(false)
   const [partnerLoading, setPartnerLoading] = useState(!!profile?.partner_id)
+  const [sharedCoupleDate, setSharedCoupleDate] = useState(null)
 
   const loveMsg   = settings?.love_message || 'Ты — лучшее, что случилось в моей жизни'
   const { out, done } = useTypewriter(loveMsg, 55)
@@ -442,6 +446,15 @@ export default function Home({ session, profile, onNavigate }) {
         .eq('id', pid).single()
       setPartnerProfile(data)
       setPartnerLoading(false)
+
+      // Shared couple start date lives in couples table — single source of truth
+      const { data: coupleRow } = await supabase
+        .from('couples')
+        .select('couple_start_date')
+        .or(`user_a.eq.${session.user.id},user_b.eq.${session.user.id}`)
+        .eq('status', 'active')
+        .maybeSingle()
+      setSharedCoupleDate(coupleRow?.couple_start_date ?? null)
     }
 
     const uids = [session.user.id, pid].filter(Boolean)

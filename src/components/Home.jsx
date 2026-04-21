@@ -76,16 +76,16 @@ function getInitials(name) {
   )
 }
 
-function AvatarBadge({ src, name, onClick, muted = false }) {
+function AvatarMedallion({ src, name, onClick, ghost = false }) {
   const [imgError, setImgError] = useState(false)
 
   return (
     <button
       type="button"
-      className={`home-avatar${muted ? ' muted' : ''}`}
+      className={`home-avatar${ghost ? ' ghost' : ''}`}
       onClick={onClick}
     >
-      <span className="home-avatar-frame">
+      <span className="home-avatar-shell">
         {src && !imgError ? (
           <img
             src={src}
@@ -102,26 +102,31 @@ function AvatarBadge({ src, name, onClick, muted = false }) {
   )
 }
 
-function FeatureCard({ title, subtitle, badge, icon, onClick, wide = false }) {
+function QuickAction({ title, subtitle, badge, icon, onClick, wide = false, delay = 0 }) {
   return (
     <button
       type="button"
-      className={`feature-card${wide ? ' wide' : ''}`}
+      className={`quick-action${wide ? ' wide' : ''}`}
       onClick={onClick}
+      style={{ animationDelay: `${delay}s` }}
     >
-      <div className="feature-card-top">
-        <span className="feature-card-icon">{icon}</span>
-        <span className="feature-card-badge">{badge}</span>
+      <span className="quick-action-shine" />
+      <div className="quick-action-top">
+        <span className="quick-action-icon">{icon}</span>
+        <span className="quick-action-badge">{badge}</span>
       </div>
-      <div className="feature-card-title">{title}</div>
-      <div className="feature-card-subtitle">{subtitle}</div>
+      <div className="quick-action-title">{title}</div>
+      <div className="quick-action-subtitle">{subtitle}</div>
     </button>
   )
 }
 
-function InfoCard({ eyebrow, title, children, compact = false }) {
+function InfoCard({ eyebrow, title, children, delay = 0, compact = false }) {
   return (
-    <section className={`info-card${compact ? ' compact' : ''}`}>
+    <section
+      className={`info-card${compact ? ' compact' : ''}`}
+      style={{ animationDelay: `${delay}s` }}
+    >
       <div className="info-card-eyebrow">{eyebrow}</div>
       <div className="info-card-title">{title}</div>
       {children}
@@ -131,23 +136,23 @@ function InfoCard({ eyebrow, title, children, compact = false }) {
 
 function PartnerModal({ profile, loading, onClose }) {
   return (
-    <div className="partner-modal-overlay" onClick={onClose}>
-      <div className="partner-modal" onClick={e => e.stopPropagation()}>
+    <div className="partner-overlay" onClick={onClose}>
+      <div className="partner-dialog" onClick={e => e.stopPropagation()}>
         <button type="button" className="partner-close" onClick={onClose}>
           Закрыть
         </button>
 
         {loading ? (
-          <div className="partner-loading" />
+          <div className="partner-loader" />
         ) : (
           <>
-            <AvatarBadge
+            <AvatarMedallion
               src={profile?.avatar_url}
               name={profile?.name || 'Партнер'}
             />
-            <div className="partner-name">{profile?.name || 'Партнер'}</div>
+            <div className="partner-title">{profile?.name || 'Партнер'}</div>
             {profile?.birthday && (
-              <div className="partner-meta">
+              <div className="partner-subtitle">
                 {formatDate(profile.birthday, { day: 'numeric', month: 'long' })}
               </div>
             )}
@@ -161,6 +166,7 @@ function PartnerModal({ profile, loading, onClose }) {
 export default function Home({ session, profile, onNavigate }) {
   const [time, setTime] = useState(null)
   const [settings, setSettings] = useState(null)
+  const [settingsId, setSettingsId] = useState(null)
   const [nextEvent, setNextEvent] = useState(null)
   const [countdown, setCountdown] = useState(null)
   const [partnerProfile, setPartnerProfile] = useState(null)
@@ -187,9 +193,12 @@ export default function Home({ session, profile, onNavigate }) {
 
   const myName = profile?.name || 'Ты'
   const partnerName = partnerProfile?.name || (hasPartner ? 'Партнер' : 'Только ты')
-  const title = hasPartner ? `${myName} и ${partnerName}` : myName
-  const loveMessage =
-    settings?.love_message || 'Здесь живет ваша история. Тихая, красивая и только для двоих.'
+  const headline = hasPartner ? `${myName} и ${partnerName}` : myName
+
+  const defaultMessage =
+    'Здесь живет ваша история. Спокойная, красивая и только для двоих.'
+
+  const loveMessage = settings?.love_message || defaultMessage
 
   useEffect(() => {
     if (!coupleStart) {
@@ -248,9 +257,11 @@ export default function Home({ session, profile, onNavigate }) {
             .eq('id', profile.couple_id)
             .maybeSingle()
 
-          if (mounted && couple?.start_date) {
-            setSharedCoupleDate(couple.start_date)
+          if (mounted) {
+            setSharedCoupleDate(couple?.start_date || null)
           }
+        } else if (mounted) {
+          setSharedCoupleDate(null)
         }
 
         let fetchedSettings = null
@@ -277,10 +288,8 @@ export default function Home({ session, profile, onNavigate }) {
 
         if (mounted) {
           setSettings(fetchedSettings)
-          setNewMessage(
-            fetchedSettings?.love_message ||
-              'Здесь живет ваша история. Тихая, красивая и только для двоих.'
-          )
+          setSettingsId(fetchedSettings?.id || null)
+          setNewMessage(fetchedSettings?.love_message || defaultMessage)
           setNewMeeting(utcToLocal(fetchedSettings?.next_meeting))
         }
 
@@ -318,33 +327,52 @@ export default function Home({ session, profile, onNavigate }) {
     }
   }, [profile?.couple_id, profile?.partner_id, session?.user?.id])
 
+  async function persistSettings(patch) {
+    const basePayload = {
+      user_id: session.user.id,
+      love_message: settings?.love_message || defaultMessage,
+      next_meeting: settings?.next_meeting || null,
+      ...patch,
+    }
+
+    if (profile?.couple_id) {
+      basePayload.couple_id = profile.couple_id
+    }
+
+    if (settingsId) {
+      const { data, error } = await supabase
+        .from('couple_settings')
+        .update(basePayload)
+        .eq('id', settingsId)
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    }
+
+    const { data, error } = await supabase
+      .from('couple_settings')
+      .insert(basePayload)
+      .select()
+      .single()
+
+    if (error) throw error
+    return data
+  }
+
   async function saveMessage() {
     if (!session?.user?.id) return
     setSaving(true)
 
     try {
-      const payload = {
-        love_message: newMessage.trim(),
-        next_meeting: settings?.next_meeting || null,
-      }
+      const saved = await persistSettings({
+        love_message: newMessage.trim() || defaultMessage,
+      })
 
-      if (profile?.couple_id) {
-        payload.couple_id = profile.couple_id
-      } else {
-        payload.user_id = session.user.id
-      }
-
-      const { data, error } = await supabase
-        .from('couple_settings')
-        .upsert(payload, {
-          onConflict: profile?.couple_id ? 'couple_id' : 'user_id',
-        })
-        .select()
-        .maybeSingle()
-
-      if (error) throw error
-
-      setSettings(prev => ({ ...prev, ...payload, ...(data || {}) }))
+      setSettings(saved)
+      setSettingsId(saved?.id || null)
+      setNewMessage(saved?.love_message || defaultMessage)
       setEditMessage(false)
     } catch (error) {
       console.warn('Ошибка сохранения сообщения:', error)
@@ -358,28 +386,13 @@ export default function Home({ session, profile, onNavigate }) {
     setSaving(true)
 
     try {
-      const payload = {
-        love_message: settings?.love_message || loveMessage,
+      const saved = await persistSettings({
         next_meeting: localToUTC(newMeeting),
-      }
+      })
 
-      if (profile?.couple_id) {
-        payload.couple_id = profile.couple_id
-      } else {
-        payload.user_id = session.user.id
-      }
-
-      const { data, error } = await supabase
-        .from('couple_settings')
-        .upsert(payload, {
-          onConflict: profile?.couple_id ? 'couple_id' : 'user_id',
-        })
-        .select()
-        .maybeSingle()
-
-      if (error) throw error
-
-      setSettings(prev => ({ ...prev, ...payload, ...(data || {}) }))
+      setSettings(saved)
+      setSettingsId(saved?.id || null)
+      setNewMeeting(utcToLocal(saved?.next_meeting))
       setEditMeeting(false)
     } catch (error) {
       console.warn('Ошибка сохранения даты встречи:', error)
@@ -393,25 +406,25 @@ export default function Home({ session, profile, onNavigate }) {
       <style>{`
         .home-screen {
           --bg-main: #090708;
-          --bg-hero: rgba(18, 13, 15, 0.88);
-          --bg-card: rgba(22, 16, 18, 0.84);
-          --bg-soft: rgba(255, 255, 255, 0.04);
-          --line: rgba(255, 245, 232, 0.08);
-          --line-strong: rgba(255, 245, 232, 0.14);
+          --bg-hero: rgba(18, 13, 15, 0.9);
+          --bg-card: rgba(22, 16, 18, 0.86);
+          --line: rgba(255, 244, 230, 0.08);
+          --line-strong: rgba(255, 244, 230, 0.15);
           --text-main: #f7efe7;
-          --text-soft: rgba(247, 239, 231, 0.74);
-          --text-muted: rgba(247, 239, 231, 0.48);
-          --gold: #dcc19b;
-          --wine: #7d2234;
-          --wine-dark: #5d1827;
+          --text-soft: rgba(247, 239, 231, 0.76);
+          --text-muted: rgba(247, 239, 231, 0.46);
+          --gold: #dbc29f;
+          --gold-soft: rgba(219, 194, 159, 0.18);
+          --wine: #7c2133;
+          --wine-dark: #591524;
           min-height: 100vh;
           position: relative;
           overflow: hidden;
           padding: 20px 16px calc(104px + env(safe-area-inset-bottom, 0px));
           background:
-            radial-gradient(circle at 12% 12%, rgba(125, 34, 52, 0.20), transparent 30%),
-            radial-gradient(circle at 88% 0%, rgba(220, 193, 155, 0.10), transparent 26%),
-            linear-gradient(180deg, #120d0f 0%, #090708 48%, #090708 100%);
+            radial-gradient(circle at 10% 12%, rgba(124, 33, 51, 0.20), transparent 30%),
+            radial-gradient(circle at 88% 0%, rgba(219, 194, 159, 0.11), transparent 24%),
+            linear-gradient(180deg, #120d10 0%, #090708 46%, #090708 100%);
           color: var(--text-main);
         }
 
@@ -419,35 +432,35 @@ export default function Home({ session, profile, onNavigate }) {
         .home-screen::after {
           content: '';
           position: absolute;
-          pointer-events: none;
           border-radius: 999px;
+          pointer-events: none;
+          z-index: 0;
           filter: blur(90px);
           opacity: 0.42;
-          z-index: 0;
         }
 
         .home-screen::before {
-          top: 120px;
-          left: -70px;
+          top: 110px;
+          left: -80px;
           width: 220px;
           height: 220px;
-          background: rgba(125, 34, 52, 0.20);
-          animation: driftBlob 24s ease-in-out infinite;
+          background: rgba(124, 33, 51, 0.22);
+          animation: blobDrift 24s ease-in-out infinite;
         }
 
         .home-screen::after {
           top: 240px;
-          right: -80px;
+          right: -60px;
           width: 240px;
           height: 240px;
-          background: rgba(220, 193, 155, 0.10);
-          animation: driftBlob 30s ease-in-out infinite reverse;
+          background: rgba(219, 194, 159, 0.12);
+          animation: blobDrift 30s ease-in-out infinite reverse;
         }
 
         .home-shell {
           position: relative;
           z-index: 1;
-          width: min(100%, 760px);
+          width: min(100%, 780px);
           margin: 0 auto;
           display: grid;
           gap: 14px;
@@ -456,27 +469,26 @@ export default function Home({ session, profile, onNavigate }) {
         .hero-card {
           position: relative;
           overflow: hidden;
-          border-radius: 30px;
+          border-radius: 32px;
           padding: 18px 18px 20px;
           background:
-            linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015)),
+            linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.015)),
             var(--bg-hero);
           border: 1px solid var(--line);
           box-shadow:
-            0 24px 80px rgba(0, 0, 0, 0.42),
-            inset 0 1px 0 rgba(255,255,255,0.05);
-          animation: fadeUp 0.55s ease both;
+            0 26px 80px rgba(0,0,0,0.42),
+            inset 0 1px 0 rgba(255,255,255,0.04);
+          animation: sectionReveal 0.55s ease both;
         }
 
         .hero-card::before {
           content: '';
           position: absolute;
-          inset: -20% -10% auto;
-          height: 220px;
+          inset: -30% -10% auto;
+          height: 240px;
           background:
-            radial-gradient(circle at center, rgba(220, 193, 155, 0.10), transparent 46%),
-            radial-gradient(circle at center, rgba(125, 34, 52, 0.18), transparent 68%);
-          opacity: 0.7;
+            radial-gradient(circle at center, rgba(219, 194, 159, 0.11), transparent 42%),
+            radial-gradient(circle at center, rgba(124, 33, 51, 0.14), transparent 66%);
           pointer-events: none;
         }
 
@@ -506,7 +518,8 @@ export default function Home({ session, profile, onNavigate }) {
           width: 8px;
           height: 8px;
           border-radius: 999px;
-          background: linear-gradient(180deg, var(--gold), #b68f62);
+          background: linear-gradient(180deg, var(--gold), #b78f61);
+          animation: dotPulse 2.8s ease-in-out infinite;
         }
 
         .hero-button {
@@ -517,7 +530,7 @@ export default function Home({ session, profile, onNavigate }) {
           padding: 10px 14px;
           font-size: 12px;
           cursor: pointer;
-          transition: background 0.2s ease, transform 0.2s ease;
+          transition: transform 0.2s ease, background 0.2s ease;
         }
 
         .hero-button:active {
@@ -526,7 +539,7 @@ export default function Home({ session, profile, onNavigate }) {
 
         .hero-content {
           display: grid;
-          gap: 16px;
+          gap: 18px;
         }
 
         .hero-avatars {
@@ -537,7 +550,7 @@ export default function Home({ session, profile, onNavigate }) {
         }
 
         .hero-link {
-          width: 34px;
+          width: 38px;
           height: 1px;
           position: relative;
           background: linear-gradient(90deg, transparent, rgba(255,255,255,0.28), transparent);
@@ -549,7 +562,7 @@ export default function Home({ session, profile, onNavigate }) {
           left: 50%;
           top: 50%;
           transform: translate(-50%, -58%);
-          color: rgba(220, 193, 155, 0.72);
+          color: rgba(219, 194, 159, 0.72);
           font-size: 13px;
         }
 
@@ -563,27 +576,32 @@ export default function Home({ session, profile, onNavigate }) {
           align-items: center;
           gap: 8px;
           cursor: pointer;
+          transition: transform 0.2s ease, opacity 0.2s ease;
         }
 
-        .home-avatar.muted {
-          opacity: 0.42;
+        .home-avatar:active {
+          transform: scale(0.98);
         }
 
-        .home-avatar-frame {
-          width: 84px;
-          height: 84px;
-          border-radius: 999px;
+        .home-avatar.ghost {
+          opacity: 0.45;
+        }
+
+        .home-avatar-shell {
+          width: 86px;
+          height: 86px;
           padding: 2px;
+          border-radius: 999px;
+          background: linear-gradient(
+            145deg,
+            rgba(219, 194, 159, 0.88),
+            rgba(124, 33, 51, 0.55),
+            rgba(255,255,255,0.34)
+          );
+          box-shadow: 0 14px 38px rgba(0,0,0,0.32);
           display: flex;
           align-items: center;
           justify-content: center;
-          background: linear-gradient(
-            145deg,
-            rgba(220, 193, 155, 0.88),
-            rgba(125, 34, 52, 0.52),
-            rgba(255, 255, 255, 0.34)
-          );
-          box-shadow: 0 14px 34px rgba(0, 0, 0, 0.32);
         }
 
         .home-avatar-image,
@@ -595,10 +613,10 @@ export default function Home({ session, profile, onNavigate }) {
           display: flex;
           align-items: center;
           justify-content: center;
-          background: linear-gradient(180deg, #2a1d21, #171114);
+          background: linear-gradient(180deg, #2b1e22, #171114);
           color: var(--text-main);
           font-size: 24px;
-          font-weight: 600;
+          font-weight: 700;
           letter-spacing: 0.08em;
         }
 
@@ -610,8 +628,8 @@ export default function Home({ session, profile, onNavigate }) {
         .hero-title-wrap {
           display: grid;
           gap: 8px;
-          text-align: center;
           justify-items: center;
+          text-align: center;
         }
 
         .hero-overline {
@@ -624,7 +642,7 @@ export default function Home({ session, profile, onNavigate }) {
         .hero-title {
           margin: 0;
           font-family: 'Cormorant Garamond', Georgia, serif;
-          font-size: clamp(36px, 7vw, 56px);
+          font-size: clamp(36px, 7vw, 58px);
           line-height: 0.95;
           font-weight: 500;
           letter-spacing: -0.03em;
@@ -632,42 +650,43 @@ export default function Home({ session, profile, onNavigate }) {
 
         .hero-subtitle {
           margin: 0;
-          max-width: 32rem;
-          font-size: 15px;
-          line-height: 1.65;
+          max-width: 34rem;
           color: var(--text-soft);
+          font-size: 15px;
+          line-height: 1.68;
         }
 
         .hero-counter {
           display: grid;
           gap: 14px;
-          margin-top: 4px;
         }
 
         .hero-counter-main {
           display: grid;
           justify-items: center;
-          gap: 4px;
+          gap: 6px;
         }
 
         .hero-counter-number {
           display: flex;
-          gap: 6px;
+          gap: 8px;
           align-items: baseline;
-          flex-wrap: wrap;
           justify-content: center;
+          flex-wrap: wrap;
         }
 
         .hero-counter-number strong {
-          font-family: 'Cormorant Garamond', Georgia, serif;
-          font-size: clamp(72px, 18vw, 108px);
+          font-family: "Helvetica Neue", Arial, sans-serif;
+          font-size: clamp(62px, 16vw, 92px);
           line-height: 0.9;
-          font-weight: 600;
-          text-shadow: 0 10px 40px rgba(0,0,0,0.35);
+          font-weight: 700;
+          letter-spacing: -0.04em;
+          font-variant-numeric: tabular-nums lining-nums;
+          text-shadow: 0 10px 36px rgba(0,0,0,0.28);
         }
 
         .hero-counter-number span {
-          font-size: 15px;
+          font-size: 14px;
           color: var(--gold);
           letter-spacing: 0.16em;
           text-transform: uppercase;
@@ -681,8 +700,11 @@ export default function Home({ session, profile, onNavigate }) {
           border-radius: 999px;
           background: rgba(255,255,255,0.04);
           border: 1px solid rgba(255,255,255,0.06);
-          font-size: 13px;
           color: var(--text-soft);
+          font-size: 13px;
+          font-family: "Helvetica Neue", Arial, sans-serif;
+          font-variant-numeric: tabular-nums lining-nums;
+          letter-spacing: 0.04em;
         }
 
         .hero-progress {
@@ -715,9 +737,11 @@ export default function Home({ session, profile, onNavigate }) {
 
         .hero-metric-value {
           display: block;
-          font-family: 'Cormorant Garamond', Georgia, serif;
+          font-family: "Helvetica Neue", Arial, sans-serif;
           font-size: 28px;
+          font-weight: 700;
           line-height: 1;
+          font-variant-numeric: tabular-nums lining-nums;
           margin-bottom: 4px;
         }
 
@@ -729,82 +753,106 @@ export default function Home({ session, profile, onNavigate }) {
           color: var(--text-muted);
         }
 
-        .feature-grid {
+        .quick-grid {
           display: grid;
           grid-template-columns: repeat(2, minmax(0, 1fr));
           gap: 14px;
         }
 
-        .feature-card,
+        .quick-action,
         .info-card {
+          position: relative;
+          overflow: hidden;
           border-radius: 24px;
           border: 1px solid var(--line);
           background:
             linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015)),
             var(--bg-card);
           box-shadow: 0 22px 60px rgba(0,0,0,0.24);
-          animation: fadeUp 0.6s ease both;
+          animation: sectionReveal 0.6s ease both;
         }
 
-        .feature-card {
+        .quick-action {
           padding: 18px;
           color: inherit;
           text-align: left;
           cursor: pointer;
           display: grid;
           gap: 14px;
-          transition: transform 0.2s ease, background 0.2s ease;
+          transition: transform 0.2s ease, border-color 0.2s ease;
         }
 
-        .feature-card:active {
+        .quick-action:active {
           transform: scale(0.985);
         }
 
-        .feature-card.wide {
+        .quick-action.wide {
           grid-column: span 2;
         }
 
-        .feature-card-top {
+        .quick-action-shine {
+          position: absolute;
+          inset: 0 auto auto -40%;
+          width: 50%;
+          height: 100%;
+          background: linear-gradient(
+            90deg,
+            transparent,
+            rgba(255,255,255,0.06),
+            transparent
+          );
+          transform: skewX(-18deg);
+          animation: cardSweep 7s ease-in-out infinite;
+          pointer-events: none;
+        }
+
+        .quick-action-top {
           display: flex;
           align-items: center;
           justify-content: space-between;
           gap: 12px;
+          position: relative;
+          z-index: 1;
         }
 
-        .feature-card-icon {
+        .quick-action-icon {
           width: 46px;
           height: 46px;
           border-radius: 16px;
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          background: linear-gradient(180deg, rgba(220,193,155,0.18), rgba(125,34,52,0.12));
+          background: linear-gradient(180deg, rgba(219,194,159,0.18), rgba(124,33,51,0.12));
           border: 1px solid rgba(255,255,255,0.08);
           color: var(--gold);
         }
 
-        .feature-card-badge {
+        .quick-action-badge {
           font-size: 11px;
           letter-spacing: 0.16em;
           text-transform: uppercase;
           color: var(--text-muted);
         }
 
-        .feature-card-title {
+        .quick-action-title {
+          position: relative;
+          z-index: 1;
           font-family: 'Cormorant Garamond', Georgia, serif;
           font-size: 30px;
-          line-height: 0.95;
+          line-height: 0.96;
         }
 
-        .feature-card-subtitle {
+        .quick-action-subtitle {
+          position: relative;
+          z-index: 1;
+          color: var(--text-soft);
           font-size: 14px;
           line-height: 1.6;
-          color: var(--text-soft);
         }
 
         .section-row {
           display: grid;
-          grid-template-columns: 1.2fr 0.8fr;
+          grid-template-columns: 1.18fr 0.82fr;
           gap: 14px;
         }
 
@@ -852,8 +900,8 @@ export default function Home({ session, profile, onNavigate }) {
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          font-size: 24px;
           flex-shrink: 0;
+          font-size: 24px;
         }
 
         .event-copy {
@@ -862,28 +910,30 @@ export default function Home({ session, profile, onNavigate }) {
         }
 
         .event-name {
-          font-size: 16px;
           color: var(--text-main);
+          font-size: 16px;
           white-space: nowrap;
-    overflow: hidden;
+          overflow: hidden;
           text-overflow: ellipsis;
         }
 
         .event-date {
           margin-top: 4px;
-          font-size: 13px;
           color: var(--text-soft);
+          font-size: 13px;
         }
 
         .event-days {
           flex-shrink: 0;
-          min-width: 62px;
+          min-width: 64px;
           padding: 10px 12px;
           border-radius: 16px;
           background: linear-gradient(180deg, var(--wine), var(--wine-dark));
           color: #fff6ee;
           font-size: 13px;
           text-align: center;
+          font-family: "Helvetica Neue", Arial, sans-serif;
+          font-variant-numeric: tabular-nums lining-nums;
         }
 
         .meeting-grid {
@@ -902,9 +952,11 @@ export default function Home({ session, profile, onNavigate }) {
 
         .meeting-num {
           display: block;
-          font-family: 'Cormorant Garamond', Georgia, serif;
-          font-size: 30px;
+          font-family: "Helvetica Neue", Arial, sans-serif;
+          font-size: 28px;
+          font-weight: 700;
           line-height: 1;
+          font-variant-numeric: tabular-nums lining-nums;
         }
 
         .meeting-label {
@@ -918,14 +970,14 @@ export default function Home({ session, profile, onNavigate }) {
 
         .note-text {
           margin: 0;
+          color: var(--text-soft);
           font-size: 15px;
           line-height: 1.75;
-          color: var(--text-soft);
         }
 
         .note-text strong {
-          font-weight: 500;
           color: var(--text-main);
+          font-weight: 500;
         }
 
         .field {
@@ -945,8 +997,8 @@ export default function Home({ session, profile, onNavigate }) {
         }
 
         .field:focus {
-          border-color: rgba(220, 193, 155, 0.34);
-          box-shadow: 0 0 0 4px rgba(220, 193, 155, 0.08);
+          border-color: rgba(219, 194, 159, 0.34);
+          box-shadow: 0 0 0 4px rgba(219, 194, 159, 0.08);
         }
 
         .actions-row {
@@ -962,11 +1014,18 @@ export default function Home({ session, profile, onNavigate }) {
           padding: 11px 16px;
           font: inherit;
           cursor: pointer;
+          transition: transform 0.2s ease, background 0.2s ease;
+        }
+
+        .btn-primary:active,
+        .btn-ghost:active {
+          transform: scale(0.985);
         }
 
         .btn-primary {
           background: linear-gradient(180deg, var(--wine), var(--wine-dark));
           color: #fff6ee;
+          box-shadow: 0 14px 34px rgba(89, 21, 36, 0.28);
         }
 
         .btn-ghost {
@@ -975,7 +1034,7 @@ export default function Home({ session, profile, onNavigate }) {
           color: var(--text-soft);
         }
 
-        .partner-modal-overlay {
+        .partner-overlay {
           position: fixed;
           inset: 0;
           background: rgba(5, 3, 4, 0.72);
@@ -987,7 +1046,7 @@ export default function Home({ session, profile, onNavigate }) {
           z-index: 80;
         }
 
-        .partner-modal {
+        .partner-dialog {
           width: min(100%, 340px);
           border-radius: 28px;
           padding: 24px;
@@ -1000,7 +1059,7 @@ export default function Home({ session, profile, onNavigate }) {
           justify-items: center;
           gap: 12px;
           position: relative;
-          animation: fadeUp 0.25s ease both;
+          animation: sectionReveal 0.25s ease both;
         }
 
         .partner-close {
@@ -1016,25 +1075,25 @@ export default function Home({ session, profile, onNavigate }) {
           cursor: pointer;
         }
 
-        .partner-name {
+        .partner-title {
           font-family: 'Cormorant Garamond', Georgia, serif;
           font-size: 32px;
         }
 
-        .partner-meta {
+        .partner-subtitle {
           color: var(--text-soft);
         }
 
-        .partner-loading {
+        .partner-loader {
           width: 34px;
           height: 34px;
           border-radius: 999px;
           border: 2px solid rgba(255,255,255,0.12);
           border-top-color: var(--gold);
-          animation: rotateLoader 0.9s linear infinite;
+          animation: loaderSpin 0.9s linear infinite;
         }
 
-        @keyframes driftBlob {
+        @keyframes blobDrift {
           0%, 100% {
             transform: translate3d(0, 0, 0) scale(1);
           }
@@ -1043,7 +1102,7 @@ export default function Home({ session, profile, onNavigate }) {
           }
         }
 
-        @keyframes fadeUp {
+        @keyframes sectionReveal {
           from {
             opacity: 0;
             transform: translateY(16px);
@@ -1054,7 +1113,7 @@ export default function Home({ session, profile, onNavigate }) {
           }
         }
 
-        @keyframes rotateLoader {
+        @keyframes loaderSpin {
           from {
             transform: rotate(0deg);
           }
@@ -1063,17 +1122,46 @@ export default function Home({ session, profile, onNavigate }) {
           }
         }
 
+        @keyframes dotPulse {
+          0%, 100% {
+            transform: scale(1);
+            opacity: 0.8;
+          }
+          50% {
+            transform: scale(1.18);
+            opacity: 1;
+          }
+        }
+
+        @keyframes cardSweep {
+          0%,
+          100% {
+            transform: translateX(-160%) skewX(-18deg);
+            opacity: 0;
+          }
+          20% {
+            opacity: 0;
+          }
+          40% {
+            opacity: 1;
+          }
+          60% {
+            transform: translateX(340%) skewX(-18deg);
+            opacity: 0;
+          }
+        }
+
         @media (max-width: 640px) {
           .home-screen {
             padding-inline: 12px;
           }
 
-          .feature-grid,
+          .quick-grid,
           .section-row {
             grid-template-columns: 1fr;
           }
 
-          .feature-card.wide {
+          .quick-action.wide {
             grid-column: span 1;
           }
 
@@ -1087,6 +1175,10 @@ export default function Home({ session, profile, onNavigate }) {
 
           .hero-title {
             font-size: 42px;
+          }
+
+          .hero-counter-number strong {
+            font-size: 64px;
           }
         }
       `}</style>
@@ -1111,7 +1203,7 @@ export default function Home({ session, profile, onNavigate }) {
 
             <div className="hero-content">
               <div className="hero-avatars">
-                <AvatarBadge
+                <AvatarMedallion
                   src={profile?.avatar_url}
                   name={myName}
                   onClick={() => onNavigate?.('settings')}
@@ -1121,9 +1213,9 @@ export default function Home({ session, profile, onNavigate }) {
                   <>
                     <div className="hero-link" />
                     {partnerLoading ? (
-                      <AvatarBadge name="..." muted />
+                      <AvatarMedallion name="..." ghost />
                     ) : (
-                      <AvatarBadge
+                      <AvatarMedallion
                         src={partnerProfile?.avatar_url}
                         name={partnerName}
                         onClick={() => setShowPartnerModal(true)}
@@ -1135,10 +1227,10 @@ export default function Home({ session, profile, onNavigate }) {
 
               <div className="hero-title-wrap">
                 <div className="hero-overline">Главная история</div>
-                <h1 className="hero-title">{title}</h1>
+                <h1 className="hero-title">{headline}</h1>
                 <p className="hero-subtitle">
-                  Пространство, которое выглядит дорого, чувствуется спокойно и хранит
-                  только вашу историю.
+                  Пространство, которое выглядит дорого, но ощущается спокойно.
+                  Без лишнего шума, только ваша история.
                 </p>
               </div>
 
@@ -1193,7 +1285,7 @@ export default function Home({ session, profile, onNavigate }) {
                   >
                     <p className="note-text">
                       {hasPartner
-                        ? 'Когда вы укажете дату отношений, главный экран начнет жить и покажет историю вашей пары.'
+                        ? 'Когда вы укажете дату отношений, экран начнет жить и красиво считать вашу историю.'
                         : 'Когда вы подключите партнера, главный экран станет пространством для двоих.'}
                     </p>
 
@@ -1212,12 +1304,13 @@ export default function Home({ session, profile, onNavigate }) {
             </div>
           </section>
 
-          <div className="feature-grid">
-            <FeatureCard
+          <div className="quick-grid">
+            <QuickAction
               badge="Раздел"
               title="Моменты"
-              subtitle="Личная галерея ваших общих кадров и воспоминаний."
+              subtitle="Ваши общие кадры и воспоминания в одной красивой галерее."
               onClick={() => onNavigate?.('moments')}
+              delay={0.08}
               icon={
                 <svg
                   viewBox="0 0 24 24"
@@ -1235,11 +1328,12 @@ export default function Home({ session, profile, onNavigate }) {
               }
             />
 
-            <FeatureCard
+            <QuickAction
               badge="Раздел"
               title="Письмо"
               subtitle="Теплое личное послание, которое хочется открыть вечером."
               onClick={() => onNavigate?.('letter')}
+              delay={0.14}
               icon={
                 <svg
                   viewBox="0 0 24 24"
@@ -1257,12 +1351,13 @@ export default function Home({ session, profile, onNavigate }) {
               }
             />
 
-            <FeatureCard
+            <QuickAction
               badge="Быстрый переход"
               title="Чат"
               subtitle="Открыть ваш диалог сразу с главного экрана."
               onClick={() => onNavigate?.('chat')}
               wide
+              delay={0.2}
               icon={
                 <svg
                   viewBox="0 0 24 24"
@@ -1281,7 +1376,7 @@ export default function Home({ session, profile, onNavigate }) {
           </div>
 
           <div className="section-row">
-            <InfoCard eyebrow="Скоро" title="Ближайшее событие">
+            <InfoCard eyebrow="Скоро" title="Ближайшее событие" delay={0.26}>
               {nextEvent ? (
                 <div className="event-row">
                   <div className="event-line">
@@ -1319,8 +1414,7 @@ export default function Home({ session, profile, onNavigate }) {
               ) : (
                 <div className="event-row">
                   <p className="note-text">
-                    Добавьте красивое следующее событие: встречу, поездку, ужин или вашу
-                    особенную дату.
+                    Добавьте следующее событие: встречу, поездку, ужин или вашу особенную дату.
                   </p>
 
                   <button
@@ -1334,7 +1428,7 @@ export default function Home({ session, profile, onNavigate }) {
               )}
             </InfoCard>
 
-            <InfoCard eyebrow="Отсчет" title="До встречи" compact>
+            <InfoCard eyebrow="Отсчет" title="До встречи" delay={0.32} compact>
               {editMeeting ? (
                 <>
                   <input
@@ -1405,7 +1499,7 @@ export default function Home({ session, profile, onNavigate }) {
             </InfoCard>
           </div>
 
-          <InfoCard eyebrow="Личное" title="Ваше сообщение">
+          <InfoCard eyebrow="Личное" title="Ваше сообщение" delay={0.38}>
             {editMessage ? (
               <>
                 <textarea

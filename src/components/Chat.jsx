@@ -7,7 +7,7 @@ import { encryptMessage, safeDecryptMessage, isMessageEncrypted } from '../lib/c
 const REACTIONS = ['❤️','🔥','😍','😂','👍','💔']
 const VALID_REACTIONS = new Set(REACTIONS)
 const GROUP_DIFF_SECONDS = 121
-const GRAD = 'linear-gradient(135deg, #C8334A, #8B1A2C)'
+const GRAD = 'var(--bubble-mine, linear-gradient(135deg, #C8334A, #8B1A2C))'
 const WAVE_H = [
   3,5,8,6,4,7,11,15,19,22,17,13,8,5,7,12,18,24,28,24,19,14,9,
   6,4,8,13,19,25,30,26,21,16,11,7,5,9,15,21,27,30,25,19,13,8,
@@ -314,7 +314,7 @@ const VoiceMessage = memo(function VoiceMessage({ url, isMine, dark, duration, t
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10,
       padding: '8px 14px 8px 10px', borderRadius: 18, minWidth: 220,
-      background: isMine ? GRAD : (dark ? '#1E0A10' : '#fff'),
+      background: isMine ? 'var(--bubble-mine, linear-gradient(135deg, #C8334A, #8B1A2C))' : (dark ? '#1E0A10' : '#fff'),
       border: isMine ? 'none' : '0.5px solid rgba(200,51,74,0.15)' }}>
       {/* скрытый audio элемент — нужен для надёжного воспроизведения на iOS */}
       <audio ref={audioRef} src={url} preload="none" style={{ display: 'none' }} />
@@ -519,7 +519,7 @@ const Message = memo(function Message({
     ? (isLast ? '18px 18px 4px 18px' : '18px 18px 8px 18px')
     : (isLast ? '18px 18px 18px 4px' : '18px 18px 18px 8px')
 
-  const bubbleBg    = isMine ? 'linear-gradient(135deg, #C8334A, #8B1A2C)' : (dark ? '#1E0A10' : '#FFFFFF')
+  const bubbleBg    = isMine ? 'var(--bubble-mine, linear-gradient(135deg, #C8334A, #8B1A2C))' : (dark ? '#1E0A10' : '#FFFFFF')
   const bubbleColor = isMine ? 'white' : (dark ? '#F5E8EA' : '#1C0A0E')
 
   function startPress(x, y) {
@@ -962,8 +962,8 @@ export default function Chat({ session, profile, darkMode }) {
   const INK = dark ? '#F5E8EA' : '#1C0A0E'
   const MUTED = dark ? '#8A5060' : '#9A6070'
   const BDR = dark ? 'rgba(232,85,106,0.18)' : 'rgba(200,51,74,0.13)'
-  const ROSE = '#C8334A'
-  const GRAD = 'linear-gradient(135deg, #C8334A, #8B1A2C)'
+  const ROSE = 'var(--rose, #C8334A)'
+  const GRAD = 'var(--bubble-mine, linear-gradient(135deg, #C8334A, #8B1A2C))'
   const uid = session?.user?.id
   const pid = profile?.partner_id
 

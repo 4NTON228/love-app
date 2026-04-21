@@ -399,16 +399,16 @@ export default function Moments({ session, profile }) {
         .moments-header {
           background: linear-gradient(175deg, #0D0305 0%, #220810 38%, #46101F 68%, #2E0C18 100%);
           padding: 60px 20px 28px;
-          border-radius: 0 0 36px 36px;
+          border-radius: 0 0 32px 32px;
           margin-bottom: 20px;
-          box-shadow: 0 16px 60px rgba(14,3,8,0.75), 0 4px 20px rgba(0,0,0,0.5);
+          box-shadow: 0 12px 48px rgba(14,3,8,0.7), 0 4px 16px rgba(0,0,0,0.4);
           overflow: hidden;
           position: relative;
         }
         .moments-header::after {
           content: '';
           position: absolute; inset: 0; border-radius: inherit;
-          background: radial-gradient(ellipse at 50% 0%, rgba(200,51,74,0.38) 0%, transparent 65%);
+          background: radial-gradient(ellipse at 50% 0%, hsl(var(--h,349), var(--s,59%), 30% / 0.35) 0%, transparent 60%);
           pointer-events: none;
         }
         .moments-header-title {
@@ -430,13 +430,14 @@ export default function Moments({ session, profile }) {
         }
         .moments-add-btn {
           flex: 1;
-          background: rgba(255,255,255,0.2);
-          backdrop-filter: blur(8px);
-          border: 1.5px solid rgba(255,255,255,0.3);
+          background: rgba(255,255,255,0.18);
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
+          border: 1px solid rgba(255,255,255,0.28);
           border-radius: 14px;
           color: white;
           font-family: var(--font-body);
-          font-weight: 700;
+          font-weight: 500;
           font-size: 14px;
           padding: 12px;
           cursor: pointer;
@@ -444,10 +445,12 @@ export default function Moments({ session, profile }) {
           align-items: center;
           justify-content: center;
           gap: 6px;
+          transition: background 0.15s, transform 0.15s;
         }
+        .moments-add-btn:active { background: rgba(255,255,255,0.26); transform: scale(0.97); }
         .moments-slide-btn {
-          background: rgba(255,255,255,0.15);
-          border: 1.5px solid rgba(255,255,255,0.25);
+          background: rgba(255,255,255,0.13);
+          border: 1px solid rgba(255,255,255,0.22);
           border-radius: 14px;
           color: white;
           width: 48px;
@@ -455,7 +458,9 @@ export default function Moments({ session, profile }) {
           display: flex;
           align-items: center;
           justify-content: center;
+          transition: background 0.15s, transform 0.15s;
         }
+        .moments-slide-btn:active { background: rgba(255,255,255,0.22); transform: scale(0.96); }
 
         /* Grid */
         .moments-grid {

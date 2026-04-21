@@ -4,13 +4,19 @@
    DESIGN TOKENS — LIGHT MODE
 ══════════════════════════════════════════ */
 :root {
-  /* ── Brand accent ── */
-  --rose:          #A8283C;
-  --rose-dark:     #6E1424;
-  --rose-light:    #C44558;
+  /* ── HSL accent — single source for theming ── */
+  --h:  349;        /* hue   */
+  --s:  59%;        /* saturation */
+
+  /* ── Brand accent (derived from HSL) ── */
+  --rose:          hsl(var(--h), var(--s), 41%);
+  --rose-dark:     hsl(var(--h), var(--s), 28%);
+  --rose-light:    hsl(var(--h), var(--s), 54%);
+  --rose-faint:    hsl(var(--h), 40%, 96%);
+  --rose-muted:    hsl(var(--h), 30%, 88%);
   --gold:          #B8975A;
 
-  /* ── Light surfaces ── */
+  /* ── Light surfaces — warm ivory/champagne ── */
   --blush:         #F6F3EE;
   --blush-2:       #EAE5DC;
   --surface:       #FFFFFF;
@@ -33,30 +39,45 @@
   --text-muted:     var(--muted);
   --theme-accent:   var(--rose);
 
-  /* ── Gradients — restrained, no rainbow ── */
-  --gradient:        linear-gradient(150deg, #A8283C 0%, #6E1424 100%);
-  --gradient-warm:   linear-gradient(135deg, #B83550 0%, #7A1B30 100%);
-  --gradient-main:   linear-gradient(150deg, #A8283C 0%, #6E1424 100%);
+  /* ── Outgoing message bubble (themeable) ── */
+  --bubble-mine:   linear-gradient(135deg,
+    hsl(var(--h), var(--s), 49%) 0%,
+    hsl(var(--h), var(--s), 35%) 100%);
+
+  /* ── Gradients — derived from accent ── */
+  --gradient:        linear-gradient(150deg, hsl(var(--h),var(--s),44%) 0%, hsl(var(--h),var(--s),29%) 100%);
+  --gradient-warm:   linear-gradient(135deg, hsl(var(--h),var(--s),48%) 0%, hsl(var(--h),var(--s),33%) 100%);
+  --gradient-main:   linear-gradient(150deg, hsl(var(--h),var(--s),44%) 0%, hsl(var(--h),var(--s),29%) 100%);
   --gradient-banner: linear-gradient(160deg, #14100C 0%, #221A14 60%, #2E1E18 100%);
-  --theme-gradient:  linear-gradient(150deg, #A8283C 0%, #6E1424 100%);
+  --theme-gradient:  linear-gradient(150deg, hsl(var(--h),var(--s),44%) 0%, hsl(var(--h),var(--s),29%) 100%);
 
   /* ── Borders ── */
   --border:        rgba(0,0,0,0.07);
+  --border-subtle: rgba(0,0,0,0.04);
 
-  /* ── Shadows — neutral, not rose-tinted ── */
-  --shadow:        0 1px 4px rgba(0,0,0,0.05), 0 2px 10px rgba(0,0,0,0.04);
-  --shadow-md:     0 2px 12px rgba(0,0,0,0.08), 0 4px 24px rgba(0,0,0,0.05);
-  --shadow-lg:     0 4px 24px rgba(0,0,0,0.12), 0 8px 40px rgba(0,0,0,0.08);
+  /* ── Shadows — layered, warm-toned ── */
+  --shadow:        0 1px 3px rgba(0,0,0,0.04), 0 2px 8px rgba(0,0,0,0.04);
+  --shadow-md:     0 2px 10px rgba(0,0,0,0.07), 0 4px 20px rgba(0,0,0,0.04);
+  --shadow-lg:     0 4px 20px rgba(0,0,0,0.10), 0 8px 36px rgba(0,0,0,0.06);
+  --shadow-card:   0 1px 4px rgba(26,23,20,0.05), 0 3px 14px rgba(26,23,20,0.04);
 
   /* ── Radius scale ── */
   --radius:        14px;
   --radius-sm:     8px;
   --radius-md:     14px;
   --radius-lg:     18px;
+  --radius-xl:     24px;
 
-  /* ── Typography ── */
+  /* ── Typography scale ── */
   --font-display:  'Cormorant Garamond', Georgia, serif;
   --font-body:     'DM Sans', -apple-system, sans-serif;
+  --text-xs:       11px;
+  --text-sm:       13px;
+  --text-base:     15px;
+  --text-md:       17px;
+  --text-lg:       20px;
+  --text-xl:       24px;
+  --text-2xl:      30px;
 
   /* ── Safe areas ── */
   --safe-top:      env(safe-area-inset-top, 0px);
@@ -74,6 +95,7 @@
   --surface:       #151412;
   --surface-2:     #1A1916;
   --border:        rgba(255,255,255,0.06);
+  --border-subtle: rgba(255,255,255,0.03);
   --ink:           #EDE9E2;
   --ink-mid:       #9E9990;
   --muted:         #6A6560;
@@ -84,7 +106,10 @@
   --shadow:        0 2px 12px rgba(0,0,0,0.45);
   --shadow-md:     0 4px 24px rgba(0,0,0,0.55);
   --shadow-lg:     0 8px 48px rgba(0,0,0,0.65);
+  --shadow-card:   0 2px 16px rgba(0,0,0,0.5);
   --gradient-banner: linear-gradient(160deg, #0C0B09 0%, #151412 100%);
+  --rose-faint:    hsl(var(--h), 40%, 13%);
+  --rose-muted:    hsl(var(--h), 30%, 22%);
 }
 
 /* ═══════════════════════════════════════════
@@ -212,6 +237,15 @@ input, textarea, button, select { font-family: var(--font-body); }
   0%,100% { transform: translateY(0) scale(var(--ps,1));               opacity: 0.3; }
   50%     { transform: translateY(-12px) scale(calc(var(--ps,1)*1.1)); opacity: 0.6; }
 }
+@keyframes popIn {
+  0%   { transform: scale(0.88); opacity: 0; }
+  65%  { transform: scale(1.03); }
+  100% { transform: scale(1);    opacity: 1; }
+}
+@keyframes softSlide {
+  from { transform: translateY(14px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
 
 /* ═══════════════════════════════════════════
    LOADING
@@ -276,12 +310,13 @@ input, textarea, button, select { font-family: var(--font-body); }
 .auth-logo-wrap { margin-bottom: 28px; position: relative; z-index: 1; }
 .auth-card {
   width: 100%; max-width: 340px;
-  background: rgba(255,255,255,0.04);
-  border: 0.5px solid rgba(255,255,255,0.1);
-  border-radius: 20px;
+  background: rgba(255,255,255,0.05);
+  border: 0.5px solid rgba(255,255,255,0.12);
+  border-radius: 24px;
   padding: 32px 24px 28px;
-  box-shadow: 0 24px 80px rgba(0,0,0,0.5), 0 0 0 0.5px rgba(255,255,255,0.04);
+  box-shadow: 0 32px 96px rgba(0,0,0,0.55), 0 0 0 0.5px rgba(255,255,255,0.04), inset 0 1px 0 rgba(255,255,255,0.08);
   position: relative; z-index: 1;
+  animation: popIn 0.38s cubic-bezier(0.22,1,0.36,1) both;
 }
 .auth-title {
   font-family: var(--font-display);
@@ -301,16 +336,17 @@ input, textarea, button, select { font-family: var(--font-body); }
 }
 .auth-input {
   width: 100%;
-  background: rgba(255,255,255,0.06);
-  border: 0.5px solid rgba(255,255,255,0.1);
-  border-radius: 12px;
+  background: rgba(255,255,255,0.07);
+  border: 0.5px solid rgba(255,255,255,0.12);
+  border-radius: 13px;
   padding: 13px 16px; font-size: 15px; color: #EDE9E2; outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
 }
-.auth-input::placeholder { color: rgba(255,255,255,0.2); }
+.auth-input::placeholder { color: rgba(255,255,255,0.22); }
 .auth-input:focus {
-  border-color: rgba(168,40,60,0.6);
-  box-shadow: 0 0 0 3px rgba(168,40,60,0.12);
+  background: rgba(255,255,255,0.09);
+  border-color: hsl(var(--h,349), var(--s,59%), 50%);
+  box-shadow: 0 0 0 3px hsl(var(--h,349), var(--s,59%), 41% / 0.15);
 }
 .auth-error {
   background: rgba(200,40,60,0.1); border: 0.5px solid rgba(200,40,60,0.25);
@@ -319,15 +355,16 @@ input, textarea, button, select { font-family: var(--font-body); }
 }
 .auth-btn {
   width: 100%;
-  background: #A8283C;
-  color: white; border: none; border-radius: 12px;
+  background: var(--rose, #A8283C);
+  color: white; border: none; border-radius: 13px;
   padding: 14px; font-size: 15px; font-weight: 500;
   cursor: pointer; margin-top: 8px;
   transition: opacity 0.15s, transform 0.15s;
   letter-spacing: 0.2px;
+  box-shadow: 0 4px 16px hsl(var(--h,349), var(--s,59%), 41% / 0.35);
 }
 .auth-btn:active  { transform: scale(0.98); opacity: 0.9; }
-.auth-btn:disabled { opacity: 0.5; }
+.auth-btn:disabled { opacity: 0.5; box-shadow: none; }
 
 /* ═══════════════════════════════════════════
    MODAL
@@ -382,7 +419,7 @@ input, textarea, button, select { font-family: var(--font-body); }
 }
 .form-input:focus, .form-textarea:focus {
   border-color: var(--rose);
-  box-shadow: 0 0 0 3px rgba(168,40,60,0.08);
+  box-shadow: 0 0 0 3px hsl(var(--h,349), var(--s,59%), 41% / 0.1);
 }
 .app.dark .form-input, .app.dark .form-textarea {
   background: #1A1916; border-color: var(--border); color: var(--ink);
@@ -391,13 +428,14 @@ input, textarea, button, select { font-family: var(--font-body); }
 .form-submit {
   width: 100%;
   background: var(--rose);
-  color: white; border: none; border-radius: 12px;
+  color: white; border: none; border-radius: 13px;
   padding: 14px; font-size: 15px; font-weight: 500;
   cursor: pointer; margin-top: 4px;
   transition: opacity 0.2s, transform 0.15s;
+  box-shadow: 0 4px 14px hsl(var(--h,349), var(--s,59%), 41% / 0.3);
 }
 .form-submit:active   { opacity: 0.9; transform: scale(0.99); }
-.form-submit:disabled { opacity: 0.5; }
+.form-submit:disabled { opacity: 0.5; box-shadow: none; }
 .form-file-label {
   display: flex; align-items: center; gap: 8px;
   background: var(--blush); border: 0.5px solid var(--border);

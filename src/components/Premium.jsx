@@ -78,35 +78,41 @@ export default function Premium({ session }) {
       <style>{`
         /* ── Hero ── */
         .pm-hero {
-          background: linear-gradient(170deg, #0C0B09 0%, #151210 40%, #1C1510 100%);
-          padding: 60px 24px 44px;
+          background: linear-gradient(170deg, #0C0B09 0%, #151210 42%, #1D1412 100%);
+          padding: 64px 24px 48px;
           text-align: center;
           position: relative;
           overflow: hidden;
         }
         .pm-hero::before {
           content:'';
-          position:absolute; top:-60px; left:50%; transform:translateX(-50%);
-          width:300px; height:300px;
-          background:radial-gradient(ellipse, rgba(168,40,60,0.15) 0%, transparent 65%);
+          position:absolute; top:-80px; left:50%; transform:translateX(-50%);
+          width:360px; height:360px;
+          background:radial-gradient(ellipse, hsl(var(--h,349), var(--s,59%), 38% / 0.16) 0%, transparent 60%);
+          pointer-events:none;
+        }
+        .pm-hero::after {
+          content:'';
+          position:absolute; inset:0;
+          background:radial-gradient(ellipse at 50% 100%, hsl(var(--h,349), var(--s,59%), 20% / 0.08) 0%, transparent 60%);
           pointer-events:none;
         }
         .pm-crown {
           display:inline-flex; align-items:center; justify-content:center;
-          width:48px; height:48px; border-radius:50%;
-          background:rgba(168,40,60,0.1);
-          border:0.5px solid rgba(168,40,60,0.2);
-          margin-bottom:16px; position:relative;
+          width:52px; height:52px; border-radius:50%;
+          background:hsl(var(--h,349), var(--s,59%), 41% / 0.12);
+          border:0.5px solid hsl(var(--h,349), var(--s,59%), 41% / 0.25);
+          margin-bottom:18px; position:relative; z-index:1;
         }
         .pm-hero-title {
           font-family:var(--font-display,'Cormorant Garamond',Georgia,serif);
-          font-size:34px; font-style:italic; font-weight:300;
-          color:rgba(237,233,226,0.9); line-height:1.2; margin-bottom:10px; position:relative;
+          font-size:36px; font-style:italic; font-weight:300;
+          color:rgba(237,233,226,0.92); line-height:1.2; margin-bottom:10px; position:relative; z-index:1;
         }
-        .pm-hero-title span { color:rgba(207,85,104,0.9); }
+        .pm-hero-title span { color:var(--rose-light, hsl(var(--h,349), var(--s,59%), 65%)); }
         .pm-hero-sub {
-          font-size:13px; color:rgba(255,255,255,0.3);
-          letter-spacing:0.3px; position:relative; font-weight:300;
+          font-size:13px; color:rgba(255,255,255,0.32);
+          letter-spacing:0.3px; position:relative; z-index:1; font-weight:300;
         }
         /* ── Active banner ── */
         .pm-active {
@@ -155,7 +161,9 @@ export default function Premium({ session }) {
         }
         .pm-plan.sel {
           border-color:var(--rose,#A8283C);
-          background:rgba(168,40,60,0.03);
+          border-width: 1.5px;
+          background:hsl(var(--h,349), var(--s,59%), 41% / 0.04);
+          box-shadow: 0 2px 16px hsl(var(--h,349), var(--s,59%), 41% / 0.12);
         }
         .pm-plan-badge {
           position:absolute; top:-10px; left:50%; transform:translateX(-50%);
@@ -175,14 +183,15 @@ export default function Premium({ session }) {
         /* ── CTA ── */
         .pm-cta { padding:20px 16px 0; }
         .pm-btn {
-          width:100%; padding:15px; border:none; border-radius:14px;
+          width:100%; padding:16px; border:none; border-radius:14px;
           font-size:15px; font-weight:500; letter-spacing:0.2px;
           background:var(--rose,#A8283C);
           color:white; cursor:pointer;
           transition:opacity 0.2s, transform 0.15s;
+          box-shadow: 0 5px 20px hsl(var(--h,349), var(--s,59%), 41% / 0.35);
         }
         .pm-btn:active { transform:scale(0.98); opacity:0.9; }
-        .pm-btn:disabled { opacity:0.5; }
+        .pm-btn:disabled { opacity:0.5; box-shadow:none; }
         .pm-note {
           text-align:center; font-size:11px; color:var(--muted);
           margin-top:14px; line-height:1.7; font-weight:300;

@@ -102,18 +102,22 @@ function formatBirthday(dateStr) {
 }
 
 const THEMES = [
-  { id: 'rose',      label: 'Роза',       a: '#A8283C', b: '#6E1424' },
-  { id: 'cherry',    label: 'Вишня',      a: '#9B1B30', b: '#5C0E1A' },
-  { id: 'violet',    label: 'Фиалка',     a: '#5C2D7A', b: '#2A0F40' },
-  { id: 'lavender',  label: 'Лаванда',    a: '#6B4F9C', b: '#3A2060' },
-  { id: 'ocean',     label: 'Океан',      a: '#1B6B8A', b: '#0C3A50' },
-  { id: 'sky',       label: 'Небо',       a: '#1A6FA0', b: '#0D3D5C' },
-  { id: 'forest',    label: 'Лес',        a: '#2A6B3A', b: '#0F3820' },
-  { id: 'northern',  label: 'Сияние',     a: '#1A8070', b: '#0A4038' },
-  { id: 'sunset',    label: 'Закат',      a: '#B85020', b: '#7A2C10' },
-  { id: 'fire',      label: 'Огонь',      a: '#A82018', b: '#6E100C' },
-  { id: 'gold',      label: 'Золото',     a: '#9A7020', b: '#5C4010' },
-  { id: 'night',     label: 'Ночь',       a: '#2A3070', b: '#12163A' },
+  { id: 'rose',      label: 'Роза',       h: 349, s: '59%' },
+  { id: 'blush',     label: 'Румянец',    h: 340, s: '55%' },
+  { id: 'cherry',    label: 'Вишня',      h: 349, s: '70%' },
+  { id: 'plum',      label: 'Слива',      h: 330, s: '48%' },
+  { id: 'iris',      label: 'Ирис',       h: 270, s: '52%' },
+  { id: 'lavender',  label: 'Лаванда',    h: 258, s: '45%' },
+  { id: 'sapphire',  label: 'Сапфир',     h: 220, s: '62%' },
+  { id: 'ocean',     label: 'Океан',      h: 198, s: '65%' },
+  { id: 'teal',      label: 'Бирюза',     h: 176, s: '60%' },
+  { id: 'emerald',   label: 'Изумруд',    h: 148, s: '52%' },
+  { id: 'bronze',    label: 'Бронза',     h: 28,  s: '58%' },
+  { id: 'gold',      label: 'Золото',     h: 44,  s: '62%' },
+  { id: 'copper',    label: 'Медь',       h: 18,  s: '60%' },
+  { id: 'slate',     label: 'Грифель',    h: 218, s: '22%' },
+  { id: 'sage',      label: 'Шалфей',     h: 150, s: '28%' },
+  { id: 'graphite',  label: 'Графит',     h: 220, s: '10%' },
 ]
 
 /* ── Partner Invite Section ── */
@@ -258,7 +262,7 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
   const [savingAvatar, setSavingAvatar] = useState(false)
   const [saved, setSaved] = useState(false)
   const [avatarPreview, setAvatarPreview] = useState(profile?.avatar_url || null)
-  const [activeTheme, setActiveTheme] = useState(localStorage.getItem('loveTheme') || 'rose')
+  const [activeTheme, setActiveTheme] = useState(() => localStorage.getItem('loveTheme') || 'rose')
   const [pushEnabled, setPushEnabled] = useState(() => notifPermission() === 'granted')
   const [pushLoading, setPushLoading] = useState(false)
   const fileRef = useRef(null)
@@ -371,20 +375,28 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
   }
 
   function applyTheme(theme) {
-    const gradient = `linear-gradient(135deg, ${theme.a} 0%, ${theme.b} 100%)`
     setActiveTheme(theme.id)
     localStorage.setItem('loveTheme', theme.id)
-    localStorage.setItem('loveThemeData', JSON.stringify(theme))
-    document.documentElement.style.setProperty('--primary', theme.a)
-    document.documentElement.style.setProperty('--primary-dark', theme.b)
-    document.documentElement.style.setProperty('--gradient', gradient)
-    document.documentElement.style.setProperty('--gradient-warm', gradient)
-    document.documentElement.style.setProperty('--theme-gradient', gradient)
-    document.documentElement.style.setProperty('--theme-accent', theme.a)
-    document.documentElement.style.setProperty('--gradient-main', gradient)
-    document.documentElement.style.setProperty('--gradient-banner', gradient)
-    document.documentElement.style.setProperty('--rose', theme.a)
-    document.documentElement.style.setProperty('--rose-dark', theme.b)
+    localStorage.setItem('loveH', theme.h)
+    localStorage.setItem('loveS', theme.s)
+    const r = document.documentElement
+    r.style.setProperty('--h', theme.h)
+    r.style.setProperty('--s', theme.s)
+    const rose      = `hsl(${theme.h}, ${theme.s}, 41%)`
+    const roseDark  = `hsl(${theme.h}, ${theme.s}, 28%)`
+    const roseLight = `hsl(${theme.h}, ${theme.s}, 54%)`
+    const gradient  = `linear-gradient(135deg, hsl(${theme.h},${theme.s},46%) 0%, hsl(${theme.h},${theme.s},30%) 100%)`
+    r.style.setProperty('--rose',          rose)
+    r.style.setProperty('--rose-dark',     roseDark)
+    r.style.setProperty('--rose-light',    roseLight)
+    r.style.setProperty('--primary',       rose)
+    r.style.setProperty('--primary-dark',  roseDark)
+    r.style.setProperty('--gradient',      gradient)
+    r.style.setProperty('--gradient-warm', gradient)
+    r.style.setProperty('--theme-gradient',gradient)
+    r.style.setProperty('--theme-accent',  rose)
+    r.style.setProperty('--gradient-main', gradient)
+    r.style.setProperty('--bubble-mine',   `linear-gradient(135deg, hsl(${theme.h},${theme.s},49%) 0%, hsl(${theme.h},${theme.s},35%) 100%)`)
   }
 
   async function handleLogout() {
@@ -580,22 +592,23 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
         /* ── Themes ── */
         .themes-grid {
           display: grid; grid-template-columns: repeat(4, 1fr);
-          gap: 14px; padding: 8px 16px 20px;
+          gap: 12px; padding: 8px 16px 20px;
         }
-        .theme-swatch { display: flex; flex-direction: column; align-items: center; gap: 7px; cursor: pointer; }
+        .theme-swatch { display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; }
         .theme-circle {
-          width: 54px; height: 54px; border-radius: 50%;
-          box-shadow: 0 3px 12px rgba(0,0,0,0.2);
-          position: relative; transition: transform 0.15s, box-shadow 0.15s;
-          border: 3px solid transparent;
+          width: 50px; height: 50px; border-radius: 50%;
+          box-shadow: 0 2px 10px rgba(0,0,0,0.18);
+          position: relative; transition: transform 0.22s cubic-bezier(0.22,1,0.36,1), box-shadow 0.22s;
+          border: 2.5px solid transparent;
         }
+        .theme-circle:active { transform: scale(0.94); }
         .theme-circle.active {
-          transform: scale(1.14); border-color: white;
-          box-shadow: 0 6px 24px rgba(0,0,0,0.35);
+          transform: scale(1.12); border-color: white;
+          box-shadow: 0 5px 22px rgba(0,0,0,0.32);
         }
         .theme-circle.active::after {
           content: ''; position: absolute; inset: 0; border-radius: 50%;
-          background: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpolyline points='20 6 9 17 4 12' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/60% no-repeat;
+          background: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpolyline points='20 6 9 17 4 12' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/55% no-repeat;
         }
         .theme-label { font-family: var(--font-body); font-size: 10px; color: var(--text-muted); text-align: center; white-space: nowrap; }
 
@@ -610,10 +623,11 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
           font-family: var(--font-body); font-weight: 500; font-size: 15px;
           cursor: pointer; letter-spacing: 0.2px;
           transition: opacity 0.2s, transform 0.15s;
+          box-shadow: 0 4px 16px hsl(var(--h,349), var(--s,59%), 41% / 0.3);
         }
         .settings-save-btn:active { transform: scale(0.98); opacity: 0.9; }
-        .settings-save-btn:disabled { opacity: 0.5; }
-        .settings-save-btn.saved { background: #2A7A4A; }
+        .settings-save-btn:disabled { opacity: 0.5; box-shadow: none; }
+        .settings-save-btn.saved { background: #2A7A4A; box-shadow: 0 4px 14px rgba(42,122,74,0.3); }
 
         /* ── Logout ── */
         .settings-logout-btn {
@@ -777,7 +791,7 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
               <div key={t.id} className="theme-swatch" onClick={() => applyTheme(t)}>
                 <div
                   className={`theme-circle${activeTheme === t.id ? ' active' : ''}`}
-                  style={{ background: `linear-gradient(135deg, ${t.a}, ${t.b})` }}
+                  style={{ background: `linear-gradient(135deg, hsl(${t.h},${t.s},46%), hsl(${t.h},${t.s},30%))` }}
                 />
                 <span className="theme-label">{t.label}</span>
               </div>

@@ -691,7 +691,7 @@ export default function Home({ session, profile, onNavigate }) {
           border-radius: 18px;
           border: 0.5px solid var(--border, rgba(0,0,0,0.07));
           padding: 20px;
-          box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+          box-shadow: var(--shadow-card, 0 1px 4px rgba(26,23,20,0.05), 0 3px 14px rgba(26,23,20,0.04));
           animation: slideUp 0.4s ease both;
           position: relative; overflow: hidden;
         }
@@ -796,10 +796,10 @@ export default function Home({ session, profile, onNavigate }) {
           align-items: center;
           gap: 10px;
           cursor: pointer;
-          box-shadow: 0 1px 4px rgba(0,0,0,0.05);
-          transition: opacity 0.15s, transform 0.15s;
+          box-shadow: var(--shadow-card, 0 1px 4px rgba(26,23,20,0.05), 0 3px 14px rgba(26,23,20,0.04));
+          transition: opacity 0.15s, transform 0.2s cubic-bezier(0.22,1,0.36,1);
         }
-        .action-btn:active { opacity: 0.7; transform: scale(0.96); }
+        .action-btn:active { opacity: 0.75; transform: scale(0.96); }
         .action-btn-icon {
           width: 44px; height: 44px;
           border-radius: 14px;

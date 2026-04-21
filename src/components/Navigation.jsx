@@ -168,35 +168,37 @@ export default function Navigation({ activeTab, setActiveTab }) {
   return (
     <>
       <style>{`
+        /* ── Bottom nav bar ── */
         .nav-new {
           position: fixed;
           bottom: 0; left: 0; right: 0;
-          background: rgba(246,243,238,0.94);
-          backdrop-filter: blur(20px) saturate(160%);
-          -webkit-backdrop-filter: blur(20px) saturate(160%);
-          border-top: 0.5px solid rgba(0,0,0,0.07);
+          background: rgba(246,243,238,0.92);
+          backdrop-filter: blur(24px) saturate(180%);
+          -webkit-backdrop-filter: blur(24px) saturate(180%);
+          border-top: 0.5px solid rgba(0,0,0,0.06);
           display: flex;
           align-items: stretch;
-          height: calc(56px + env(safe-area-inset-bottom, 0px));
+          height: calc(58px + env(safe-area-inset-bottom, 0px));
           padding-bottom: env(safe-area-inset-bottom, 0px);
           z-index: 50;
         }
         .app.dark .nav-new {
-          background: rgba(12,11,9,0.95);
+          background: rgba(12,11,9,0.94);
           border-top-color: rgba(255,255,255,0.05);
         }
 
+        /* ── Individual tab button ── */
         .nav-tab {
           flex: 1;
           display: flex;
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          padding: 9px 2px 8px;
+          padding: 7px 2px 8px;
           cursor: pointer;
           background: none;
           border: none;
-          gap: 4px;
+          gap: 3px;
           position: relative;
           -webkit-tap-highlight-color: transparent;
           outline: none;
@@ -204,12 +206,31 @@ export default function Navigation({ activeTab, setActiveTab }) {
         }
         .nav-tab:active { opacity: 0.65; }
 
+        /* Pill background that grows when active */
+        .nav-tab-pill {
+          position: absolute;
+          top: 6px; left: 50%;
+          transform: translateX(-50%) scale(0);
+          width: 48px; height: 30px;
+          border-radius: 15px;
+          background: hsl(var(--h,349), var(--s,59%), 94%);
+          transition: transform 0.28s cubic-bezier(0.22,1,0.36,1);
+          pointer-events: none;
+        }
+        .app.dark .nav-tab-pill {
+          background: hsl(var(--h,349), var(--s,59%), 13%);
+        }
+        .nav-tab.active .nav-tab-pill {
+          transform: translateX(-50%) scale(1);
+        }
+
         .nav-tab-icon {
           display: flex;
           align-items: center;
           justify-content: center;
           width: 28px; height: 28px;
-          transition: transform 0.2s cubic-bezier(0.22,1,0.36,1);
+          position: relative; z-index: 1;
+          transition: transform 0.25s cubic-bezier(0.22,1,0.36,1);
           color: var(--muted, #8A8480);
         }
         .nav-tab-icon svg { width: 22px; height: 22px; }
@@ -223,63 +244,52 @@ export default function Navigation({ activeTab, setActiveTab }) {
           color: var(--muted, #8A8480);
           transition: color 0.2s;
           white-space: nowrap;
+          position: relative; z-index: 1;
         }
         .nav-tab.active .nav-tab-label {
           color: var(--rose, #A8283C);
           font-weight: 500;
         }
 
-        /* Active indicator — thin line above icon */
-        .nav-tab-dot {
-          position: absolute;
-          top: 0;
-          left: 50%;
-          transform: translateX(-50%) scaleX(0);
-          width: 20px; height: 1.5px;
-          border-radius: 99px;
-          background: var(--rose, #A8283C);
-          transition: transform 0.25s cubic-bezier(0.22,1,0.36,1);
-        }
-        .nav-tab.active .nav-tab-dot { transform: translateX(-50%) scaleX(1); }
-
-        /* More drawer overlay */
+        /* ── More drawer overlay ── */
         .more-overlay {
           position: fixed; inset: 0; z-index: 49;
-          background: rgba(10,8,6,0.6);
+          background: rgba(10,8,6,0.55);
           backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
           animation: fadeIn 0.18s ease;
         }
 
         .more-drawer {
           position: fixed;
-          bottom: calc(56px + env(safe-area-inset-bottom, 0px));
+          bottom: calc(58px + env(safe-area-inset-bottom, 0px));
           left: 0; right: 0;
           background: var(--surface, #FFFFFF);
-          border-radius: 18px 18px 0 0;
+          border-radius: 20px 20px 0 0;
           border-top: 0.5px solid var(--border, rgba(0,0,0,0.07));
           padding: 14px 16px 20px;
           z-index: 50;
           animation: slideUp 0.28s cubic-bezier(0.22,1,0.36,1) both;
-          box-shadow: 0 -8px 40px rgba(0,0,0,0.12);
+          box-shadow: 0 -12px 48px rgba(0,0,0,0.1);
         }
         .app.dark .more-drawer {
           background: #151412;
           border-top-color: rgba(255,255,255,0.05);
-          box-shadow: 0 -8px 40px rgba(0,0,0,0.5);
+          box-shadow: 0 -12px 48px rgba(0,0,0,0.5);
         }
 
         .more-handle {
-          width: 28px; height: 2.5px;
+          width: 32px; height: 3px;
           border-radius: 99px;
           background: var(--blush-2, #EAE5DC);
-          margin: 0 auto 14px;
+          margin: 0 auto 16px;
         }
         .app.dark .more-handle { background: rgba(255,255,255,0.1); }
 
         .more-grid {
           display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          gap: 6px;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 8px;
         }
 
         .more-item {
@@ -287,19 +297,28 @@ export default function Navigation({ activeTab, setActiveTab }) {
           flex-direction: column;
           align-items: center;
           gap: 7px;
-          padding: 14px 6px 12px;
-          border-radius: 12px;
+          padding: 16px 6px 13px;
+          border-radius: 14px;
           cursor: pointer;
           background: var(--blush, #F6F3EE);
           border: 0.5px solid var(--border, rgba(0,0,0,0.07));
-          transition: opacity 0.15s, transform 0.15s;
+          transition: opacity 0.15s, transform 0.15s, background 0.2s, border-color 0.2s;
           -webkit-tap-highlight-color: transparent;
         }
         .app.dark .more-item { background: #1A1916; border-color: rgba(255,255,255,0.05); }
         .more-item:active { opacity: 0.65; transform: scale(0.96); }
 
+        .more-item.active-item {
+          background: hsl(var(--h,349), var(--s,59%), 96%);
+          border-color: hsl(var(--h,349), var(--s,59%), 87%);
+        }
+        .app.dark .more-item.active-item {
+          background: hsl(var(--h,349), var(--s,59%), 12%);
+          border-color: hsl(var(--h,349), var(--s,59%), 22%);
+        }
+
         .more-item-icon {
-          width: 24px; height: 24px;
+          width: 26px; height: 26px;
           color: var(--ink-mid, #48423C);
           display: flex; align-items: center; justify-content: center;
         }
@@ -309,7 +328,7 @@ export default function Navigation({ activeTab, setActiveTab }) {
 
         .more-item-label {
           font-family: var(--font-body);
-          font-size: 10px;
+          font-size: 11px;
           font-weight: 400;
           color: var(--muted, #8A8480);
           text-align: center;
@@ -352,7 +371,7 @@ export default function Navigation({ activeTab, setActiveTab }) {
               className={`nav-tab${isActive ? ' active' : ''}`}
               onClick={() => handlePress(id)}
             >
-              <div className="nav-tab-dot" />
+              <div className="nav-tab-pill" />
               <span className="nav-tab-icon">
                 <Icon active={isActive} />
               </span>

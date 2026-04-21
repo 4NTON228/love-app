@@ -4,37 +4,38 @@ import { supabase } from '../lib/supabase'
 const STYLE = `
   .auth-tabs {
     display:flex; gap:0; margin-bottom:24px;
-    background:rgba(255,255,255,0.05); border-radius:10px; padding:3px;
+    background:rgba(255,255,255,0.06); border-radius:12px; padding:3px;
   }
   .auth-tab {
-    flex:1; padding:9px; border:none; background:transparent;
-    color:rgba(255,255,255,0.35);
+    flex:1; padding:9px 6px; border:none; background:transparent;
+    color:rgba(255,255,255,0.38);
     font-family:var(--font-body); font-size:13px; font-weight:400; cursor:pointer;
-    border-radius:8px; transition:all 0.2s;
+    border-radius:10px; transition:all 0.22s cubic-bezier(0.22,1,0.36,1);
   }
   .auth-tab.active {
-    background:rgba(255,255,255,0.09);
-    color:rgba(237,233,226,0.9);
+    background:rgba(255,255,255,0.1);
+    color:rgba(237,233,226,0.92);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.2);
   }
   .auth-btn-google {
-    width:100%; background:rgba(255,255,255,0.06); color:rgba(237,233,226,0.75);
-    border:0.5px solid rgba(255,255,255,0.1); border-radius:12px;
+    width:100%; background:rgba(255,255,255,0.07); color:rgba(237,233,226,0.78);
+    border:0.5px solid rgba(255,255,255,0.12); border-radius:13px;
     padding:13px; font-size:13px; font-weight:400; cursor:pointer;
     margin-top:10px; display:flex; align-items:center; justify-content:center; gap:10px;
-    transition:background 0.2s;
+    transition:background 0.2s, transform 0.15s;
   }
-  .auth-btn-google:hover { background:rgba(255,255,255,0.1); }
+  .auth-btn-google:active { background:rgba(255,255,255,0.12); transform:scale(0.98); }
   .auth-btn-vk {
-    width:100%; background:rgba(0,119,255,0.18); color:rgba(180,210,255,0.9);
-    border:0.5px solid rgba(0,119,255,0.25); border-radius:12px;
+    width:100%; background:rgba(0,119,255,0.18); color:rgba(180,210,255,0.92);
+    border:0.5px solid rgba(0,119,255,0.28); border-radius:13px;
     padding:13px; font-size:13px; font-weight:400; cursor:pointer;
     margin-top:10px; display:flex; align-items:center; justify-content:center; gap:10px;
-    transition:opacity 0.2s;
+    transition:opacity 0.2s, transform 0.15s;
   }
-  .auth-btn-vk:hover { opacity:0.85; }
+  .auth-btn-vk:active { opacity:0.82; transform:scale(0.98); }
   .auth-divider {
     display:flex; align-items:center; gap:10px; margin:14px 0 6px;
-    color:rgba(255,255,255,0.2); font-size:11px; letter-spacing:0.5px;
+    color:rgba(255,255,255,0.22); font-size:11px; letter-spacing:0.6px;
   }
   .auth-divider::before,.auth-divider::after {
     content:''; flex:1; height:0.5px; background:rgba(255,255,255,0.08);
@@ -45,19 +46,19 @@ const STYLE = `
     padding:0; margin-top:14px; display:block; text-align:center; width:100%;
     transition:color 0.2s;
   }
-  .auth-link:hover { color:rgba(255,255,255,0.6); }
+  .auth-link:active { color:rgba(255,255,255,0.65); }
   .auth-success {
-    background:rgba(50,160,90,0.1); border:0.5px solid rgba(50,160,90,0.25);
-    border-radius:10px; padding:12px 14px; font-size:13px;
-    color:rgba(160,220,180,0.9);
-    margin-bottom:12px; text-align:center; line-height:1.5;
+    background:rgba(50,160,90,0.1); border:0.5px solid rgba(50,160,90,0.28);
+    border-radius:12px; padding:12px 14px; font-size:13px;
+    color:rgba(160,220,180,0.92);
+    margin-bottom:12px; text-align:center; line-height:1.55;
   }
   .auth-consent {
     display:flex; align-items:flex-start; gap:10px; margin:12px 0 4px; cursor:pointer;
   }
   .auth-consent input[type="checkbox"] {
     width:16px; height:16px; min-width:16px; margin-top:2px; cursor:pointer;
-    accent-color:#A8283C;
+    accent-color:var(--rose, #A8283C);
   }
   .auth-consent-text {
     font-size:11px; color:rgba(255,255,255,0.3); line-height:1.6;
@@ -146,17 +147,31 @@ export default function Auth() {
     <div className="auth-bg">
       <style>{STYLE}</style>
 
-      {/* Wordmark — no heartbeat, no decoration */}
+      {/* Wordmark */}
       <div className="auth-logo-wrap">
-        <div style={{
-          fontFamily: 'var(--font-display)',
-          fontSize: 13,
-          fontWeight: 400,
-          letterSpacing: 4,
-          textTransform: 'uppercase',
-          color: 'rgba(237,233,226,0.35)',
-        }}>
-          Love App
+        <div style={{ textAlign: 'center' }}>
+          <div style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: 36,
+            fontWeight: 300,
+            fontStyle: 'italic',
+            letterSpacing: 1,
+            color: 'rgba(237,233,226,0.88)',
+            lineHeight: 1,
+            marginBottom: 6,
+          }}>
+            Love
+          </div>
+          <div style={{
+            fontFamily: 'var(--font-body)',
+            fontSize: 10,
+            fontWeight: 400,
+            letterSpacing: 5,
+            textTransform: 'uppercase',
+            color: 'rgba(237,233,226,0.28)',
+          }}>
+            your story
+          </div>
         </div>
       </div>
 

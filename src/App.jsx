@@ -16,40 +16,48 @@ const Settings    = lazy(() => import('./components/Settings'))
 const AIAdvisor   = lazy(() => import('./components/AIAdvisor'))
 const Premium     = lazy(() => import('./components/Premium'))
 
-// Apply saved theme on load
+// Apply saved theme on load — HSL-based system
 ;(function applyStoredTheme() {
-  const THEMES = {
-    rose:     { a: '#A8283C', b: '#6E1424' },
-    cherry:   { a: '#9B1B30', b: '#5C0E1A' },
-    violet:   { a: '#5C2D7A', b: '#2A0F40' },
-    lavender: { a: '#6B4F9C', b: '#3A2060' },
-    ocean:    { a: '#1B6B8A', b: '#0C3A50' },
-    sky:      { a: '#1A6FA0', b: '#0D3D5C' },
-    forest:   { a: '#2A6B3A', b: '#0F3820' },
-    northern: { a: '#1A8070', b: '#0A4038' },
-    sunset:   { a: '#B85020', b: '#7A2C10' },
-    fire:     { a: '#A82018', b: '#6E100C' },
-    gold:     { a: '#9A7020', b: '#5C4010' },
-    night:    { a: '#2A3070', b: '#12163A' },
+  const r = document.documentElement
+  const h = localStorage.getItem('loveH')
+  const s = localStorage.getItem('loveS')
+  if (h && s) {
+    const rose     = `hsl(${h}, ${s}, 41%)`
+    const roseDark = `hsl(${h}, ${s}, 28%)`
+    const gradient = `linear-gradient(135deg, hsl(${h},${s},46%) 0%, hsl(${h},${s},30%) 100%)`
+    r.style.setProperty('--h',             h)
+    r.style.setProperty('--s',             s)
+    r.style.setProperty('--rose',          rose)
+    r.style.setProperty('--rose-dark',     roseDark)
+    r.style.setProperty('--rose-light',    `hsl(${h}, ${s}, 54%)`)
+    r.style.setProperty('--primary',       rose)
+    r.style.setProperty('--primary-dark',  roseDark)
+    r.style.setProperty('--gradient',      gradient)
+    r.style.setProperty('--gradient-warm', gradient)
+    r.style.setProperty('--theme-gradient',gradient)
+    r.style.setProperty('--theme-accent',  rose)
+    r.style.setProperty('--gradient-main', gradient)
+    r.style.setProperty('--bubble-mine',   `linear-gradient(135deg, hsl(${h},${s},49%) 0%, hsl(${h},${s},35%) 100%)`)
+    return
   }
-  let t = null
+  // Legacy hex fallback (users with old loveThemeData)
   try {
     const raw = localStorage.getItem('loveThemeData')
-    if (raw) t = JSON.parse(raw)
-  } catch (_e) { /* ignore invalid stored theme */ }
-  if (!t) {
-    const saved = localStorage.getItem('loveTheme')
-    if (saved && THEMES[saved]) t = THEMES[saved]
-  }
-  if (t) {
-    const gradient = `linear-gradient(135deg, ${t.a} 0%, ${t.b} 100%)`
-    document.documentElement.style.setProperty('--primary', t.a)
-    document.documentElement.style.setProperty('--primary-dark', t.b)
-    document.documentElement.style.setProperty('--gradient', gradient)
-    document.documentElement.style.setProperty('--gradient-warm', gradient)
-    document.documentElement.style.setProperty('--theme-gradient', gradient)
-    document.documentElement.style.setProperty('--theme-accent', t.a)
-  }
+    if (raw) {
+      const t = JSON.parse(raw)
+      if (t?.a) {
+        const gradient = `linear-gradient(135deg, ${t.a} 0%, ${t.b} 100%)`
+        r.style.setProperty('--rose',          t.a)
+        r.style.setProperty('--rose-dark',     t.b)
+        r.style.setProperty('--primary',       t.a)
+        r.style.setProperty('--primary-dark',  t.b)
+        r.style.setProperty('--gradient',      gradient)
+        r.style.setProperty('--gradient-warm', gradient)
+        r.style.setProperty('--theme-gradient',gradient)
+        r.style.setProperty('--theme-accent',  t.a)
+      }
+    }
+  } catch (_e) { /* ignore */ }
 })()
 
 export default function App() {

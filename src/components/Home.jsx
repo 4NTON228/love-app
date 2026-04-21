@@ -36,6 +36,7 @@ function getAnniversary(start) {
 
 function getTimeUntil(target) {
   if (!target) return null
+
   const diff = new Date(target) - new Date()
   if (diff <= 0) return null
 
@@ -64,80 +65,89 @@ function formatDate(value, options) {
 
 function getInitials(name) {
   if (!name) return 'L'
-  return name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map(part => part[0]?.toUpperCase())
-    .join('') || 'L'
+
+  return (
+    name
+      .trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map(part => part[0]?.toUpperCase())
+      .join('') || 'L'
+  )
 }
 
-function AvatarHalo({ src, name, onClick, muted = false }) {
+function AvatarBadge({ src, name, onClick, muted = false }) {
   const [imgError, setImgError] = useState(false)
 
   return (
-    <button type="button" className={`lux-avatar${muted ? ' muted' : ''}`} onClick={onClick}>
-      <span className="lux-avatar-ring" />
-      <span className="lux-avatar-core">
+    <button
+      type="button"
+      className={`home-avatar${muted ? ' muted' : ''}`}
+      onClick={onClick}
+    >
+      <span className="home-avatar-frame">
         {src && !imgError ? (
           <img
             src={src}
             alt={name}
-            className="lux-avatar-image"
+            className="home-avatar-image"
             onError={() => setImgError(true)}
           />
         ) : (
-          <span className="lux-avatar-fallback">{getInitials(name)}</span>
+          <span className="home-avatar-fallback">{getInitials(name)}</span>
         )}
       </span>
-      <span className="lux-avatar-name">{name || 'Love'}</span>
+      <span className="home-avatar-name">{name || 'Любовь'}</span>
     </button>
   )
 }
 
-function ActionCard({ title, subtitle, label, icon, onClick, wide = false }) {
+function FeatureCard({ title, subtitle, badge, icon, onClick, wide = false }) {
   return (
     <button
       type="button"
-      className={`action-card${wide ? ' wide' : ''}`}
+      className={`feature-card${wide ? ' wide' : ''}`}
       onClick={onClick}
     >
-      <span className="action-card-glow" />
-      <span className="action-card-head">
-        <span className="action-card-icon">{icon}</span>
-        <span className="action-card-label">{label}</span>
-      </span>
-      <span className="action-card-title">{title}</span>
-      <span className="action-card-subtitle">{subtitle}</span>
+      <div className="feature-card-top">
+        <span className="feature-card-icon">{icon}</span>
+        <span className="feature-card-badge">{badge}</span>
+      </div>
+      <div className="feature-card-title">{title}</div>
+      <div className="feature-card-subtitle">{subtitle}</div>
     </button>
   )
 }
 
-function DataCard({ eyebrow, title, children, compact = false }) {
+function InfoCard({ eyebrow, title, children, compact = false }) {
   return (
-    <section className={`data-card${compact ? ' compact' : ''}`}>
-      <div className="data-card-eyebrow">{eyebrow}</div>
-      <div className="data-card-title">{title}</div>
+    <section className={`info-card${compact ? ' compact' : ''}`}>
+      <div className="info-card-eyebrow">{eyebrow}</div>
+      <div className="info-card-title">{title}</div>
       {children}
     </section>
   )
 }
 
-function PartnerCard({ profile, loading, onClose }) {
+function PartnerModal({ profile, loading, onClose }) {
   return (
-    <div className="partner-overlay" onClick={onClose}>
-      <div className="partner-dialog" onClick={e => e.stopPropagation()}>
+    <div className="partner-modal-overlay" onClick={onClose}>
+      <div className="partner-modal" onClick={e => e.stopPropagation()}>
         <button type="button" className="partner-close" onClick={onClose}>
-          x
+          Закрыть
         </button>
+
         {loading ? (
           <div className="partner-loading" />
         ) : (
           <>
-            <AvatarHalo src={profile?.avatar_url} name={profile?.name || 'Партнёр'} />
-            <div className="partner-title">{profile?.name || 'Партнёр'}</div>
+            <AvatarBadge
+              src={profile?.avatar_url}
+              name={profile?.name || 'Партнер'}
+            />
+            <div className="partner-name">{profile?.name || 'Партнер'}</div>
             {profile?.birthday && (
-              <div className="partner-subtitle">
+              <div className="partner-meta">
                 {formatDate(profile.birthday, { day: 'numeric', month: 'long' })}
               </div>
             )}
@@ -156,29 +166,30 @@ export default function Home({ session, profile, onNavigate }) {
   const [partnerProfile, setPartnerProfile] = useState(null)
   const [sharedCoupleDate, setSharedCoupleDate] = useState(null)
   const [partnerLoading, setPartnerLoading] = useState(!!profile?.partner_id)
-  const [editMsg, setEditMsg] = useState(false)
-  const [editMeet, setEditMeet] = useState(false)
-  const [newMsg, setNewMsg] = useState('')
-  const [newMeet, setNewMeet] = useState('')
+  const [editMessage, setEditMessage] = useState(false)
+  const [editMeeting, setEditMeeting] = useState(false)
+  const [newMessage, setNewMessage] = useState('')
+  const [newMeeting, setNewMeeting] = useState('')
   const [saving, setSaving] = useState(false)
-  const [showPartnerCard, setShowPartnerCard] = useState(false)
+  const [showPartnerModal, setShowPartnerModal] = useState(false)
 
   const hasPartner = !!profile?.partner_id
   const effectiveCoupleDate = sharedCoupleDate ?? profile?.couple_start_date ?? null
   const hasStartDate = !!effectiveCoupleDate
-  const coupleStart = useMemo(
-    () => (effectiveCoupleDate ? new Date(`${effectiveCoupleDate}T00:00:00`) : null),
-    [effectiveCoupleDate]
-  )
-  const anniv = useMemo(
-    () => (coupleStart ? getAnniversary(coupleStart) : { daysUntil: null, progress: 0 }),
-    [coupleStart]
-  )
 
-  const myName = profile?.name || 'You'
-  const partnerName = partnerProfile?.name || (hasPartner ? 'Партнёр' : 'Only you')
-  const headline = hasPartner ? `${myName} & ${partnerName}` : myName
-  const loveMsg = settings?.love_message || 'Для вас двоих. Тихо, красиво и только по любви.'
+  const coupleStart = useMemo(() => {
+    return effectiveCoupleDate ? new Date(`${effectiveCoupleDate}T00:00:00`) : null
+  }, [effectiveCoupleDate])
+
+  const anniversary = useMemo(() => {
+    return coupleStart ? getAnniversary(coupleStart) : { daysUntil: null, progress: 0 }
+  }, [coupleStart])
+
+  const myName = profile?.name || 'Ты'
+  const partnerName = partnerProfile?.name || (hasPartner ? 'Партнер' : 'Только ты')
+  const title = hasPartner ? `${myName} и ${partnerName}` : myName
+  const loveMessage =
+    settings?.love_message || 'Здесь живет ваша история. Тихая, красивая и только для двоих.'
 
   useEffect(() => {
     if (!coupleStart) {
@@ -188,6 +199,7 @@ export default function Home({ session, profile, onNavigate }) {
 
     const update = () => setTime(getRelTime(coupleStart))
     update()
+
     const id = setInterval(update, 1000)
     return () => clearInterval(id)
   }, [coupleStart])
@@ -200,6 +212,7 @@ export default function Home({ session, profile, onNavigate }) {
 
     const update = () => setCountdown(getTimeUntil(settings.next_meeting))
     update()
+
     const id = setInterval(update, 1000)
     return () => clearInterval(id)
   }, [settings?.next_meeting])
@@ -213,13 +226,16 @@ export default function Home({ session, profile, onNavigate }) {
       try {
         if (profile?.partner_id) {
           setPartnerLoading(true)
+
           const { data: partner } = await supabase
             .from('profiles')
             .select('id, name, avatar_url, birthday')
             .eq('id', profile.partner_id)
             .single()
 
-          if (mounted) setPartnerProfile(partner || null)
+          if (mounted) {
+            setPartnerProfile(partner || null)
+          }
         } else if (mounted) {
           setPartnerProfile(null)
           setPartnerLoading(false)
@@ -245,6 +261,7 @@ export default function Home({ session, profile, onNavigate }) {
             .select('*')
             .eq('couple_id', profile.couple_id)
             .maybeSingle()
+
           fetchedSettings = data || null
         }
 
@@ -254,16 +271,20 @@ export default function Home({ session, profile, onNavigate }) {
             .select('*')
             .eq('user_id', session.user.id)
             .maybeSingle()
+
           fetchedSettings = data || null
         }
 
         if (mounted) {
           setSettings(fetchedSettings)
-          setNewMsg(fetchedSettings?.love_message || loveMsg)
-          setNewMeet(utcToLocal(fetchedSettings?.next_meeting))
+          setNewMessage(
+            fetchedSettings?.love_message ||
+              'Здесь живет ваша история. Тихая, красивая и только для двоих.'
+          )
+          setNewMeeting(utcToLocal(fetchedSettings?.next_meeting))
         }
 
-        let eventsQuery = supabase
+        let eventQuery = supabase
           .from('calendar_events')
           .select('id, title, emoji, event_date')
           .gte('event_date', new Date().toISOString())
@@ -271,20 +292,22 @@ export default function Home({ session, profile, onNavigate }) {
           .limit(1)
 
         if (profile?.couple_id) {
-          eventsQuery = eventsQuery.eq('couple_id', profile.couple_id)
+          eventQuery = eventQuery.eq('couple_id', profile.couple_id)
         } else {
-          eventsQuery = eventsQuery.eq('user_id', session.user.id)
+          eventQuery = eventQuery.eq('user_id', session.user.id)
         }
 
-        const { data: eventRows } = await eventsQuery
+        const { data: events } = await eventQuery
 
         if (mounted) {
-          setNextEvent(eventRows?.[0] || null)
+          setNextEvent(events?.[0] || null)
           setPartnerLoading(false)
         }
       } catch (error) {
-        console.warn('Home load failed:', error)
-        if (mounted) setPartnerLoading(false)
+        console.warn('Ошибка загрузки главного экрана:', error)
+        if (mounted) {
+          setPartnerLoading(false)
+        }
       }
     }
 
@@ -293,7 +316,7 @@ export default function Home({ session, profile, onNavigate }) {
     return () => {
       mounted = false
     }
-  }, [profile?.couple_id, profile?.partner_id, session?.user?.id, loveMsg])
+  }, [profile?.couple_id, profile?.partner_id, session?.user?.id])
 
   async function saveMessage() {
     if (!session?.user?.id) return
@@ -301,25 +324,30 @@ export default function Home({ session, profile, onNavigate }) {
 
     try {
       const payload = {
-        love_message: newMsg.trim(),
+        love_message: newMessage.trim(),
         next_meeting: settings?.next_meeting || null,
       }
 
-      if (profile?.couple_id) payload.couple_id = profile.couple_id
-      else payload.user_id = session.user.id
+      if (profile?.couple_id) {
+        payload.couple_id = profile.couple_id
+      } else {
+        payload.user_id = session.user.id
+      }
 
       const { data, error } = await supabase
         .from('couple_settings')
-        .upsert(payload, { onConflict: profile?.couple_id ? 'couple_id' : 'user_id' })
+        .upsert(payload, {
+          onConflict: profile?.couple_id ? 'couple_id' : 'user_id',
+        })
         .select()
         .maybeSingle()
 
       if (error) throw error
 
       setSettings(prev => ({ ...prev, ...payload, ...(data || {}) }))
-      setEditMsg(false)
+      setEditMessage(false)
     } catch (error) {
-      console.warn('Save message failed:', error)
+      console.warn('Ошибка сохранения сообщения:', error)
     } finally {
       setSaving(false)
     }
@@ -331,25 +359,30 @@ export default function Home({ session, profile, onNavigate }) {
 
     try {
       const payload = {
-        love_message: settings?.love_message || loveMsg,
-        next_meeting: localToUTC(newMeet),
+        love_message: settings?.love_message || loveMessage,
+        next_meeting: localToUTC(newMeeting),
       }
 
-      if (profile?.couple_id) payload.couple_id = profile.couple_id
-      else payload.user_id = session.user.id
+      if (profile?.couple_id) {
+        payload.couple_id = profile.couple_id
+      } else {
+        payload.user_id = session.user.id
+      }
 
       const { data, error } = await supabase
         .from('couple_settings')
-        .upsert(payload, { onConflict: profile?.couple_id ? 'couple_id' : 'user_id' })
+        .upsert(payload, {
+          onConflict: profile?.couple_id ? 'couple_id' : 'user_id',
+        })
         .select()
         .maybeSingle()
 
       if (error) throw error
 
       setSettings(prev => ({ ...prev, ...payload, ...(data || {}) }))
-      setEditMeet(false)
+      setEditMeeting(false)
     } catch (error) {
-      console.warn('Save meeting failed:', error)
+      console.warn('Ошибка сохранения даты встречи:', error)
     } finally {
       setSaving(false)
     }
@@ -358,61 +391,60 @@ export default function Home({ session, profile, onNavigate }) {
   return (
     <>
       <style>{`
-        .lux-home {
-          --bg-main: #090709;
-          --bg-card: rgba(18, 14, 16, 0.78);
-          --bg-card-strong: rgba(27, 20, 23, 0.9);
-          --line: rgba(255, 244, 229, 0.08);
-          --line-strong: rgba(255, 244, 229, 0.16);
-          --text-main: #f7efe6;
-          --text-soft: rgba(247, 239, 230, 0.72);
-          --text-faint: rgba(247, 239, 230, 0.48);
-          --gold: #dcc4a1;
-          --wine: #7f2235;
-          --wine-2: #5f1527;
-          --glow: rgba(220, 196, 161, 0.18);
+        .home-screen {
+          --bg-main: #090708;
+          --bg-hero: rgba(18, 13, 15, 0.88);
+          --bg-card: rgba(22, 16, 18, 0.84);
+          --bg-soft: rgba(255, 255, 255, 0.04);
+          --line: rgba(255, 245, 232, 0.08);
+          --line-strong: rgba(255, 245, 232, 0.14);
+          --text-main: #f7efe7;
+          --text-soft: rgba(247, 239, 231, 0.74);
+          --text-muted: rgba(247, 239, 231, 0.48);
+          --gold: #dcc19b;
+          --wine: #7d2234;
+          --wine-dark: #5d1827;
           min-height: 100vh;
-          color: var(--text-main);
-          background:
-            radial-gradient(circle at 15% 10%, rgba(127, 34, 53, 0.22), transparent 34%),
-            radial-gradient(circle at 85% 0%, rgba(220, 196, 161, 0.12), transparent 30%),
-            radial-gradient(circle at 50% 30%, rgba(255, 255, 255, 0.04), transparent 45%),
-            linear-gradient(180deg, #120c0f 0%, #090709 54%, #090709 100%);
-          padding: 20px 16px calc(104px + env(safe-area-inset-bottom, 0px));
           position: relative;
           overflow: hidden;
+          padding: 20px 16px calc(104px + env(safe-area-inset-bottom, 0px));
+          background:
+            radial-gradient(circle at 12% 12%, rgba(125, 34, 52, 0.20), transparent 30%),
+            radial-gradient(circle at 88% 0%, rgba(220, 193, 155, 0.10), transparent 26%),
+            linear-gradient(180deg, #120d0f 0%, #090708 48%, #090708 100%);
+          color: var(--text-main);
         }
 
-        .lux-home::before,
-        .lux-home::after {
+        .home-screen::before,
+        .home-screen::after {
           content: '';
-          position: fixed;
-          inset: auto;
+          position: absolute;
           pointer-events: none;
-          filter: blur(70px);
+          border-radius: 999px;
+          filter: blur(90px);
+          opacity: 0.42;
           z-index: 0;
-          opacity: 0.9;
         }
 
-        .lux-home::before {
-          top: 80px;
-          left: -60px;
-          width: 200px;
-          height: 200px;
-          background: rgba(127, 34, 53, 0.18);
-          animation: ambientFloat 14s ease-in-out infinite;
+        .home-screen::before {
+          top: 120px;
+          left: -70px;
+          width: 220px;
+          height: 220px;
+          background: rgba(125, 34, 52, 0.20);
+          animation: driftBlob 24s ease-in-out infinite;
         }
 
-        .lux-home::after {
-          top: 160px;
-          right: -30px;
+        .home-screen::after {
+          top: 240px;
+          right: -80px;
           width: 240px;
           height: 240px;
-          background: rgba(220, 196, 161, 0.08);
-          animation: ambientFloat 18s ease-in-out infinite reverse;
+          background: rgba(220, 193, 155, 0.10);
+          animation: driftBlob 30s ease-in-out infinite reverse;
         }
 
-        .lux-shell {
+        .home-shell {
           position: relative;
           z-index: 1;
           width: min(100%, 760px);
@@ -421,34 +453,34 @@ export default function Home({ session, profile, onNavigate }) {
           gap: 14px;
         }
 
-        .lux-hero {
+        .hero-card {
           position: relative;
           overflow: hidden;
           border-radius: 30px;
           padding: 18px 18px 20px;
           background:
-            linear-gradient(145deg, rgba(255,255,255,0.06), rgba(255,255,255,0.01)),
-            linear-gradient(180deg, rgba(12, 9, 11, 0.9), rgba(20, 13, 17, 0.84));
+            linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015)),
+            var(--bg-hero);
           border: 1px solid var(--line);
           box-shadow:
             0 24px 80px rgba(0, 0, 0, 0.42),
             inset 0 1px 0 rgba(255,255,255,0.05);
-          animation: revealUp 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+          animation: fadeUp 0.55s ease both;
         }
 
-        .lux-hero::before {
+        .hero-card::before {
           content: '';
           position: absolute;
           inset: -20% -10% auto;
           height: 220px;
           background:
-            radial-gradient(circle at center, rgba(220, 196, 161, 0.15), transparent 46%),
-            radial-gradient(circle at center, rgba(127, 34, 53, 0.26), transparent 68%);
-          animation: heroPulse 8s ease-in-out infinite;
+            radial-gradient(circle at center, rgba(220, 193, 155, 0.10), transparent 46%),
+            radial-gradient(circle at center, rgba(125, 34, 52, 0.18), transparent 68%);
+          opacity: 0.7;
           pointer-events: none;
         }
 
-        .lux-topline {
+        .hero-top {
           display: flex;
           align-items: center;
           justify-content: space-between;
@@ -456,7 +488,7 @@ export default function Home({ session, profile, onNavigate }) {
           margin-bottom: 18px;
         }
 
-        .lux-chip {
+        .hero-chip {
           display: inline-flex;
           align-items: center;
           gap: 8px;
@@ -470,15 +502,14 @@ export default function Home({ session, profile, onNavigate }) {
           text-transform: uppercase;
         }
 
-        .lux-dot {
+        .hero-chip-dot {
           width: 8px;
           height: 8px;
           border-radius: 999px;
-          background: linear-gradient(180deg, var(--gold), #b08f65);
-          box-shadow: 0 0 18px rgba(220, 196, 161, 0.35);
+          background: linear-gradient(180deg, var(--gold), #b68f62);
         }
 
-        .lux-hero-button {
+        .hero-button {
           border: 1px solid rgba(255,255,255,0.08);
           background: rgba(255,255,255,0.04);
           color: var(--text-main);
@@ -486,178 +517,163 @@ export default function Home({ session, profile, onNavigate }) {
           padding: 10px 14px;
           font-size: 12px;
           cursor: pointer;
-          transition: transform 0.24s ease, background 0.24s ease;
+          transition: background 0.2s ease, transform 0.2s ease;
         }
 
-        .lux-hero-button:active {
+        .hero-button:active {
           transform: scale(0.98);
         }
 
-        .lux-hero-content {
+        .hero-content {
           display: grid;
           gap: 16px;
         }
 
-        .lux-avatar-row {
+        .hero-avatars {
           display: flex;
           align-items: center;
           justify-content: center;
           gap: 14px;
         }
 
-        .lux-link {
+        .hero-link {
           width: 34px;
           height: 1px;
-          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
           position: relative;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.28), transparent);
         }
 
-        .lux-link::after {
+        .hero-link::after {
           content: '♥';
           position: absolute;
           left: 50%;
           top: 50%;
           transform: translate(-50%, -58%);
-          color: rgba(220, 196, 161, 0.72);
-          font-size: 14px;
+          color: rgba(220, 193, 155, 0.72);
+          font-size: 13px;
         }
 
-        .lux-avatar {
+        .home-avatar {
           border: none;
           background: transparent;
           color: inherit;
+          padding: 0;
           display: flex;
           flex-direction: column;
           align-items: center;
           gap: 8px;
           cursor: pointer;
-          padding: 0;
         }
 
-        .lux-avatar-ring {
-          position: absolute;
-          inset: -2px;
-          border-radius: inherit;
-          background:
-            linear-gradient(135deg, rgba(220,196,161,0.95), rgba(127,34,53,0.72), rgba(255,255,255,0.52));
-          animation: slowSpin 10s linear infinite;
+        .home-avatar.muted {
+          opacity: 0.42;
         }
 
-        .lux-avatar-core {
-          position: relative;
+        .home-avatar-frame {
           width: 84px;
           height: 84px;
           border-radius: 999px;
-          padding: 1px;
-          background: rgba(255,255,255,0.06);
-          overflow: hidden;
-          box-shadow: 0 14px 40px rgba(0,0,0,0.35);
-        }
-
-        .lux-avatar-core::before {
-          content: '';
-          position: absolute;
-          inset: 0;
-          border-radius: inherit;
-          background: linear-gradient(180deg, rgba(255,255,255,0.18), transparent 45%);
-          pointer-events: none;
-        }
-
-        .lux-avatar-image,
-        .lux-avatar-fallback {
-          position: relative;
-          z-index: 1;
+          padding: 2px;
           display: flex;
           align-items: center;
           justify-content: center;
+          background: linear-gradient(
+            145deg,
+            rgba(220, 193, 155, 0.88),
+            rgba(125, 34, 52, 0.52),
+            rgba(255, 255, 255, 0.34)
+          );
+          box-shadow: 0 14px 34px rgba(0, 0, 0, 0.32);
+        }
+
+        .home-avatar-image,
+        .home-avatar-fallback {
           width: 100%;
           height: 100%;
           border-radius: inherit;
           object-fit: cover;
-          background: linear-gradient(180deg, #2f2025, #171114);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: linear-gradient(180deg, #2a1d21, #171114);
           color: var(--text-main);
           font-size: 24px;
           font-weight: 600;
           letter-spacing: 0.08em;
         }
 
-        .lux-avatar-name {
+        .home-avatar-name {
           font-size: 12px;
           color: var(--text-soft);
         }
 
-        .lux-avatar.muted {
-          opacity: 0.5;
-        }
-
-        .lux-title-wrap {
+        .hero-title-wrap {
           display: grid;
           gap: 8px;
           text-align: center;
           justify-items: center;
         }
 
-        .lux-overline {
+        .hero-overline {
           font-size: 11px;
-          letter-spacing: 0.26em;
+          letter-spacing: 0.24em;
           text-transform: uppercase;
-          color: var(--text-faint);
+          color: var(--text-muted);
         }
 
-        .lux-title {
+        .hero-title {
           margin: 0;
           font-family: 'Cormorant Garamond', Georgia, serif;
           font-size: clamp(36px, 7vw, 56px);
-          font-weight: 500;
           line-height: 0.95;
+          font-weight: 500;
           letter-spacing: -0.03em;
         }
 
-        .lux-subtitle {
-          max-width: 30rem;
+        .hero-subtitle {
           margin: 0;
+          max-width: 32rem;
           font-size: 15px;
           line-height: 1.65;
           color: var(--text-soft);
         }
 
-        .lux-counter {
+        .hero-counter {
           display: grid;
           gap: 14px;
           margin-top: 4px;
         }
 
-        .lux-counter-main {
+        .hero-counter-main {
           display: grid;
           justify-items: center;
           gap: 4px;
         }
 
-        .lux-counter-number {
+        .hero-counter-number {
           display: flex;
-          gap: 4px;
+          gap: 6px;
           align-items: baseline;
           flex-wrap: wrap;
           justify-content: center;
         }
 
-        .lux-counter-number strong {
+        .hero-counter-number strong {
           font-family: 'Cormorant Garamond', Georgia, serif;
           font-size: clamp(72px, 18vw, 108px);
           line-height: 0.9;
           font-weight: 600;
-          color: var(--text-main);
           text-shadow: 0 10px 40px rgba(0,0,0,0.35);
         }
 
-        .lux-counter-number span {
+        .hero-counter-number span {
           font-size: 15px;
           color: var(--gold);
-          letter-spacing: 0.18em;
+          letter-spacing: 0.16em;
           text-transform: uppercase;
         }
 
-        .lux-counter-clock {
+        .hero-clock {
           display: inline-flex;
           align-items: center;
           gap: 8px;
@@ -669,18 +685,27 @@ export default function Home({ session, profile, onNavigate }) {
           color: var(--text-soft);
         }
 
-        .lux-divider {
-          height: 1px;
-          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
+        .hero-progress {
+          height: 6px;
+          border-radius: 999px;
+          overflow: hidden;
+          background: rgba(255,255,255,0.08);
         }
 
-        .lux-metrics {
+        .hero-progress-bar {
+          height: 100%;
+          border-radius: inherit;
+          background: linear-gradient(90deg, var(--wine), var(--gold));
+          transition: width 0.8s ease;
+        }
+
+        .hero-metrics {
           display: grid;
           grid-template-columns: repeat(3, minmax(0, 1fr));
           gap: 10px;
         }
 
-        .lux-metric {
+        .hero-metric {
           padding: 14px 10px;
           border-radius: 20px;
           background: rgba(255,255,255,0.03);
@@ -688,7 +713,7 @@ export default function Home({ session, profile, onNavigate }) {
           text-align: center;
         }
 
-        .lux-metric-value {
+        .hero-metric-value {
           display: block;
           font-family: 'Cormorant Garamond', Georgia, serif;
           font-size: 28px;
@@ -696,138 +721,111 @@ export default function Home({ session, profile, onNavigate }) {
           margin-bottom: 4px;
         }
 
-        .lux-metric-label {
+        .hero-metric-label {
           display: block;
           font-size: 11px;
           letter-spacing: 0.14em;
           text-transform: uppercase;
-          color: var(--text-faint);
+          color: var(--text-muted);
         }
 
-        .lux-progress {
-          height: 6px;
-          border-radius: 999px;
-          overflow: hidden;
-          background: rgba(255,255,255,0.08);
-        }
-
-        .lux-progress-bar {
-          height: 100%;
-          border-radius: inherit;
-          background: linear-gradient(90deg, var(--wine), var(--gold));
-          box-shadow: 0 0 28px rgba(220, 196, 161, 0.24);
-          transition: width 0.9s ease;
-        }
-
-        .lux-grid {
+        .feature-grid {
           display: grid;
-          gap: 14px;
           grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 14px;
         }
 
-        .action-card,
-        .data-card {
-          position: relative;
-          overflow: hidden;
+        .feature-card,
+        .info-card {
           border-radius: 24px;
           border: 1px solid var(--line);
           background:
             linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015)),
             var(--bg-card);
           box-shadow: 0 22px 60px rgba(0,0,0,0.24);
-          animation: revealUp 0.78s cubic-bezier(0.22, 1, 0.36, 1) both;
+          animation: fadeUp 0.6s ease both;
         }
 
-        .action-card {
-          text-align: left;
+        .feature-card {
           padding: 18px;
-          cursor: pointer;
           color: inherit;
+          text-align: left;
+          cursor: pointer;
           display: grid;
           gap: 14px;
+          transition: transform 0.2s ease, background 0.2s ease;
         }
 
-        .action-card.wide {
+        .feature-card:active {
+          transform: scale(0.985);
+        }
+
+        .feature-card.wide {
           grid-column: span 2;
         }
 
-        .action-card-glow {
-          position: absolute;
-          inset: auto auto 0 -30px;
-          width: 140px;
-          height: 140px;
-          border-radius: 999px;
-          background: radial-gradient(circle, rgba(220,196,161,0.18), transparent 65%);
-          filter: blur(20px);
-          transition: transform 0.35s ease;
-        }
-
-        .action-card:active .action-card-glow {
-          transform: scale(1.1);
-        }
-
-        .action-card-head {
+        .feature-card-top {
           display: flex;
           align-items: center;
           justify-content: space-between;
           gap: 12px;
-          position: relative;
-          z-index: 1;
         }
 
-        .action-card-icon {
+        .feature-card-icon {
           width: 46px;
           height: 46px;
           border-radius: 16px;
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          background: linear-gradient(180deg, rgba(220,196,161,0.22), rgba(127,34,53,0.15));
+          background: linear-gradient(180deg, rgba(220,193,155,0.18), rgba(125,34,52,0.12));
           border: 1px solid rgba(255,255,255,0.08);
           color: var(--gold);
         }
 
-        .action-card-label {
+        .feature-card-badge {
           font-size: 11px;
-          color: var(--text-faint);
           letter-spacing: 0.16em;
           text-transform: uppercase;
+          color: var(--text-muted);
         }
 
-        .action-card-title {
-          position: relative;
-          z-index: 1;
+        .feature-card-title {
           font-family: 'Cormorant Garamond', Georgia, serif;
           font-size: 30px;
           line-height: 0.95;
         }
 
-        .action-card-subtitle {
-          position: relative;
-          z-index: 1;
-          color: var(--text-soft);
+        .feature-card-subtitle {
           font-size: 14px;
           line-height: 1.6;
+          color: var(--text-soft);
         }
 
-        .data-card {
+        .section-row {
+          display: grid;
+          grid-template-columns: 1.2fr 0.8fr;
+          gap: 14px;
+        }
+
+        .info-card {
           padding: 18px;
           display: grid;
           gap: 14px;
         }
 
-        .data-card.compact {
+        .info-card.compact {
           gap: 12px;
         }
 
-        .data-card-eyebrow {
+        .info-card-eyebrow {
           font-size: 11px;
-          color: var(--text-faint);
           letter-spacing: 0.18em;
           text-transform: uppercase;
+          color: var(--text-muted);
         }
 
-        .data-card-title {
+        .info-card-title {
           font-family: 'Cormorant Garamond', Georgia, serif;
           font-size: 28px;
           line-height: 0.96;
@@ -849,12 +847,13 @@ export default function Home({ session, profile, onNavigate }) {
           width: 52px;
           height: 52px;
           border-radius: 18px;
+          background: rgba(255,255,255,0.05);
+          border: 1px solid rgba(255,255,255,0.06);
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          background: rgba(255,255,255,0.05);
-          border: 1px solid rgba(255,255,255,0.06);
           font-size: 24px;
+          flex-shrink: 0;
         }
 
         .event-copy {
@@ -866,7 +865,7 @@ export default function Home({ session, profile, onNavigate }) {
           font-size: 16px;
           color: var(--text-main);
           white-space: nowrap;
-          overflow: hidden;
+    overflow: hidden;
           text-overflow: ellipsis;
         }
 
@@ -877,15 +876,14 @@ export default function Home({ session, profile, onNavigate }) {
         }
 
         .event-days {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
+          flex-shrink: 0;
           min-width: 62px;
           padding: 10px 12px;
           border-radius: 16px;
-          background: linear-gradient(180deg, rgba(127,34,53,0.92), rgba(95,21,39,0.92));
-          box-shadow: 0 12px 32px rgba(95, 21, 39, 0.35);
+          background: linear-gradient(180deg, var(--wine), var(--wine-dark));
+          color: #fff6ee;
           font-size: 13px;
+          text-align: center;
         }
 
         .meeting-grid {
@@ -915,43 +913,43 @@ export default function Home({ session, profile, onNavigate }) {
           font-size: 11px;
           letter-spacing: 0.14em;
           text-transform: uppercase;
-          color: var(--text-faint);
+          color: var(--text-muted);
         }
 
-        .lux-note {
+        .note-text {
           margin: 0;
           font-size: 15px;
           line-height: 1.75;
           color: var(--text-soft);
         }
 
-        .lux-note strong {
-          color: var(--text-main);
+        .note-text strong {
           font-weight: 500;
+          color: var(--text-main);
         }
 
         .field {
           width: 100%;
-          border: 1px solid rgba(255,255,255,0.09);
+          padding: 14px 16px;
           border-radius: 18px;
+          border: 1px solid rgba(255,255,255,0.09);
           background: rgba(255,255,255,0.04);
           color: var(--text-main);
-          padding: 14px 16px;
-          outline: none;
           font: inherit;
+          outline: none;
           resize: vertical;
         }
 
         .field::placeholder {
-          color: rgba(247,239,230,0.35);
+          color: rgba(247, 239, 231, 0.36);
         }
 
         .field:focus {
-          border-color: rgba(220,196,161,0.36);
-          box-shadow: 0 0 0 4px rgba(220,196,161,0.08);
+          border-color: rgba(220, 193, 155, 0.34);
+          box-shadow: 0 0 0 4px rgba(220, 193, 155, 0.08);
         }
 
-        .field-row {
+        .actions-row {
           display: flex;
           gap: 10px;
           flex-wrap: wrap;
@@ -962,32 +960,25 @@ export default function Home({ session, profile, onNavigate }) {
           border: none;
           border-radius: 999px;
           padding: 11px 16px;
-          cursor: pointer;
           font: inherit;
+          cursor: pointer;
         }
 
         .btn-primary {
-          color: #fff7ef;
-          background: linear-gradient(180deg, var(--wine), var(--wine-2));
-          box-shadow: 0 12px 32px rgba(95, 21, 39, 0.34);
+          background: linear-gradient(180deg, var(--wine), var(--wine-dark));
+          color: #fff6ee;
         }
 
         .btn-ghost {
-          color: var(--text-soft);
           background: rgba(255,255,255,0.06);
           border: 1px solid rgba(255,255,255,0.07);
+          color: var(--text-soft);
         }
 
-        .section-row {
-          display: grid;
-          grid-template-columns: 1.2fr 0.8fr;
-          gap: 14px;
-        }
-
-        .partner-overlay {
+        .partner-modal-overlay {
           position: fixed;
           inset: 0;
-          background: rgba(5, 3, 4, 0.7);
+          background: rgba(5, 3, 4, 0.72);
           backdrop-filter: blur(10px);
           display: flex;
           align-items: center;
@@ -996,7 +987,7 @@ export default function Home({ session, profile, onNavigate }) {
           z-index: 80;
         }
 
-        .partner-dialog {
+        .partner-modal {
           width: min(100%, 340px);
           border-radius: 28px;
           padding: 24px;
@@ -1005,34 +996,32 @@ export default function Home({ session, profile, onNavigate }) {
             rgba(19, 14, 16, 0.96);
           border: 1px solid rgba(255,255,255,0.08);
           box-shadow: 0 26px 80px rgba(0,0,0,0.45);
-          text-align: center;
-          position: relative;
           display: grid;
           justify-items: center;
           gap: 12px;
-          animation: revealUp 0.3s ease both;
+          position: relative;
+          animation: fadeUp 0.25s ease both;
         }
 
         .partner-close {
           position: absolute;
-          right: 14px;
           top: 14px;
-          width: 34px;
-          height: 34px;
-          border-radius: 999px;
+          right: 14px;
           border: 1px solid rgba(255,255,255,0.06);
           background: rgba(255,255,255,0.04);
           color: var(--text-main);
-          font-size: 22px;
+          border-radius: 999px;
+          padding: 8px 12px;
+          font-size: 12px;
           cursor: pointer;
         }
 
-        .partner-title {
+        .partner-name {
           font-family: 'Cormorant Garamond', Georgia, serif;
           font-size: 32px;
         }
 
-        .partner-subtitle {
+        .partner-meta {
           color: var(--text-soft);
         }
 
@@ -1042,45 +1031,49 @@ export default function Home({ session, profile, onNavigate }) {
           border-radius: 999px;
           border: 2px solid rgba(255,255,255,0.12);
           border-top-color: var(--gold);
-          animation: spin 0.9s linear infinite;
+          animation: rotateLoader 0.9s linear infinite;
         }
 
-        @keyframes ambientFloat {
-          0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
-          50% { transform: translate3d(18px, -16px, 0) scale(1.08); }
+        @keyframes driftBlob {
+          0%, 100% {
+            transform: translate3d(0, 0, 0) scale(1);
+          }
+          50% {
+            transform: translate3d(10px, -8px, 0) scale(1.04);
+          }
         }
 
-        @keyframes heroPulse {
-          0%, 100% { transform: scale(1); opacity: 0.75; }
-          50% { transform: scale(1.08); opacity: 1; }
+        @keyframes fadeUp {
+          from {
+            opacity: 0;
+            transform: translateY(16px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
         }
 
-        @keyframes revealUp {
-          from { opacity: 0; transform: translateY(18px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-
-        @keyframes slowSpin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
+        @keyframes rotateLoader {
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(360deg);
+          }
         }
 
         @media (max-width: 640px) {
-          .lux-home {
+          .home-screen {
             padding-inline: 12px;
           }
 
-          .lux-grid,
+          .feature-grid,
           .section-row {
             grid-template-columns: 1fr;
           }
 
-          .action-card.wide {
+          .feature-card.wide {
             grid-column: span 1;
           }
 
@@ -1088,74 +1081,77 @@ export default function Home({ session, profile, onNavigate }) {
             grid-template-columns: repeat(2, minmax(0, 1fr));
           }
 
-          .lux-metrics {
+          .hero-metrics {
             grid-template-columns: 1fr;
           }
 
-          .lux-title {
+          .hero-title {
             font-size: 42px;
           }
         }
       `}</style>
 
-      <div className="lux-home">
-        <div className="lux-shell">
-          <section className="lux-hero">
-            <div className="lux-topline">
-              <div className="lux-chip">
-                <span className="lux-dot" />
-                Private for two
+      <div className="home-screen">
+        <div className="home-shell">
+          <section className="hero-card">
+            <div className="hero-top">
+              <div className="hero-chip">
+                <span className="hero-chip-dot" />
+                Только для двоих
               </div>
+
               <button
                 type="button"
-                className="lux-hero-button"
+                className="hero-button"
                 onClick={() => onNavigate?.('settings')}
               >
                 Настройки
               </button>
             </div>
 
-            <div className="lux-hero-content">
-              <div className="lux-avatar-row">
-                <AvatarHalo
+            <div className="hero-content">
+              <div className="hero-avatars">
+                <AvatarBadge
                   src={profile?.avatar_url}
                   name={myName}
                   onClick={() => onNavigate?.('settings')}
                 />
+
                 {hasPartner ? (
                   <>
-                    <div className="lux-link" />
+                    <div className="hero-link" />
                     {partnerLoading ? (
-                      <AvatarHalo name="..." muted />
+                      <AvatarBadge name="..." muted />
                     ) : (
-                      <AvatarHalo
+                      <AvatarBadge
                         src={partnerProfile?.avatar_url}
                         name={partnerName}
-                        onClick={() => setShowPartnerCard(true)}
+                        onClick={() => setShowPartnerModal(true)}
                       />
                     )}
                   </>
                 ) : null}
               </div>
 
-              <div className="lux-title-wrap">
-                <div className="lux-overline">Luxury Home</div>
-                <h1 className="lux-title">{headline}</h1>
-                <p className="lux-subtitle">
-                  Пространство, которое ощущается как закрытый клуб для ваших чувств:
-                  глубже, чище и красивее с каждым днём.
+              <div className="hero-title-wrap">
+                <div className="hero-overline">Главная история</div>
+                <h1 className="hero-title">{title}</h1>
+                <p className="hero-subtitle">
+                  Пространство, которое выглядит дорого, чувствуется спокойно и хранит
+                  только вашу историю.
                 </p>
               </div>
 
-              <div className="lux-counter">
+              <div className="hero-counter">
                 {time && hasStartDate ? (
                   <>
-                    <div className="lux-counter-main">
-                      <div className="lux-counter-number">
+                    <div className="hero-counter-main">
+                      <div className="hero-counter-number">
                         <strong>{time.totalDays}</strong>
-                        <span>days together</span>
+                        <span>дней вместе</span>
                       </div>
-                      <div className="lux-counter-clock">
+
+                      <div className="hero-clock">
                         <span>{pad(time.hours)}</span>
                         <span>:</span>
                         <span>{pad(time.minutes)}</span>
@@ -1164,81 +1160,120 @@ export default function Home({ session, profile, onNavigate }) {
                       </div>
                     </div>
 
-                    <div className="lux-progress">
+                    <div className="hero-progress">
                       <div
-                        className="lux-progress-bar"
-                        style={{ width: `${anniv.progress}%` }}
+                        className="hero-progress-bar"
+                        style={{ width: `${anniversary.progress}%` }}
                       />
                     </div>
 
-                    <div className="lux-metrics">
-                      <div className="lux-metric">
-                        <span className="lux-metric-value">{time.years}</span>
-                        <span className="lux-metric-label">лет</span>
+                    <div className="hero-metrics">
+                      <div className="hero-metric">
+                        <span className="hero-metric-value">{time.years}</span>
+                        <span className="hero-metric-label">лет</span>
                       </div>
-                      <div className="lux-metric">
-                        <span className="lux-metric-value">{time.months}</span>
-                        <span className="lux-metric-label">месяцев</span>
+
+                      <div className="hero-metric">
+                        <span className="hero-metric-value">{time.months}</span>
+                        <span className="hero-metric-label">месяцев</span>
                       </div>
-                      <div className="lux-metric">
-                        <span className="lux-metric-value">
-                          {anniv.daysUntil ?? '—'}
+
+                      <div className="hero-metric">
+                        <span className="hero-metric-value">
+                          {anniversary.daysUntil ?? '-'}
                         </span>
-                        <span className="lux-metric-label">до годовщины</span>
+                        <span className="hero-metric-label">до годовщины</span>
                       </div>
                     </div>
                   </>
                 ) : (
-                  <DataCard eyebrow="Setup" title={hasPartner ? 'Добавьте дату начала' : 'Пригласите партнёра'}>
-                    <p className="lux-note">
+                  <InfoCard
+                    eyebrow="Подготовка"
+                    title={hasPartner ? 'Добавьте дату начала' : 'Пригласите партнера'}
+                  >
+                    <p className="note-text">
                       {hasPartner
-                        ? 'Когда появится дата отношений, главный экран станет живым и покажет историю вашей пары.'
-                        : 'Как только вы соедините пару, главный экран превратится в красивую личную историю для двоих.'}
+                        ? 'Когда вы укажете дату отношений, главный экран начнет жить и покажет историю вашей пары.'
+                        : 'Когда вы подключите партнера, главный экран станет пространством для двоих.'}
                     </p>
-                    <div className="field-row">
-                      <button type="button" className="btn-primary" onClick={() => onNavigate?.('settings')}>
+
+                    <div className="actions-row">
+                      <button
+                        type="button"
+                        className="btn-primary"
+                        onClick={() => onNavigate?.('settings')}
+                      >
                         Открыть настройки
                       </button>
                     </div>
-                  </DataCard>
+                  </InfoCard>
                 )}
               </div>
             </div>
           </section>
 
-          <div className="lux-grid">
-            <ActionCard
-              label="Featured"
+          <div className="feature-grid">
+            <FeatureCard
+              badge="Раздел"
               title="Моменты"
-              subtitle="Ваши кадры в виде красивой приватной галереи."
+              subtitle="Личная галерея ваших общих кадров и воспоминаний."
               onClick={() => onNavigate?.('moments')}
               icon={
-                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <svg
+                  viewBox="0 0 24 24"
+                  width="22"
+                  height="22"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
                   <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
                   <circle cx="12" cy="13" r="4" />
                 </svg>
               }
             />
-            <ActionCard
-              label="Featured"
+
+            <FeatureCard
+              badge="Раздел"
               title="Письмо"
-              subtitle="Личное послание, которое хочется открыть вечером."
+              subtitle="Теплое личное послание, которое хочется открыть вечером."
               onClick={() => onNavigate?.('letter')}
               icon={
-                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <svg
+                  viewBox="0 0 24 24"
+                  width="22"
+                  height="22"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
                   <rect x="2" y="5" width="20" height="14" rx="2" />
                   <polyline points="2,5 12,13 22,5" />
                 </svg>
               }
             />
-            <ActionCard
-              label="Live"
+
+            <FeatureCard
+              badge="Быстрый переход"
               title="Чат"
-              subtitle="Быстрый переход в тёплый приватный диалог."
+              subtitle="Открыть ваш диалог сразу с главного экрана."
               onClick={() => onNavigate?.('chat')}
               wide
               icon={
-                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <svg
+                  viewBox="0 0 24 24"
+                  width="22"
+                  height="22"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
                   <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                 </svg>
               }
@@ -1246,51 +1281,84 @@ export default function Home({ session, profile, onNavigate }) {
           </div>
 
           <div className="section-row">
-            <DataCard eyebrow="Upcoming" title="Ближайшее событие">
+            <InfoCard eyebrow="Скоро" title="Ближайшее событие">
               {nextEvent ? (
                 <div className="event-row">
                   <div className="event-line">
-                    <div className="event-emoji">{nextEvent.emoji || '✦'}</div>
+                    <div className="event-emoji">{nextEvent.emoji || '•'}</div>
+
                     <div className="event-copy">
                       <div className="event-name">{nextEvent.title}</div>
                       <div className="event-date">
-                        {formatDate(nextEvent.event_date, { day: 'numeric', month: 'long' })}
+                        {formatDate(nextEvent.event_date, {
+                          day: 'numeric',
+                          month: 'long',
+                        })}
                       </div>
                     </div>
+
                     <div className="event-days">
-                      {Math.max(0, Math.ceil((new Date(nextEvent.event_date) - new Date()) / 86400000))} дн
+                      {Math.max(
+                        0,
+                        Math.ceil(
+                          (new Date(nextEvent.event_date) - new Date()) / 86400000
+                        )
+                      )}{' '}
+                      дн
                     </div>
                   </div>
-                  <button type="button" className="btn-ghost" onClick={() => onNavigate?.('calendar')}>
+
+                  <button
+                    type="button"
+                    className="btn-ghost"
+                    onClick={() => onNavigate?.('calendar')}
+                  >
                     Открыть календарь
                   </button>
                 </div>
               ) : (
                 <div className="event-row">
-                  <p className="lux-note">
-                    Добавьте красивый следующий момент: встречу, поездку, ужин или вашу дату.
+                  <p className="note-text">
+                    Добавьте красивое следующее событие: встречу, поездку, ужин или вашу
+                    особенную дату.
                   </p>
-                  <button type="button" className="btn-primary" onClick={() => onNavigate?.('calendar')}>
+
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    onClick={() => onNavigate?.('calendar')}
+                  >
                     Создать событие
                   </button>
                 </div>
               )}
-            </DataCard>
+            </InfoCard>
 
-            <DataCard eyebrow="Count" title="До встречи" compact>
-              {editMeet ? (
+            <InfoCard eyebrow="Отсчет" title="До встречи" compact>
+              {editMeeting ? (
                 <>
                   <input
                     className="field"
                     type="datetime-local"
-                    value={newMeet}
-                    onChange={e => setNewMeet(e.target.value)}
+                    value={newMeeting}
+                    onChange={e => setNewMeeting(e.target.value)}
                   />
-                  <div className="field-row">
-                    <button type="button" className="btn-primary" onClick={saveMeeting} disabled={saving}>
+
+                  <div className="actions-row">
+                    <button
+                      type="button"
+                      className="btn-primary"
+                      onClick={saveMeeting}
+                      disabled={saving}
+                    >
                       {saving ? 'Сохраняю...' : 'Сохранить'}
                     </button>
-                    <button type="button" className="btn-ghost" onClick={() => setEditMeet(false)}>
+
+                    <button
+                      type="button"
+                      className="btn-ghost"
+                      onClick={() => setEditMeeting(false)}
+                    >
                       Отмена
                     </button>
                   </div>
@@ -1310,64 +1378,97 @@ export default function Home({ session, profile, onNavigate }) {
                       </div>
                     ))}
                   </div>
-                  <button type="button" className="btn-ghost" onClick={() => setEditMeet(true)}>
+
+                  <button
+                    type="button"
+                    className="btn-ghost"
+                    onClick={() => setEditMeeting(true)}
+                  >
                     Изменить
                   </button>
                 </div>
               ) : (
                 <div className="meeting-row">
-                  <p className="lux-note">Добавьте следующую встречу, чтобы экран жил в ожидании.</p>
-                  <button type="button" className="btn-primary" onClick={() => setEditMeet(true)}>
+                  <p className="note-text">
+                    Добавьте следующую встречу, чтобы экран жил в ожидании.
+                  </p>
+
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    onClick={() => setEditMeeting(true)}
+                  >
                     Указать дату
                   </button>
                 </div>
               )}
-            </DataCard>
+            </InfoCard>
           </div>
 
-          <DataCard eyebrow="Private note" title="Love note">
-            {editMsg ? (
+          <InfoCard eyebrow="Личное" title="Ваше сообщение">
+            {editMessage ? (
               <>
                 <textarea
                   className="field"
                   rows={4}
-                  value={newMsg}
-                  onChange={e => setNewMsg(e.target.value)}
-                  placeholder="Напиши фразу, ради которой хочется возвращаться на главный экран"
+                  value={newMessage}
+                  onChange={e => setNewMessage(e.target.value)}
+                  placeholder="Напишите фразу, ради которой хочется возвращаться на главный экран"
                 />
-                <div className="field-row">
-                  <button type="button" className="btn-primary" onClick={saveMessage} disabled={saving}>
+
+                <div className="actions-row">
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    onClick={saveMessage}
+                    disabled={saving}
+                  >
                     {saving ? 'Сохраняю...' : 'Сохранить'}
                   </button>
-                  <button type="button" className="btn-ghost" onClick={() => setEditMsg(false)}>
+
+                  <button
+                    type="button"
+                    className="btn-ghost"
+                    onClick={() => setEditMessage(false)}
+                  >
                     Отмена
                   </button>
                 </div>
               </>
             ) : (
               <>
-                <p className="lux-note">
-                  <strong>«{loveMsg}»</strong>
+                <p className="note-text">
+                  <strong>"{loveMessage}"</strong>
                 </p>
-                <div className="field-row">
-                  <button type="button" className="btn-ghost" onClick={() => setEditMsg(true)}>
+
+                <div className="actions-row">
+                  <button
+                    type="button"
+                    className="btn-ghost"
+                    onClick={() => setEditMessage(true)}
+                  >
                     Редактировать
                   </button>
-                  <button type="button" className="btn-ghost" onClick={() => onNavigate?.('clock')}>
+
+                  <button
+                    type="button"
+                    className="btn-ghost"
+                    onClick={() => onNavigate?.('clock')}
+                  >
                     Часы любви
                   </button>
                 </div>
               </>
             )}
-          </DataCard>
+          </InfoCard>
         </div>
       </div>
 
-      {showPartnerCard && (
-        <PartnerCard
+      {showPartnerModal && (
+        <PartnerModal
           profile={partnerProfile}
           loading={partnerLoading}
-          onClose={() => setShowPartnerCard(false)}
+          onClose={() => setShowPartnerModal(false)}
         />
       )}
     </>

@@ -59,14 +59,14 @@ function getInitials(name) {
 
 /* ── Static heart configs — rendered once, CSS-animated on GPU ── */
 const HEART_CONFIGS = [
-  { left: '6%',  '--size': '9px',  '--dur': '16s', '--delay': '0s',   '--r': '-12deg', '--op': '0.12' },
-  { left: '17%', '--size': '13px', '--dur': '11s', '--delay': '2.5s', '--r': '8deg',   '--op': '0.10' },
-  { left: '29%', '--size': '7px',  '--dur': '20s', '--delay': '5s',   '--r': '-19deg', '--op': '0.08' },
-  { left: '44%', '--size': '11px', '--dur': '14s', '--delay': '1s',   '--r': '14deg',  '--op': '0.11' },
-  { left: '59%', '--size': '8px',  '--dur': '22s', '--delay': '7.5s', '--r': '-8deg',  '--op': '0.09' },
-  { left: '73%', '--size': '12px', '--dur': '13s', '--delay': '4s',   '--r': '20deg',  '--op': '0.12' },
-  { left: '86%', '--size': '6px',  '--dur': '18s', '--delay': '9s',   '--r': '-24deg', '--op': '0.08' },
-  { left: '94%', '--size': '10px', '--dur': '15s', '--delay': '3s',   '--r': '11deg',  '--op': '0.10' },
+  { left: '6%',  '--size': '14px', '--dur': '16s', '--delay': '0s',   '--r': '-12deg', '--op': '0.38' },
+  { left: '17%', '--size': '20px', '--dur': '11s', '--delay': '2.5s', '--r': '8deg',   '--op': '0.30' },
+  { left: '29%', '--size': '11px', '--dur': '20s', '--delay': '5s',   '--r': '-19deg', '--op': '0.28' },
+  { left: '44%', '--size': '17px', '--dur': '14s', '--delay': '1s',   '--r': '14deg',  '--op': '0.35' },
+  { left: '59%', '--size': '12px', '--dur': '22s', '--delay': '7.5s', '--r': '-8deg',  '--op': '0.28' },
+  { left: '73%', '--size': '18px', '--dur': '13s', '--delay': '4s',   '--r': '20deg',  '--op': '0.36' },
+  { left: '86%', '--size': '10px', '--dur': '18s', '--delay': '9s',   '--r': '-24deg', '--op': '0.26' },
+  { left: '94%', '--size': '15px', '--dur': '15s', '--delay': '3s',   '--r': '11deg',  '--op': '0.32' },
 ]
 
 /* Static icon elements — created once, not on every render */

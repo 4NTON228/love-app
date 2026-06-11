@@ -92,10 +92,10 @@ function StoriesViewer({ stories, startIdx, onClose }) {
   const [liked, setLiked] = useState(false)
   const [isZoomed, setIsZoomed] = useState(false)
   const [scale, setScale] = useState(1)
-  const [imagePosition, setImagePosition] = useState({ x: 0, y: 0, startX: null, startY: null })
   const rafRef = useRef(null)
   const startRef = useRef(null)
-  const imgRef = useRef(null)
+  const startTimeRef = useRef(null)
+  const autoTimerRef = useRef(null)
 
   const story = stories[idx]
   const moodData = getMood(story?.mood)
@@ -119,23 +119,29 @@ function StoriesViewer({ stories, startIdx, onClose }) {
     }
   }, [])
 
-  // Reset and start progress animation when idx changes
+  // Сброс прогресса и запуск таймера при смене индекса
   useEffect(() => {
+    // Сбрасываем состояние
     setProgress(0)
     setLiked(false)
     setScale(1)
     setIsZoomed(false)
-    setImagePosition({ x: 0, y: 0, startX: null, startY: null })
-    startRef.current = null
+    startTimeRef.current = Date.now()
+    
+    // Очищаем предыдущие таймеры
+    if (autoTimerRef.current) clearTimeout(autoTimerRef.current)
+    if (rafRef.current) cancelAnimationFrame(rafRef.current)
 
-    function tick(ts) {
-      if (!startRef.current) startRef.current = ts
-      const elapsed = ts - startRef.current
+    // Запускаем анимацию прогресса
+    function updateProgress() {
+      const elapsed = Date.now() - startTimeRef.current
       const p = Math.min((elapsed / STORY_DURATION) * 100, 100)
       setProgress(p)
+      
       if (p < 100) {
-        rafRef.current = requestAnimationFrame(tick)
+        rafRef.current = requestAnimationFrame(updateProgress)
       } else {
+        // Время вышло - переключаем на следующий
         if (idx < stories.length - 1) {
           setIdx(i => i + 1)
         } else {
@@ -143,32 +149,60 @@ function StoriesViewer({ stories, startIdx, onClose }) {
         }
       }
     }
-    rafRef.current = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(rafRef.current)
+    
+    rafRef.current = requestAnimationFrame(updateProgress)
+    
+    // Таймер на всякий случай (запасной)
+    autoTimerRef.current = setTimeout(() => {
+      if (idx < stories.length - 1) {
+        setIdx(i => i + 1)
+      } else {
+        onClose()
+      }
+    }, STORY_DURATION)
+    
+    return () => {
+      if (autoTimerRef.current) clearTimeout(autoTimerRef.current)
+      if (rafRef.current) cancelAnimationFrame(rafRef.current)
+    }
   }, [idx, stories.length, onClose])
 
   function goNext() {
-    cancelAnimationFrame(rafRef.current)
-    if (idx < stories.length - 1) setIdx(i => i + 1)
-    else onClose()
+    // Очищаем таймеры
+    if (autoTimerRef.current) clearTimeout(autoTimerRef.current)
+    if (rafRef.current) cancelAnimationFrame(rafRef.current)
+    
+    if (idx < stories.length - 1) {
+      setIdx(i => i + 1)
+    } else {
+      onClose()
+    }
   }
 
   function goPrev() {
-    cancelAnimationFrame(rafRef.current)
-    if (idx > 0) setIdx(i => i - 1)
+    // Очищаем таймеры
+    if (autoTimerRef.current) clearTimeout(autoTimerRef.current)
+    if (rafRef.current) cancelAnimationFrame(rafRef.current)
+    
+    if (idx > 0) {
+      setIdx(i => i - 1)
+    }
   }
 
   function triggerHeart(e) {
     e.stopPropagation()
     setLiked(true)
+    
+    // Анимация сердечек вокруг кнопки (снизу справа, где кнопка)
     const newBursts = Array.from({ length: 12 }, (_, i) => ({
       id: Date.now() + i,
       angle: (i / 12) * 360 + Math.random() * 30,
-      dist: 60 + Math.random() * 40,
+      dist: 40 + Math.random() * 30,
       size: 8 + Math.random() * 10,
     }))
     setBursts(b => [...b, ...newBursts])
-    setTimeout(() => setBursts([]), 900)
+    
+    setTimeout(() => setBursts([]), 800)
   }
 
   function handleImageZoom(e) {
@@ -178,36 +212,8 @@ function StoriesViewer({ stories, startIdx, onClose }) {
       setIsZoomed(true)
     } else {
       setScale(1)
-      setImagePosition({ x: 0, y: 0, startX: null, startY: null })
       setIsZoomed(false)
     }
-  }
-
-  function handleTouchStart(e) {
-    if (!isZoomed) return
-    e.stopPropagation()
-    const touch = e.touches[0]
-    setImagePosition(prev => ({
-      ...prev,
-      startX: touch.clientX - prev.x,
-      startY: touch.clientY - prev.y
-    }))
-  }
-
-  function handleTouchMove(e) {
-    if (!isZoomed || imagePosition.startX === null || imagePosition.startY === null) return
-    e.stopPropagation()
-    const touch = e.touches[0]
-    setImagePosition(prev => ({
-      ...prev,
-      x: touch.clientX - prev.startX,
-      y: touch.clientY - prev.startY
-    }))
-  }
-
-  function handleTouchEnd() {
-    if (!isZoomed) return
-    setImagePosition(prev => ({ ...prev, startX: null, startY: null }))
   }
 
   if (!story) return null
@@ -222,8 +228,7 @@ function StoriesViewer({ stories, startIdx, onClose }) {
         background: '#000000', 
         display: 'flex', 
         flexDirection: 'column', 
-        userSelect: 'none', 
-        touchAction: 'pan-x pan-y',
+        userSelect: 'none',
         overflow: 'hidden'
       }}
     >
@@ -296,7 +301,8 @@ function StoriesViewer({ stories, startIdx, onClose }) {
         .burst-particle {
           position: absolute;
           pointer-events: none;
-          animation: heartBurstOut 0.8s cubic-bezier(0.34, 1.2, 0.64, 1) forwards;
+          animation: heartBurstOut 0.6s cubic-bezier(0.34, 1.2, 0.64, 1) forwards;
+          z-index: 25;
         }
         @keyframes likedPop {
           0%   { transform: scale(1); }
@@ -310,7 +316,7 @@ function StoriesViewer({ stories, startIdx, onClose }) {
           position: absolute;
           left: 0;
           top: 0;
-          width: 25%;
+          width: 20%;
           height: 100%;
           z-index: 15;
           background: transparent;
@@ -319,9 +325,18 @@ function StoriesViewer({ stories, startIdx, onClose }) {
           position: absolute;
           right: 0;
           top: 0;
-          width: 25%;
+          width: 20%;
           height: 100%;
           z-index: 15;
+          background: transparent;
+        }
+        .stories-tap-center {
+          position: absolute;
+          left: 20%;
+          right: 20%;
+          top: 0;
+          height: 100%;
+          z-index: 10;
           background: transparent;
         }
         .stories-caption {
@@ -390,23 +405,17 @@ function StoriesViewer({ stories, startIdx, onClose }) {
         </svg>
       </button>
 
-      {/* Image Container */}
+      {/* Image Container - центрирование через flex */}
       <div className="stories-image-container">
         {story.photo_url ? (
           <img
             key={story.id}
-            ref={imgRef}
             className={`story-img ${isZoomed ? 'zoomed' : ''}`}
             src={story.photo_url}
             alt={story.title}
             loading="eager"
-            style={{
-              transform: `scale(${scale}) translate(${imagePosition.x / scale}px, ${imagePosition.y / scale}px)`,
-            }}
+            style={{ transform: `scale(${scale})` }}
             onClick={handleImageZoom}
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
             draggable={false}
           />
         ) : (
@@ -426,9 +435,10 @@ function StoriesViewer({ stories, startIdx, onClose }) {
         )}
       </div>
 
-      {/* Tap zones for navigation */}
+      {/* Tap zones для навигации */}
       <div className="stories-tap-left" onClick={goPrev} />
       <div className="stories-tap-right" onClick={goNext} />
+      <div className="stories-tap-center" /> {/* Пустая зона чтобы не мешать зуму */}
 
       {/* Caption overlay */}
       <div className="stories-caption">
@@ -464,7 +474,7 @@ function StoriesViewer({ stories, startIdx, onClose }) {
         </div>
       </div>
 
-      {/* Heart button */}
+      {/* Heart button - анимация на кнопке */}
       <button className="stories-heart-btn" onClick={triggerHeart}>
         <svg viewBox="0 0 24 22" width="26" height="24" fill="none" className={liked ? 'heart-liked' : ''}>
           <path d="M12 20S2 13.5 2 6C2 3.5 4 1.5 6.5 1.5C8.5 1.5 10 3 12 5.5C14 3 15.5 1.5 17.5 1.5C20 1.5 22 3.5 22 6C22 13.5 12 20 12 20Z"
@@ -472,15 +482,15 @@ function StoriesViewer({ stories, startIdx, onClose }) {
         </svg>
       </button>
 
-      {/* Burst particles */}
+      {/* Burst particles - вокруг кнопки сердечка */}
       {bursts.map(b => {
         const rad = (b.angle * Math.PI) / 180
         return (
           <div key={b.id} className="burst-particle" style={{
             '--bx': `${Math.cos(rad) * b.dist}px`,
             '--by': `${Math.sin(rad) * b.dist}px`,
-            left: `calc(50% - ${b.size / 2}px)`,
-            top: `calc(100% - 140px)`,
+            left: `calc(100% - 80px + ${Math.cos(rad) * 15}px)`,
+            top: `calc(100% - 160px + ${Math.sin(rad) * 15}px)`,
           }}>
             <svg viewBox="0 0 12 11" width={b.size} height={b.size * 0.92} fill="#C8334A">
               <path d="M6 10S1 6.5 1 3C1 1.75 2 1 3.25 1C4.25 1 5 1.75 6 3C7 1.75 7.75 1 8.75 1C10 1 11 1.75 11 3C11 6.5 6 10 6 10Z"/>
@@ -491,7 +501,6 @@ function StoriesViewer({ stories, startIdx, onClose }) {
     </div>
   )
 }
-
 export default function Moments({ session, profile }) {
   const uid = session?.user?.id
   const pid = profile?.partner_id

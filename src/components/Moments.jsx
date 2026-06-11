@@ -15,7 +15,7 @@ function IcoTrash() {
 }
 function IcoClose() {
   return (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
       <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
     </svg>
   )
@@ -92,11 +92,32 @@ function StoriesViewer({ stories, startIdx, onClose }) {
   const [liked, setLiked] = useState(false)
   const [isZoomed, setIsZoomed] = useState(false)
   const [scale, setScale] = useState(1)
+  const [imagePosition, setImagePosition] = useState({ x: 0, y: 0, startX: null, startY: null })
   const rafRef = useRef(null)
   const startRef = useRef(null)
+  const imgRef = useRef(null)
 
   const story = stories[idx]
   const moodData = getMood(story?.mood)
+
+  // Блокируем скролл body при открытии
+  useEffect(() => {
+    const scrollY = window.scrollY
+    document.body.style.position = 'fixed'
+    document.body.style.top = `-${scrollY}px`
+    document.body.style.width = '100%'
+    document.body.style.left = '0'
+    document.body.style.right = '0'
+    
+    return () => {
+      document.body.style.position = ''
+      document.body.style.top = ''
+      document.body.style.width = ''
+      document.body.style.left = ''
+      document.body.style.right = ''
+      window.scrollTo(0, scrollY)
+    }
+  }, [])
 
   // Reset and start progress animation when idx changes
   useEffect(() => {
@@ -104,6 +125,7 @@ function StoriesViewer({ stories, startIdx, onClose }) {
     setLiked(false)
     setScale(1)
     setIsZoomed(false)
+    setImagePosition({ x: 0, y: 0, startX: null, startY: null })
     startRef.current = null
 
     function tick(ts) {
@@ -139,11 +161,11 @@ function StoriesViewer({ stories, startIdx, onClose }) {
   function triggerHeart(e) {
     e.stopPropagation()
     setLiked(true)
-    const newBursts = Array.from({ length: 10 }, (_, i) => ({
+    const newBursts = Array.from({ length: 12 }, (_, i) => ({
       id: Date.now() + i,
-      angle: (i / 10) * 360 + Math.random() * 20,
-      dist: 55 + Math.random() * 35,
-      size: 10 + Math.random() * 8,
+      angle: (i / 12) * 360 + Math.random() * 30,
+      dist: 60 + Math.random() * 40,
+      size: 8 + Math.random() * 10,
     }))
     setBursts(b => [...b, ...newBursts])
     setTimeout(() => setBursts([]), 900)
@@ -156,79 +178,92 @@ function StoriesViewer({ stories, startIdx, onClose }) {
       setIsZoomed(true)
     } else {
       setScale(1)
+      setImagePosition({ x: 0, y: 0, startX: null, startY: null })
       setIsZoomed(false)
     }
+  }
+
+  function handleTouchStart(e) {
+    if (!isZoomed) return
+    e.stopPropagation()
+    const touch = e.touches[0]
+    setImagePosition(prev => ({
+      ...prev,
+      startX: touch.clientX - prev.x,
+      startY: touch.clientY - prev.y
+    }))
+  }
+
+  function handleTouchMove(e) {
+    if (!isZoomed || imagePosition.startX === null || imagePosition.startY === null) return
+    e.stopPropagation()
+    const touch = e.touches[0]
+    setImagePosition(prev => ({
+      ...prev,
+      x: touch.clientX - prev.startX,
+      y: touch.clientY - prev.startY
+    }))
+  }
+
+  function handleTouchEnd() {
+    if (!isZoomed) return
+    setImagePosition(prev => ({ ...prev, startX: null, startY: null }))
   }
 
   if (!story) return null
 
   return (
-    <div className="stories-overlay" style={{ 
-      position: 'fixed', 
-      inset: 0, 
-      zIndex: 300, 
-      background: '#200A10', 
-      display: 'flex', 
-      flexDirection: 'column', 
-      userSelect: 'none', 
-      touchAction: 'pan-x pan-y',
-      overflow: 'hidden'
-    }}>
+    <div 
+      className="stories-overlay" 
+      style={{ 
+        position: 'fixed', 
+        inset: 0, 
+        zIndex: 1000, 
+        background: '#000000', 
+        display: 'flex', 
+        flexDirection: 'column', 
+        userSelect: 'none', 
+        touchAction: 'pan-x pan-y',
+        overflow: 'hidden'
+      }}
+    >
       <style>{`
         .stories-prog-track {
-          flex: 1; height: 2.5px;
-          background: rgba(255,255,255,0.3);
-          border-radius: 2px; overflow: hidden;
+          flex: 1;
+          height: 3px;
+          background: rgba(255,255,255,0.25);
+          border-radius: 3px;
+          overflow: hidden;
         }
         .stories-prog-fill {
-          height: 100%; background: white; border-radius: 2px;
+          height: 100%;
+          border-radius: 3px;
+          transition: width 0.05s linear;
         }
         .stories-close-btn {
           position: absolute;
-          top: calc(var(--safe-top,0px) + 22px); right: 16px;
-          z-index: 20;
-          background: rgba(0,0,0,0.35); border: none; border-radius: 50%;
-          width: 38px; height: 38px; color: white; cursor: pointer;
-          display: flex; align-items: center; justify-content: center;
+          top: calc(env(safe-area-inset-top, 0px) + 20px);
+          right: 20px;
+          z-index: 30;
+          background: rgba(0,0,0,0.5);
+          backdrop-filter: blur(10px);
+          border: none;
+          border-radius: 50%;
+          width: 40px;
+          height: 40px;
+          color: white;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: transform 0.15s;
+        }
+        .stories-close-btn:active {
+          transform: scale(0.92);
         }
         @keyframes storyImgIn {
-          from { opacity:0; transform: scale(1.04); }
-          to   { opacity:1; transform: scale(1); }
-        }
-        .story-bg-img {
-          max-width: 100%;
-          max-height: 100%;
-          width: auto;
-          height: auto;
-          object-fit: contain;
-          animation: storyImgIn 0.35s ease both;
-          transition: transform 0.2s ease;
-          cursor: zoom-in;
-        }
-        .story-bg-img.zoomed {
-          cursor: zoom-out;
-        }
-        @keyframes heartBurstOut {
-          0%   { opacity:1; transform: translate(0,0) scale(1.2); }
-          100% { opacity:0; transform: translate(var(--bx),var(--by)) scale(0.2); }
-        }
-        .burst-particle {
-          position:absolute; pointer-events:none;
-          animation: heartBurstOut 0.85s cubic-bezier(0.22,1,0.36,1) forwards;
-        }
-        @keyframes likedPop {
-          0%   { transform: scale(1); }
-          40%  { transform: scale(1.4); }
-          100% { transform: scale(1); }
-        }
-        .heart-liked { animation: likedPop 0.35s ease both; }
-        .stories-tap-l {
-          position:absolute; left:0; top:0; width:30%; height:100%;
-          z-index:5; background:transparent;
-        }
-        .stories-tap-r {
-          position:absolute; right:0; top:0; width:70%; height:100%;
-          z-index:5; background:transparent;
+          from { opacity: 0; transform: scale(0.96); }
+          to { opacity: 1; transform: scale(1); }
         }
         .stories-image-container {
           position: absolute;
@@ -237,119 +272,222 @@ function StoriesViewer({ stories, startIdx, onClose }) {
           align-items: center;
           justify-content: center;
           overflow: hidden;
+          background: #000000;
+        }
+        .story-img {
+          display: block;
+          max-width: 100%;
+          max-height: 100%;
+          width: auto;
+          height: auto;
+          object-fit: contain;
+          animation: storyImgIn 0.25s ease-out;
+          transition: transform 0.2s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+          cursor: zoom-in;
+          will-change: transform;
+        }
+        .story-img.zoomed {
+          cursor: zoom-out;
+        }
+        @keyframes heartBurstOut {
+          0%   { opacity: 1; transform: translate(0,0) scale(1); }
+          100% { opacity: 0; transform: translate(var(--bx),var(--by)) scale(0.3); }
+        }
+        .burst-particle {
+          position: absolute;
+          pointer-events: none;
+          animation: heartBurstOut 0.8s cubic-bezier(0.34, 1.2, 0.64, 1) forwards;
+        }
+        @keyframes likedPop {
+          0%   { transform: scale(1); }
+          40%  { transform: scale(1.3); }
+          100% { transform: scale(1); }
+        }
+        .heart-liked {
+          animation: likedPop 0.3s ease both;
+        }
+        .stories-tap-left {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 25%;
+          height: 100%;
+          z-index: 15;
+          background: transparent;
+        }
+        .stories-tap-right {
+          position: absolute;
+          right: 0;
+          top: 0;
+          width: 25%;
+          height: 100%;
+          z-index: 15;
+          background: transparent;
+        }
+        .stories-caption {
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          z-index: 15;
+          padding: 100px 24px calc(env(safe-area-inset-bottom, 0px) + 120px);
+          background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%);
+          pointer-events: none;
+        }
+        .stories-heart-btn {
+          position: absolute;
+          bottom: calc(env(safe-area-inset-bottom, 0px) + 120px);
+          right: 24px;
+          z-index: 20;
+          background: rgba(255,255,255,0.12);
+          backdrop-filter: blur(12px);
+          border: 1.5px solid rgba(255,255,255,0.25);
+          border-radius: 50%;
+          width: 56px;
+          height: 56px;
+          color: white;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: transform 0.15s, background 0.15s;
+        }
+        .stories-heart-btn:active {
+          transform: scale(0.92);
+          background: rgba(255,255,255,0.2);
         }
       `}</style>
 
       {/* Progress bars */}
       <div style={{
-        position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10,
-        padding: `calc(var(--safe-top,0px) + 10px) 10px 0`,
-        display: 'flex', gap: 4,
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 25,
+        padding: `calc(env(safe-area-inset-top, 0px) + 12px) 12px 0`,
+        display: 'flex',
+        gap: 6,
       }}>
         {stories.map((_, i) => (
           <div key={i} className="stories-prog-track">
-            <div className="stories-prog-fill" style={{
-              width: i < idx ? '100%' : i === idx ? `${progress}%` : '0%',
-              transition: i === idx ? 'none' : undefined,
-            }} />
+            <div 
+              className="stories-prog-fill" 
+              style={{
+                width: i < idx ? '100%' : i === idx ? `${progress}%` : '0%',
+                background: i === idx ? '#C8334A' : 'rgba(255,255,255,0.8)'
+              }} 
+            />
           </div>
         ))}
       </div>
 
       {/* Close button */}
-      <button className="stories-close-btn" onClick={onClose}><IcoClose /></button>
+      <button className="stories-close-btn" onClick={onClose}>
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="white" strokeWidth="2.5">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
 
       {/* Image Container */}
       <div className="stories-image-container">
         {story.photo_url ? (
           <img
             key={story.id}
-            className={`story-bg-img ${isZoomed ? 'zoomed' : ''}`}
+            ref={imgRef}
+            className={`story-img ${isZoomed ? 'zoomed' : ''}`}
             src={story.photo_url}
             alt={story.title}
             loading="eager"
-            style={{ transform: `scale(${scale})` }}
+            style={{
+              transform: `scale(${scale}) translate(${imagePosition.x / scale}px, ${imagePosition.y / scale}px)`,
+            }}
             onClick={handleImageZoom}
-            onError={e => { e.currentTarget.style.display = 'none' }}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            draggable={false}
           />
         ) : (
           <div style={{
-            width: '100%', height: '100%',
-            background: `linear-gradient(160deg, ${moodData.color}44 0%, #0A0A14 100%)`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: '100%',
+            height: '100%',
+            background: `linear-gradient(160deg, ${moodData.color}66 0%, #1a0a0a 100%)`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
           }}>
-            <svg viewBox="0 0 60 56" width="130" height="120" fill="none">
+            <svg viewBox="0 0 60 56" width="100" height="93" fill="none">
               <path d="M30 52C30 52 3 35 3 16C3 8 9.5 2 18 2C22.5 2 26.5 4.5 30 9C33.5 4.5 37.5 2 42 2C50.5 2 57 8 57 16C57 35 30 52 30 52Z"
-                fill={moodData.color} opacity="0.45"/>
+                fill={moodData.color} opacity="0.6"/>
             </svg>
           </div>
         )}
       </div>
 
-      {/* Tap zones */}
-      <div className="stories-tap-l" onClick={goPrev} />
-      <div className="stories-tap-r" onClick={goNext} />
+      {/* Tap zones for navigation */}
+      <div className="stories-tap-left" onClick={goPrev} />
+      <div className="stories-tap-right" onClick={goNext} />
 
       {/* Caption overlay */}
-      <div style={{
-        position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 10,
-        padding: `80px 20px calc(var(--safe-bottom,0px) + 110px)`,
-        background: 'linear-gradient(to top, rgba(0,0,0,0.72) 0%, transparent 100%)',
-        pointerEvents: 'none',
-      }}>
+      <div className="stories-caption">
         <div style={{
-          fontFamily: 'var(--font-display)', fontSize: 22, color: 'white',
-          marginBottom: 5, textShadow: '0 2px 10px rgba(0,0,0,0.6)',
-        }}>{story.title}</div>
+          fontFamily: "'Cormorant Garamond', Georgia, serif",
+          fontSize: 28,
+          fontWeight: 600,
+          color: 'white',
+          marginBottom: 8,
+          textShadow: '0 2px 12px rgba(0,0,0,0.5)',
+          letterSpacing: '-0.3px',
+        }}>
+          {story.title}
+        </div>
         {story.description && (
           <div style={{
-            fontFamily: 'var(--font-body)', fontSize: 14, color: 'rgba(255,255,255,0.82)',
-            lineHeight: 1.55, textShadow: '0 1px 5px rgba(0,0,0,0.5)',
-          }}>{story.description}</div>
+            fontFamily: "'DM Sans', sans-serif",
+            fontSize: 14,
+            color: 'rgba(255,255,255,0.85)',
+            lineHeight: 1.5,
+            textShadow: '0 1px 6px rgba(0,0,0,0.3)',
+          }}>
+            {story.description}
+          </div>
         )}
         <div style={{
-          fontFamily: 'var(--font-body)', fontSize: 12, color: 'rgba(255,255,255,0.48)',
-          marginTop: 7,
-        }}>{formatDate(story.created_at)}</div>
+          fontFamily: "'DM Sans', sans-serif",
+          fontSize: 12,
+          color: 'rgba(255,255,255,0.5)',
+          marginTop: 8,
+        }}>
+          {formatDate(story.created_at)}
+        </div>
       </div>
 
-      {/* Heart button + burst */}
-      <div style={{
-        position: 'absolute',
-        bottom: `calc(var(--safe-bottom,0px) + 112px)`,
-        right: 22, zIndex: 15,
-      }}>
-        <button
-          onClick={triggerHeart}
-          style={{
-            background: 'rgba(255,255,255,0.13)',
-            border: '1.5px solid rgba(255,255,255,0.28)',
-            borderRadius: '50%', width: 54, height: 54,
-            color: 'white', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}
-        >
-          <svg viewBox="0 0 24 22" width="24" height="22" fill="none" className={liked ? 'heart-liked' : ''}>
-            <path d="M12 20S2 13.5 2 6C2 3.5 4 1.5 6.5 1.5C8.5 1.5 10 3 12 5.5C14 3 15.5 1.5 17.5 1.5C20 1.5 22 3.5 22 6C22 13.5 12 20 12 20Z"
-              fill={liked ? '#C8334A' : 'rgba(255,255,255,0.25)'} stroke="white" strokeWidth="1.5"/>
-          </svg>
-        </button>
-        {/* Burst particles */}
-        {bursts.map(b => {
-          const rad = (b.angle * Math.PI) / 180
-          return (
-            <div key={b.id} className="burst-particle" style={{
-              '--bx': `${Math.cos(rad) * b.dist}px`,
-              '--by': `${Math.sin(rad) * b.dist}px`,
-              left: 27 - b.size / 2, top: 27 - b.size / 2,
-            }}>
-              <svg viewBox="0 0 12 11" width={b.size} height={b.size * 0.92} fill="#C8334A">
-                <path d="M6 10S1 6.5 1 3C1 1.75 2 1 3.25 1C4.25 1 5 1.75 6 3C7 1.75 7.75 1 8.75 1C10 1 11 1.75 11 3C11 6.5 6 10 6 10Z"/>
-              </svg>
-            </div>
-          )
-        })}
-      </div>
+      {/* Heart button */}
+      <button className="stories-heart-btn" onClick={triggerHeart}>
+        <svg viewBox="0 0 24 22" width="26" height="24" fill="none" className={liked ? 'heart-liked' : ''}>
+          <path d="M12 20S2 13.5 2 6C2 3.5 4 1.5 6.5 1.5C8.5 1.5 10 3 12 5.5C14 3 15.5 1.5 17.5 1.5C20 1.5 22 3.5 22 6C22 13.5 12 20 12 20Z"
+            fill={liked ? '#C8334A' : 'rgba(255,255,255,0.25)'} stroke="white" strokeWidth="1.5"/>
+        </svg>
+      </button>
+
+      {/* Burst particles */}
+      {bursts.map(b => {
+        const rad = (b.angle * Math.PI) / 180
+        return (
+          <div key={b.id} className="burst-particle" style={{
+            '--bx': `${Math.cos(rad) * b.dist}px`,
+            '--by': `${Math.sin(rad) * b.dist}px`,
+            left: `calc(50% - ${b.size / 2}px)`,
+            top: `calc(100% - 140px)`,
+          }}>
+            <svg viewBox="0 0 12 11" width={b.size} height={b.size * 0.92} fill="#C8334A">
+              <path d="M6 10S1 6.5 1 3C1 1.75 2 1 3.25 1C4.25 1 5 1.75 6 3C7 1.75 7.75 1 8.75 1C10 1 11 1.75 11 3C11 6.5 6 10 6 10Z"/>
+            </svg>
+          </div>
+        )
+      })}
     </div>
   )
 }

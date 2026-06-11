@@ -90,6 +90,8 @@ function StoriesViewer({ stories, startIdx, onClose }) {
   const [progress, setProgress] = useState(0)
   const [bursts, setBursts] = useState([])
   const [liked, setLiked] = useState(false)
+  const [isZoomed, setIsZoomed] = useState(false)
+  const [scale, setScale] = useState(1)
   const rafRef = useRef(null)
   const startRef = useRef(null)
 
@@ -100,6 +102,8 @@ function StoriesViewer({ stories, startIdx, onClose }) {
   useEffect(() => {
     setProgress(0)
     setLiked(false)
+    setScale(1)
+    setIsZoomed(false)
     startRef.current = null
 
     function tick(ts) {
@@ -145,10 +149,31 @@ function StoriesViewer({ stories, startIdx, onClose }) {
     setTimeout(() => setBursts([]), 900)
   }
 
+  function handleImageZoom(e) {
+    e.stopPropagation()
+    if (!isZoomed) {
+      setScale(2.5)
+      setIsZoomed(true)
+    } else {
+      setScale(1)
+      setIsZoomed(false)
+    }
+  }
+
   if (!story) return null
 
   return (
-    <div className="stories-overlay" style={{ position:'fixed', inset:0, zIndex:300, background:'#200A10', display:'flex', flexDirection:'column', userSelect:'none', touchAction:'none' }}>
+    <div className="stories-overlay" style={{ 
+      position: 'fixed', 
+      inset: 0, 
+      zIndex: 300, 
+      background: '#200A10', 
+      display: 'flex', 
+      flexDirection: 'column', 
+      userSelect: 'none', 
+      touchAction: 'pan-x pan-y',
+      overflow: 'hidden'
+    }}>
       <style>{`
         .stories-prog-track {
           flex: 1; height: 2.5px;
@@ -171,8 +196,17 @@ function StoriesViewer({ stories, startIdx, onClose }) {
           to   { opacity:1; transform: scale(1); }
         }
         .story-bg-img {
-          width:100%; height:100%; object-fit:cover;
+          max-width: 100%;
+          max-height: 100%;
+          width: auto;
+          height: auto;
+          object-fit: contain;
           animation: storyImgIn 0.35s ease both;
+          transition: transform 0.2s ease;
+          cursor: zoom-in;
+        }
+        .story-bg-img.zoomed {
+          cursor: zoom-out;
         }
         @keyframes heartBurstOut {
           0%   { opacity:1; transform: translate(0,0) scale(1.2); }
@@ -189,20 +223,28 @@ function StoriesViewer({ stories, startIdx, onClose }) {
         }
         .heart-liked { animation: likedPop 0.35s ease both; }
         .stories-tap-l {
-          position:absolute; left:0; top:0; width:35%; height:100%;
+          position:absolute; left:0; top:0; width:30%; height:100%;
           z-index:5; background:transparent;
         }
         .stories-tap-r {
-          position:absolute; right:0; top:0; width:65%; height:100%;
+          position:absolute; right:0; top:0; width:70%; height:100%;
           z-index:5; background:transparent;
+        }
+        .stories-image-container {
+          position: absolute;
+          inset: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          overflow: hidden;
         }
       `}</style>
 
       {/* Progress bars */}
       <div style={{
-        position:'absolute', top:0, left:0, right:0, zIndex:10,
-        padding:`calc(var(--safe-top,0px) + 10px) 10px 0`,
-        display:'flex', gap:4,
+        position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10,
+        padding: `calc(var(--safe-top,0px) + 10px) 10px 0`,
+        display: 'flex', gap: 4,
       }}>
         {stories.map((_, i) => (
           <div key={i} className="stories-prog-track">
@@ -217,16 +259,24 @@ function StoriesViewer({ stories, startIdx, onClose }) {
       {/* Close button */}
       <button className="stories-close-btn" onClick={onClose}><IcoClose /></button>
 
-      {/* Background */}
-      <div style={{ position:'absolute', inset:0 }}>
+      {/* Image Container */}
+      <div className="stories-image-container">
         {story.photo_url ? (
-          <img key={story.id} className="story-bg-img" src={story.photo_url} alt={story.title} loading="eager"
-            onError={e => { e.currentTarget.style.display='none' }} />
+          <img
+            key={story.id}
+            className={`story-bg-img ${isZoomed ? 'zoomed' : ''}`}
+            src={story.photo_url}
+            alt={story.title}
+            loading="eager"
+            style={{ transform: `scale(${scale})` }}
+            onClick={handleImageZoom}
+            onError={e => { e.currentTarget.style.display = 'none' }}
+          />
         ) : (
           <div style={{
-            width:'100%', height:'100%',
+            width: '100%', height: '100%',
             background: `linear-gradient(160deg, ${moodData.color}44 0%, #0A0A14 100%)`,
-            display:'flex', alignItems:'center', justifyContent:'center',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
             <svg viewBox="0 0 60 56" width="130" height="120" fill="none">
               <path d="M30 52C30 52 3 35 3 16C3 8 9.5 2 18 2C22.5 2 26.5 4.5 30 9C33.5 4.5 37.5 2 42 2C50.5 2 57 8 57 16C57 35 30 52 30 52Z"
@@ -242,41 +292,41 @@ function StoriesViewer({ stories, startIdx, onClose }) {
 
       {/* Caption overlay */}
       <div style={{
-        position:'absolute', bottom:0, left:0, right:0, zIndex:10,
-        padding:`80px 20px calc(var(--safe-bottom,0px) + 110px)`,
-        background:'linear-gradient(to top, rgba(0,0,0,0.72) 0%, transparent 100%)',
-        pointerEvents:'none',
+        position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 10,
+        padding: `80px 20px calc(var(--safe-bottom,0px) + 110px)`,
+        background: 'linear-gradient(to top, rgba(0,0,0,0.72) 0%, transparent 100%)',
+        pointerEvents: 'none',
       }}>
         <div style={{
-          fontFamily:'var(--font-display)', fontSize:22, color:'white',
-          marginBottom:5, textShadow:'0 2px 10px rgba(0,0,0,0.6)',
+          fontFamily: 'var(--font-display)', fontSize: 22, color: 'white',
+          marginBottom: 5, textShadow: '0 2px 10px rgba(0,0,0,0.6)',
         }}>{story.title}</div>
         {story.description && (
           <div style={{
-            fontFamily:'var(--font-body)', fontSize:14, color:'rgba(255,255,255,0.82)',
-            lineHeight:1.55, textShadow:'0 1px 5px rgba(0,0,0,0.5)',
+            fontFamily: 'var(--font-body)', fontSize: 14, color: 'rgba(255,255,255,0.82)',
+            lineHeight: 1.55, textShadow: '0 1px 5px rgba(0,0,0,0.5)',
           }}>{story.description}</div>
         )}
         <div style={{
-          fontFamily:'var(--font-body)', fontSize:12, color:'rgba(255,255,255,0.48)',
-          marginTop:7,
+          fontFamily: 'var(--font-body)', fontSize: 12, color: 'rgba(255,255,255,0.48)',
+          marginTop: 7,
         }}>{formatDate(story.created_at)}</div>
       </div>
 
       {/* Heart button + burst */}
       <div style={{
-        position:'absolute',
-        bottom:`calc(var(--safe-bottom,0px) + 112px)`,
-        right:22, zIndex:15,
+        position: 'absolute',
+        bottom: `calc(var(--safe-bottom,0px) + 112px)`,
+        right: 22, zIndex: 15,
       }}>
         <button
           onClick={triggerHeart}
           style={{
-            background:'rgba(255,255,255,0.13)',
-            border:'1.5px solid rgba(255,255,255,0.28)',
-            borderRadius:'50%', width:54, height:54,
-            color:'white', cursor:'pointer',
-            display:'flex', alignItems:'center', justifyContent:'center',
+            background: 'rgba(255,255,255,0.13)',
+            border: '1.5px solid rgba(255,255,255,0.28)',
+            borderRadius: '50%', width: 54, height: 54,
+            color: 'white', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}
         >
           <svg viewBox="0 0 24 22" width="24" height="22" fill="none" className={liked ? 'heart-liked' : ''}>

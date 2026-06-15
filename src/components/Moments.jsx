@@ -70,6 +70,15 @@ function formatDate(dateStr) {
   return new Date(dateStr).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
+function yearsAgo(n) {
+  const mod10 = n % 10
+  const mod100 = n % 100
+  let word = 'лет'
+  if (mod10 === 1 && mod100 !== 11) word = 'год'
+  else if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) word = 'года'
+  return `${n} ${word} назад`
+}
+
 /* ── Stories Viewer ── */
 const STORY_DURATION = 5000
 
@@ -77,6 +86,7 @@ function StoriesViewer({ stories, startIdx, onClose, onToggleLike }) {
   const [idx, setIdx] = useState(startIdx)
   const [burst, setBurst] = useState(false)
   const burstTimerRef = useRef(null)
+  const touchStartRef = useRef(null)
 
   const story = stories[idx]
   const moodData = getMood(story?.mood)
@@ -117,6 +127,23 @@ function StoriesViewer({ stories, startIdx, onClose, onToggleLike }) {
   function goPrev() {
     if (idx > 0) {
       setIdx(i => i - 1)
+    }
+  }
+
+  function onTouchStart(e) {
+    const t = e.touches[0]
+    touchStartRef.current = { x: t.clientX, y: t.clientY }
+  }
+  function onTouchEnd(e) {
+    if (!touchStartRef.current) return
+    const t = e.changedTouches[0]
+    const dx = t.clientX - touchStartRef.current.x
+    const dy = t.clientY - touchStartRef.current.y
+    touchStartRef.current = null
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
+      if (dx > 0) goPrev(); else goNext()
+    } else if (dy > 90 && Math.abs(dy) > Math.abs(dx)) {
+      onClose() // свайп вниз — закрыть
     }
   }
 
@@ -364,6 +391,8 @@ function StoriesViewer({ stories, startIdx, onClose, onToggleLike }) {
       {/* Image Container */}
       <div
         className="stories-image-container"
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
         style={{
           '--bg-img': story.photo_url ? `url("${story.photo_url}")` : 'none',
           '--bg-op': story.photo_url ? 1 : 0,
@@ -587,6 +616,17 @@ export default function Moments({ session, profile }) {
     }
   }, [])
 
+  // «В этот день» — момент с той же датой в прошлые годы
+  const today = new Date()
+  const memoryIndex = moments.findIndex(m => {
+    const d = new Date(m.created_at)
+    return d.getFullYear() < today.getFullYear()
+      && d.getMonth() === today.getMonth()
+      && d.getDate() === today.getDate()
+  })
+  const memory = memoryIndex >= 0 ? moments[memoryIndex] : null
+  const memoryYears = memory ? today.getFullYear() - new Date(memory.created_at).getFullYear() : 0
+
   return (
     <>
       <style>{`
@@ -656,6 +696,51 @@ export default function Moments({ session, profile }) {
           transition: background 0.15s, transform 0.15s;
         }
         .moments-slide-btn:active { background: rgba(255,255,255,0.22); transform: scale(0.96); }
+
+        /* "В этот день" memory banner */
+        .memory-banner {
+          margin: 0 14px 16px;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 10px 12px 10px 10px;
+          border-radius: 18px;
+          background: linear-gradient(135deg, hsl(var(--h,349), var(--s,59%), 96%), #ffffff);
+          border: 1px solid hsl(var(--h,349), var(--s,59%), 90%);
+          box-shadow: 0 4px 18px rgba(200,51,74,0.10);
+          cursor: pointer;
+          animation: momentIn 0.45s ease both;
+          transition: transform 0.16s ease;
+        }
+        .memory-banner:active { transform: scale(0.985); }
+        .app.dark .memory-banner {
+          background: linear-gradient(135deg, hsl(var(--h,349), var(--s,59%), 13%), #1a0b10);
+          border-color: hsl(var(--h,349), var(--s,59%), 24%);
+        }
+        .memory-thumb {
+          width: 52px; height: 52px;
+          border-radius: 13px;
+          object-fit: cover;
+          flex-shrink: 0;
+          display: flex; align-items: center; justify-content: center;
+        }
+        .memory-txt { flex: 1; min-width: 0; }
+        .memory-eyebrow {
+          font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+          color: var(--rose, #C8334A); font-weight: 700;
+          font-family: var(--font-body);
+        }
+        .memory-title {
+          font-size: 14px; font-weight: 600; color: var(--text);
+          font-family: var(--font-body);
+          white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+          margin-top: 1px;
+        }
+        .memory-sub {
+          font-size: 12px; color: var(--text-muted);
+          font-family: var(--font-body); margin-top: 1px;
+        }
+        .memory-chevron { color: var(--text-muted); flex-shrink: 0; }
 
         /* Grid — uniform photo tiles (always shows every photo, no gaps) */
         .moments-grid {
@@ -864,6 +949,28 @@ export default function Moments({ session, profile }) {
             )}
           </div>
         </div>
+
+        {!loading && memory && (
+          <div className="memory-banner" onClick={() => openStories(memoryIndex)}>
+            {(memory.thumb_url || memory.photo_url) ? (
+              <img className="memory-thumb" src={memory.thumb_url || memory.photo_url} alt="" />
+            ) : (
+              <div className="memory-thumb" style={{ background: `linear-gradient(160deg, ${getMood(memory.mood).color}, #1d0b12)` }}>
+                <svg viewBox="0 0 24 22" width="20" height="18" fill="#fff" opacity="0.7">
+                  <path d="M12 20S2 13.5 2 6C2 3.5 4 1.5 6.5 1.5C8.5 1.5 10 3 12 5.5C14 3 15.5 1.5 17.5 1.5C20 1.5 22 3.5 22 6C22 13.5 12 20 12 20Z"/>
+                </svg>
+              </div>
+            )}
+            <div className="memory-txt">
+              <div className="memory-eyebrow">В этот день</div>
+              <div className="memory-title">{memory.title}</div>
+              <div className="memory-sub">{yearsAgo(memoryYears)} · {formatDate(memory.created_at)}</div>
+            </div>
+            <svg className="memory-chevron" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="9 6 15 12 9 18" />
+            </svg>
+          </div>
+        )}
 
         {loading ? (
           <div className="moments-empty"><LoadingHeart /></div>

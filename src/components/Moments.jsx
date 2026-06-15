@@ -14,13 +14,6 @@ function IcoTrash() {
     </svg>
   )
 }
-function IcoClose() {
-  return (
-    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-      <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-    </svg>
-  )
-}
 function IcoPlay() {
   return (
     <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -33,14 +26,6 @@ function IcoCamera() {
     <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
       <circle cx="12" cy="13" r="4"/>
-    </svg>
-  )
-}
-function IcoCameraLg() {
-  return (
-    <svg viewBox="0 0 60 56" width="48" height="44" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M54 44a4 4 0 01-4 4H10a4 4 0 01-4-4V20a4 4 0 014-4h8l4-6h16l4 6h8a4 4 0 014 4v24z"/>
-      <circle cx="30" cy="30" r="8"/>
     </svg>
   )
 }
@@ -88,10 +73,7 @@ const STORY_DURATION = 5000
 
 function StoriesViewer({ stories, startIdx, onClose, onToggleLike }) {
   const [idx, setIdx] = useState(startIdx)
-  const [progress, setProgress] = useState(0)
   const [burst, setBurst] = useState(false)
-  const timerRef = useRef(null)
-  const progressIntervalRef = useRef(null)
   const burstTimerRef = useRef(null)
 
   const story = stories[idx]
@@ -106,7 +88,7 @@ function StoriesViewer({ stories, startIdx, onClose, onToggleLike }) {
     document.body.style.width = '100%'
     document.body.style.left = '0'
     document.body.style.right = '0'
-    
+
     return () => {
       document.body.style.position = ''
       document.body.style.top = ''
@@ -117,55 +99,12 @@ function StoriesViewer({ stories, startIdx, onClose, onToggleLike }) {
     }
   }, [])
 
-  // Запуск таймера для текущей истории
-  const startTimer = useCallback(() => {
-    // Очищаем старые таймеры
-    if (timerRef.current) clearTimeout(timerRef.current)
-    if (progressIntervalRef.current) clearInterval(progressIntervalRef.current)
-    
-    setProgress(0)
-    
-    // Запускаем прогресс
-    let startTime = Date.now()
-    progressIntervalRef.current = setInterval(() => {
-      const elapsed = Date.now() - startTime
-      const newProgress = Math.min((elapsed / STORY_DURATION) * 100, 100)
-      setProgress(newProgress)
-      
-      if (newProgress >= 100) {
-        clearInterval(progressIntervalRef.current)
-      }
-    }, 50)
-    
-    // Таймер на переключение
-    timerRef.current = setTimeout(() => {
-      if (idx < stories.length - 1) {
-        setIdx(i => i + 1)
-      } else {
-        onClose()
-      }
-    }, STORY_DURATION)
-  }, [idx, stories.length, onClose])
-
-  // При смене индекса запускаем новый таймер
-  useEffect(() => {
-    startTimer()
-
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current)
-      if (progressIntervalRef.current) clearInterval(progressIntervalRef.current)
-    }
-  }, [idx, startTimer])
-
   // Чистим таймер всплеска сердца при размонтировании
   useEffect(() => () => {
     if (burstTimerRef.current) clearTimeout(burstTimerRef.current)
   }, [])
 
   function goNext() {
-    if (timerRef.current) clearTimeout(timerRef.current)
-    if (progressIntervalRef.current) clearInterval(progressIntervalRef.current)
-    
     if (idx < stories.length - 1) {
       setIdx(i => i + 1)
     } else {
@@ -174,9 +113,6 @@ function StoriesViewer({ stories, startIdx, onClose, onToggleLike }) {
   }
 
   function goPrev() {
-    if (timerRef.current) clearTimeout(timerRef.current)
-    if (progressIntervalRef.current) clearInterval(progressIntervalRef.current)
-    
     if (idx > 0) {
       setIdx(i => i - 1)
     }
@@ -219,10 +155,20 @@ function StoriesViewer({ stories, startIdx, onClose, onToggleLike }) {
         }
         .stories-prog-fill {
           height: 100%;
+          width: 100%;
           border-radius: 3px;
-          background: #C8334A;
-          width: 0%;
-          transition: width 0.05s linear;
+          background: #ffffff;
+          transform: scaleX(0);
+          transform-origin: left center;
+        }
+        .stories-prog-fill.done { transform: scaleX(1); }
+        .stories-prog-fill.active {
+          animation: storyFill linear forwards;
+          will-change: transform;
+        }
+        @keyframes storyFill {
+          from { transform: scaleX(0); }
+          to   { transform: scaleX(1); }
         }
         .stories-close-btn {
           position: absolute;
@@ -250,12 +196,36 @@ function StoriesViewer({ stories, startIdx, onClose, onToggleLike }) {
           background: #000000;
         }
         .story-img {
+          position: relative;
+          z-index: 1;
           display: block;
           max-width: 100%;
           max-height: 100%;
           width: auto;
           height: auto;
           object-fit: contain;
+          pointer-events: none;
+          border-radius: 4px;
+          box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+          animation: storyImgIn 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+          will-change: transform, opacity;
+        }
+        @keyframes storyImgIn {
+          from { opacity: 0; transform: scale(1.05); }
+          to   { opacity: 1; transform: scale(1); }
+        }
+        /* Blurred fill behind the photo for a richer look */
+        .stories-image-container::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background-image: var(--bg-img);
+          background-size: cover;
+          background-position: center;
+          filter: blur(40px) brightness(0.45) saturate(1.2);
+          transform: scale(1.2);
+          opacity: var(--bg-op, 0);
+          transition: opacity 0.4s ease;
           pointer-events: none;
         }
         .stories-tap-left {
@@ -282,6 +252,9 @@ function StoriesViewer({ stories, startIdx, onClose, onToggleLike }) {
           left: 0;
           right: 0;
           z-index: 15;
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
           /* extra right padding keeps text clear of the heart button */
           padding: 100px 96px calc(env(safe-area-inset-bottom, 0px) + 120px) 24px;
           background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%);
@@ -365,13 +338,15 @@ function StoriesViewer({ stories, startIdx, onClose, onToggleLike }) {
       }}>
         {stories.map((_, i) => (
           <div key={i} className="stories-prog-track">
-            <div 
-              className="stories-prog-fill" 
-              style={{ 
-                width: i < idx ? '100%' : i === idx ? `${progress}%` : '0%',
-                background: i === idx ? '#C8334A' : 'rgba(255,255,255,0.5)'
-              }}
-            />
+            {i < idx && <div className="stories-prog-fill done" />}
+            {i === idx && (
+              <div
+                key={idx}
+                className="stories-prog-fill active"
+                style={{ animationDuration: `${STORY_DURATION}ms` }}
+                onAnimationEnd={goNext}
+              />
+            )}
           </div>
         ))}
       </div>
@@ -385,7 +360,13 @@ function StoriesViewer({ stories, startIdx, onClose, onToggleLike }) {
       </button>
 
       {/* Image Container */}
-      <div className="stories-image-container">
+      <div
+        className="stories-image-container"
+        style={{
+          '--bg-img': story.photo_url ? `url("${story.photo_url}")` : 'none',
+          '--bg-op': story.photo_url ? 1 : 0,
+        }}
+      >
         {story.photo_url ? (
           <img
             key={story.id}
@@ -418,6 +399,25 @@ function StoriesViewer({ stories, startIdx, onClose, onToggleLike }) {
 
       {/* Caption */}
       <div className="stories-caption">
+        <span style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 6,
+          padding: '4px 11px 4px 8px',
+          marginBottom: 10,
+          borderRadius: 999,
+          background: 'rgba(255,255,255,0.16)',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
+          fontFamily: "'DM Sans', sans-serif",
+          fontSize: 11,
+          fontWeight: 600,
+          color: '#fff',
+          letterSpacing: '0.02em',
+        }}>
+          <span style={{ width: 8, height: 8, borderRadius: '50%', background: moodData.color }} />
+          {moodData.label}
+        </span>
         <div style={{
           fontFamily: "'Cormorant Garamond', Georgia, serif",
           fontSize: 28,
@@ -703,21 +703,32 @@ export default function Moments({ session, profile }) {
           overflow: hidden;
           text-shadow: 0 1px 4px rgba(0,0,0,0.5);
         }
-        .moment-foot {
-          display: flex;
+        .moment-mood-chip {
+          display: inline-flex;
           align-items: center;
-          gap: 6px;
-          margin-top: 5px;
+          gap: 5px;
+          padding: 3px 9px 3px 7px;
+          margin-bottom: 7px;
+          border-radius: 999px;
+          background: rgba(0,0,0,0.42);
+          backdrop-filter: blur(6px);
+          -webkit-backdrop-filter: blur(6px);
+          font-family: var(--font-body);
+          font-size: 10px;
+          font-weight: 600;
+          color: #fff;
+          letter-spacing: 0.02em;
         }
         .moment-mood-dot {
-          width: 7px; height: 7px;
+          width: 8px; height: 8px;
           border-radius: 50%;
           flex-shrink: 0;
-          box-shadow: 0 0 0 2px rgba(255,255,255,0.25);
         }
         .moment-date-new {
+          display: block;
+          margin-top: 4px;
           font-size: 11px;
-          color: rgba(255,255,255,0.82);
+          color: rgba(255,255,255,0.78);
           font-family: var(--font-body);
         }
 
@@ -894,15 +905,12 @@ export default function Moments({ session, profile }) {
                   )}
 
                   <div className="moment-overlay">
+                    <span className="moment-mood-chip">
+                      <span className="moment-mood-dot" style={{ background: moodData.color }} />
+                      {moodData.label}
+                    </span>
                     <div className="moment-title-new">{moment.title}</div>
-                    <div className="moment-foot">
-                      <span
-                        className="moment-mood-dot"
-                        style={{ background: moodData.color }}
-                        title={moodData.label}
-                      />
-                      <span className="moment-date-new">{formatDate(moment.created_at)}</span>
-                    </div>
+                    <span className="moment-date-new">{formatDate(moment.created_at)}</span>
                   </div>
                 </div>
               )

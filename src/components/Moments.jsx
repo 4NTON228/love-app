@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { supabase } from '../lib/supabase'
 import { sendPushNotification } from '../lib/push'
+import { processAndUpload, validateImageFile } from '../lib/mediaUtils'
+import { toast } from '../lib/helpers'
 
 /* ── SVG icons ── */
 function IcoTrash() {
@@ -478,6 +480,7 @@ export default function Moments({ session, profile }) {
   const [showModal, setShowModal] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [uploadStage, setUploadStage] = useState('')
   const [imgErrors, setImgErrors] = useState({})
   const [storiesIdx, setStoriesIdx] = useState(0)
   const [showStories, setShowStories] = useState(false)
@@ -501,18 +504,11 @@ export default function Moments({ session, profile }) {
 
   useEffect(() => { loadMoments() }, [loadMoments])
 
-  async function uploadPhoto(file) {
-    const fileExt = file.name.split('.').pop()
-    const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
-    const { error } = await supabase.storage.from('photos').upload(`moments/${fileName}`, file)
-    if (error) throw error
-    const { data } = supabase.storage.from('photos').getPublicUrl(`moments/${fileName}`)
-    return data.publicUrl
-  }
-
   function handlePhotoSelect(e) {
     const file = e.target.files[0]
     if (!file) return
+    const err = validateImageFile(file)
+    if (err) { toast.error(err); e.target.value = ''; return }
     setPhoto(file)
     setPhotoPreview(prev => {
       if (prev?.startsWith('blob:')) URL.revokeObjectURL(prev)
@@ -522,31 +518,51 @@ export default function Moments({ session, profile }) {
 
   async function handleSubmit(e) {
     e.preventDefault()
-    if (!title) return
+    if (!title.trim()) { toast.error('Добавьте название'); return }
     setSaving(true)
     try {
       let photoUrl = null
-      if (photo) photoUrl = await uploadPhoto(photo)
-      const { error } = await supabase.from('moments').insert({ user_id: session.user.id, title, description, mood, photo_url: photoUrl })
-      if (!error) {
-        resetForm(); setShowModal(false); loadMoments()
-        if (profile?.partner_id) {
-          sendPushNotification(
-            profile?.name || 'Новый момент',
-            photo ? `📸 ${title}` : `💝 ${title}`,
-            profile.partner_id,
-            session.user.id
-          ).catch(() => {})
-        }
+      let thumbUrl = null
+      if (photo) {
+        setUploadStage('Сжимаем фото…')
+        const base = `moments/${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+        setUploadStage('Загружаем…')
+        const res = await processAndUpload(photo, base)
+        photoUrl = res.publicUrl
+        thumbUrl = res.thumbPublicUrl
       }
-    } catch (err) { console.error(err) }
-    setSaving(false)
+      setUploadStage('Сохраняем…')
+      const { error } = await supabase.from('moments').insert({
+        user_id: session.user.id, title: title.trim(), description, mood,
+        photo_url: photoUrl, thumb_url: thumbUrl,
+      })
+      if (error) throw error
+
+      resetForm(); setShowModal(false); loadMoments()
+      toast.success('Момент сохранён')
+      if (profile?.partner_id) {
+        sendPushNotification(
+          profile?.name || 'Новый момент',
+          photo ? `📸 ${title}` : `💝 ${title}`,
+          profile.partner_id,
+          session.user.id
+        ).catch(() => {})
+      }
+    } catch (err) {
+      console.error(err)
+      toast.error('Не удалось сохранить момент')
+    } finally {
+      setSaving(false)
+      setUploadStage('')
+    }
   }
 
   async function deleteMoment(id) {
     if (!confirm('Удалить этот момент?')) return
-    await supabase.from('moments').delete().eq('id', id)
-    loadMoments()
+    const { error } = await supabase.from('moments').delete().eq('id', id)
+    if (error) { toast.error('Не удалось удалить'); return }
+    setMoments(prev => prev.filter(m => m.id !== id))
+    toast.success('Момент удалён')
   }
 
   function resetForm() {
@@ -567,6 +583,7 @@ export default function Moments({ session, profile }) {
       // Откатываем при ошибке
       setMoments(prev => prev.map(m => (m.id === id ? { ...m, liked: !value } : m)))
       console.error('Не удалось сохранить лайк:', error)
+      toast.error('Не удалось сохранить лайк')
     }
   }, [])
 
@@ -869,9 +886,10 @@ export default function Moments({ session, profile }) {
                   {moment.photo_url && !imgErrors[moment.id] ? (
                     <img
                       className="moment-img"
-                      src={moment.photo_url}
+                      src={moment.thumb_url || moment.photo_url}
                       alt={moment.title}
                       loading="lazy"
+                      decoding="async"
                       onError={() => setImgErrors(prev => ({ ...prev, [moment.id]: true }))}
                     />
                   ) : (
@@ -973,7 +991,7 @@ export default function Moments({ session, profile }) {
                 {photoPreview && <img className="photo-preview" src={photoPreview} alt="Preview" />}
               </div>
               <button className="form-submit" type="submit" disabled={saving}>
-                {saving ? 'Сохраняем...' : 'Сохранить'}
+                {saving ? (uploadStage || 'Сохраняем…') : 'Сохранить'}
               </button>
             </form>
           </div>

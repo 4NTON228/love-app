@@ -129,16 +129,16 @@ function IconPremium({ active }) {
 }
 
 const MAIN_TABS = [
-  { id: 'home',   label: 'Главная', Icon: IconHome   },
-  { id: 'chat',   label: 'Чат',     Icon: IconChat   },
-  { id: 'clock',  label: 'Часы',    Icon: IconClock  },
-  { id: 'letter', label: 'Письмо',  Icon: IconLetter },
-  { id: 'more',   label: 'Ещё',     Icon: IconMore   },
+  { id: 'home',    label: 'Главная', Icon: IconHome   },
+  { id: 'chat',    label: 'Чат',     Icon: IconChat   },
+  { id: 'moments', label: 'Фото',    Icon: IconCamera },
+  { id: 'letter',  label: 'Письмо',  Icon: IconLetter },
+  { id: 'more',    label: 'Ещё',     Icon: IconMore   },
 ]
 
 const MORE_ITEMS = [
   { id: 'advisor',  label: 'Советник',  Icon: IconAdvisor  },
-  { id: 'moments',  label: 'Фото',      Icon: IconCamera   },
+  { id: 'clock',    label: 'Часы',      Icon: IconClock    },
   { id: 'calendar', label: 'Дни',       Icon: IconCalendar },
   { id: 'plans',    label: 'Планы',     Icon: IconPlans    },
   { id: 'premium',  label: 'Premium',   Icon: IconPremium  },

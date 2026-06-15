@@ -282,7 +282,8 @@ function StoriesViewer({ stories, startIdx, onClose, onToggleLike }) {
           left: 0;
           right: 0;
           z-index: 15;
-          padding: 100px 24px calc(env(safe-area-inset-bottom, 0px) + 120px);
+          /* extra right padding keeps text clear of the heart button */
+          padding: 100px 96px calc(env(safe-area-inset-bottom, 0px) + 120px) 24px;
           background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%);
           pointer-events: none;
         }
@@ -639,17 +640,17 @@ export default function Moments({ session, profile }) {
         }
         .moments-slide-btn:active { background: rgba(255,255,255,0.22); transform: scale(0.96); }
 
-        /* Grid */
+        /* Grid — masonry via CSS columns (no big gaps) */
         .moments-grid {
           padding: 0 14px;
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 12px;
-          align-items: start;
+          column-count: 2;
+          column-gap: 12px;
         }
         .moment-card-new {
           position: relative;
-          margin-bottom: 0;
+          margin: 0 0 12px;
+          break-inside: avoid;
+          -webkit-column-break-inside: avoid;
           border-radius: 22px;
           overflow: hidden;
           background: var(--bg-card, #ffffff);

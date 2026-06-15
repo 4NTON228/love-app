@@ -575,18 +575,18 @@ export default function Moments({ session, profile }) {
       <style>{`
         .moments-wrap { padding: 0 0 120px; }
         .moments-header {
-          background: linear-gradient(175deg, #0D0305 0%, #220810 38%, #46101F 68%, #2E0C18 100%);
-          padding: 60px 20px 28px;
+          background: linear-gradient(165deg, #5e2545 0%, #92384e 42%, #bd5552 76%, #cb6650 100%);
+          padding: 60px 20px 30px;
           border-radius: 0 0 32px 32px;
-          margin-bottom: 20px;
-          box-shadow: 0 12px 48px rgba(14,3,8,0.7), 0 4px 16px rgba(0,0,0,0.4);
+          margin-bottom: 18px;
+          box-shadow: 0 12px 40px rgba(60,20,40,0.45);
           overflow: hidden;
           position: relative;
         }
         .moments-header::after {
           content: '';
           position: absolute; inset: 0; border-radius: inherit;
-          background: radial-gradient(ellipse at 50% 0%, hsl(var(--h,349), var(--s,59%), 30% / 0.35) 0%, transparent 60%);
+          background: radial-gradient(ellipse at 80% 0%, rgba(255,210,150,0.30) 0%, transparent 55%);
           pointer-events: none;
         }
         .moments-header-title {
@@ -640,108 +640,152 @@ export default function Moments({ session, profile }) {
         }
         .moments-slide-btn:active { background: rgba(255,255,255,0.22); transform: scale(0.96); }
 
-        /* Grid — masonry via CSS columns (no big gaps) */
+        /* Grid — uniform photo tiles (always shows every photo, no gaps) */
         .moments-grid {
           padding: 0 14px;
-          column-count: 2;
-          column-gap: 12px;
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 10px;
         }
         .moment-card-new {
           position: relative;
-          margin: 0 0 12px;
-          break-inside: avoid;
-          -webkit-column-break-inside: avoid;
-          border-radius: 22px;
+          aspect-ratio: 3 / 4;
+          border-radius: 20px;
           overflow: hidden;
-          background: var(--bg-card, #ffffff);
-          border: 1px solid rgba(200,51,74,0.08);
-          box-shadow: 0 2px 16px rgba(0,0,0,0.07);
+          background: linear-gradient(160deg, #3a1622, #1d0b12);
+          box-shadow: 0 6px 20px rgba(40,12,24,0.18);
           animation: momentIn 0.45s ease both;
           cursor: pointer;
-        }
-        .moment-like-badge {
-          position: absolute;
-          top: 10px;
-          right: 10px;
-          z-index: 2;
-          width: 30px;
-          height: 30px;
-          border-radius: 50%;
-          background: rgba(0,0,0,0.32);
-          backdrop-filter: blur(8px);
-          -webkit-backdrop-filter: blur(8px);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          pointer-events: none;
-        }
-        .app.dark .moment-card-new {
-          background: #2C1018;
-          border-color: rgba(200,51,74,0.18);
-          box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+          transition: transform 0.16s ease;
         }
         @keyframes momentIn {
-          from { opacity:0; transform: translateY(24px) scale(0.95); }
+          from { opacity:0; transform: translateY(20px) scale(0.96); }
           to   { opacity:1; transform: translateY(0) scale(1); }
         }
         .moment-card-new:active { transform: scale(0.97); }
+
         .moment-img {
+          position: absolute;
+          inset: 0;
           width: 100%;
-          display: block;
+          height: 100%;
           object-fit: cover;
+          display: block;
         }
-        .moment-img-tall { aspect-ratio: 3/4; }
-        .moment-img-wide { aspect-ratio: 4/3; }
         .moment-no-photo {
-          height: 100px;
+          position: absolute;
+          inset: 0;
           display: flex;
           align-items: center;
           justify-content: center;
-          background: var(--blush, #FBF0F2);
         }
-        .app.dark .moment-no-photo { background: rgba(139,26,44,0.12); }
-        .moment-info { padding: 10px 12px; }
+
+        /* gradient + caption overlaid on the photo */
+        .moment-overlay {
+          position: absolute;
+          left: 0; right: 0; bottom: 0;
+          z-index: 1;
+          padding: 30px 12px 12px;
+          background: linear-gradient(to top,
+            rgba(10,4,8,0.82) 0%,
+            rgba(10,4,8,0.40) 55%,
+            transparent 100%);
+        }
         .moment-title-new {
           font-family: var(--font-body);
           font-weight: 700;
-          font-size: 13px;
-          color: var(--text);
-          margin-bottom: 3px;
-          line-height: 1.3;
+          font-size: 13.5px;
+          color: #fff;
+          line-height: 1.25;
           display: -webkit-box;
           -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
           overflow: hidden;
-        }
-        .moment-date-new {
-          font-size: 11px;
-          color: var(--text-muted);
-          font-family: var(--font-body);
+          text-shadow: 0 1px 4px rgba(0,0,0,0.5);
         }
         .moment-foot {
           display: flex;
           align-items: center;
-          justify-content: space-between;
-          margin-top: 4px;
+          gap: 6px;
+          margin-top: 5px;
         }
         .moment-mood-dot {
-          width: 8px; height: 8px;
+          width: 7px; height: 7px;
           border-radius: 50%;
           flex-shrink: 0;
+          box-shadow: 0 0 0 2px rgba(255,255,255,0.25);
+        }
+        .moment-date-new {
+          font-size: 11px;
+          color: rgba(255,255,255,0.82);
+          font-family: var(--font-body);
+        }
+
+        .moment-like-badge {
+          position: absolute;
+          top: 9px; right: 9px;
+          z-index: 2;
+          width: 30px; height: 30px;
+          border-radius: 50%;
+          background: rgba(0,0,0,0.35);
+          backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
+          display: flex; align-items: center; justify-content: center;
+          pointer-events: none;
         }
         .moment-del-btn {
-          background: none;
+          position: absolute;
+          top: 9px; left: 9px;
+          z-index: 2;
+          background: rgba(0,0,0,0.35);
+          backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
           border: none;
-          color: var(--text-muted);
+          color: rgba(255,255,255,0.9);
           cursor: pointer;
-          padding: 2px 4px;
-          line-height: 1;
-          border-radius: 6px;
+          width: 30px; height: 30px;
+          line-height: 0;
+          border-radius: 50%;
           display: flex;
           align-items: center;
           justify-content: center;
         }
-        .moment-del-btn:active { background: rgba(200,51,74,0.1); color: #C8334A; }
+        .moment-del-btn:active { background: rgba(200,51,74,0.6); }
+
+        /* "+" tile that invites adding a new moment */
+        .moment-add-tile {
+          aspect-ratio: 3 / 4;
+          border-radius: 20px;
+          border: 2px dashed hsl(var(--h,349), var(--s,59%), 70%);
+          background: hsl(var(--h,349), var(--s,59%), 97%);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          cursor: pointer;
+          color: var(--rose, #C8334A);
+          transition: transform 0.16s ease, background 0.16s ease;
+          animation: momentIn 0.45s ease both;
+        }
+        .app.dark .moment-add-tile {
+          border-color: hsl(var(--h,349), var(--s,59%), 32%);
+          background: hsl(var(--h,349), var(--s,59%), 12%);
+        }
+        .moment-add-tile:active { transform: scale(0.97); }
+        .moment-add-tile-circle {
+          width: 46px; height: 46px;
+          border-radius: 50%;
+          background: var(--rose, #C8334A);
+          color: #fff;
+          display: flex; align-items: center; justify-content: center;
+          box-shadow: 0 6px 16px rgba(200,51,74,0.35);
+        }
+        .moment-add-tile-label {
+          font-family: var(--font-body);
+          font-size: 12.5px;
+          font-weight: 600;
+        }
 
         .moments-empty {
           display: flex;
@@ -775,9 +819,6 @@ export default function Moments({ session, profile }) {
           transition: border-color 0.15s, transform 0.15s;
         }
         .mood-btn:active { transform: scale(0.95); }
-
-        .app.dark .moment-card-new { background: var(--surface-2, #1E0A10); }
-        .app.dark .moment-title-new { color: var(--ink, #F5E8EA); }
       `}</style>
 
       <div className="moments-wrap">
@@ -798,22 +839,42 @@ export default function Moments({ session, profile }) {
 
         {loading ? (
           <div className="moments-empty"><LoadingHeart /></div>
-        ) : moments.length === 0 ? (
-          <div className="moments-empty">
-            <IcoCameraLg />
-            <p className="moments-empty-text">Пока нет моментов.<br />Сохраните ваше первое воспоминание!</p>
-          </div>
         ) : (
           <div className="moments-grid">
+            <div className="moment-add-tile" onClick={() => setShowModal(true)}>
+              <span className="moment-add-tile-circle"><IcoPlus /></span>
+              <span className="moment-add-tile-label">Добавить фото</span>
+            </div>
             {moments.map((moment, i) => {
               const moodData = getMood(moment.mood)
+              const isMine = moment.user_id === session.user.id
               return (
                 <div
                   key={moment.id}
                   className="moment-card-new"
-                  style={{ animationDelay: `${i * 0.05}s` }}
+                  style={{ animationDelay: `${Math.min(i, 8) * 0.05}s` }}
                   onClick={() => openStories(i)}
                 >
+                  {moment.photo_url && !imgErrors[moment.id] ? (
+                    <img
+                      className="moment-img"
+                      src={moment.photo_url}
+                      alt={moment.title}
+                      loading="lazy"
+                      onError={() => setImgErrors(prev => ({ ...prev, [moment.id]: true }))}
+                    />
+                  ) : (
+                    <div
+                      className="moment-no-photo"
+                      style={{ background: `linear-gradient(160deg, ${moodData.color}88, #1d0b12)` }}
+                    >
+                      <svg viewBox="0 0 60 56" width="48" height="44" fill="none">
+                        <path d="M30 52C30 52 3 35 3 16C3 8 9.5 2 18 2C22.5 2 26.5 4.5 30 9C33.5 4.5 37.5 2 42 2C50.5 2 57 8 57 16C57 35 30 52 30 52Z"
+                          fill="#ffffff" opacity="0.55"/>
+                      </svg>
+                    </div>
+                  )}
+
                   {moment.liked && (
                     <span className="moment-like-badge">
                       <svg viewBox="0 0 24 22" width="15" height="14" fill="#FF3B5C" stroke="white" strokeWidth="1.5">
@@ -821,37 +882,27 @@ export default function Moments({ session, profile }) {
                       </svg>
                     </span>
                   )}
-                  {moment.photo_url && !imgErrors[moment.id] ? (
-                    <img
-                      className={`moment-img ${i % 3 === 0 ? 'moment-img-tall' : 'moment-img-wide'}`}
-                      src={moment.photo_url}
-                      alt={moment.title}
-                      loading="lazy"
-                      onError={() => setImgErrors(prev => ({ ...prev, [moment.id]: true }))}
-                    />
-                  ) : (
-                    <div className="moment-no-photo">
-                      <svg viewBox="0 0 60 56" width="44" height="40" fill="none">
-                        <path d="M30 52C30 52 3 35 3 16C3 8 9.5 2 18 2C22.5 2 26.5 4.5 30 9C33.5 4.5 37.5 2 42 2C50.5 2 57 8 57 16C57 35 30 52 30 52Z"
-                          fill={moodData.color} opacity="0.4"/>
-                      </svg>
-                    </div>
+
+                  {isMine && (
+                    <button
+                      className="moment-del-btn"
+                      onClick={e => { e.stopPropagation(); deleteMoment(moment.id) }}
+                      aria-label="Удалить момент"
+                    >
+                      <IcoTrash />
+                    </button>
                   )}
-                  <div className="moment-info">
+
+                  <div className="moment-overlay">
                     <div className="moment-title-new">{moment.title}</div>
                     <div className="moment-foot">
-                      <span className="moment-date-new">{formatDate(moment.created_at)}</span>
                       <span
                         className="moment-mood-dot"
                         style={{ background: moodData.color }}
                         title={moodData.label}
                       />
+                      <span className="moment-date-new">{formatDate(moment.created_at)}</span>
                     </div>
-                    {moment.user_id === session.user.id && (
-                      <button className="moment-del-btn" onClick={e => { e.stopPropagation(); deleteMoment(moment.id) }}>
-                        <IcoTrash />
-                      </button>
-                    )}
                   </div>
                 </div>
               )

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { supabase } from '../lib/supabase'
 import { sendPushNotification } from '../lib/push'
 
@@ -85,15 +86,17 @@ function formatDate(dateStr) {
 /* ── Stories Viewer ── */
 const STORY_DURATION = 5000
 
-function StoriesViewer({ stories, startIdx, onClose }) {
+function StoriesViewer({ stories, startIdx, onClose, onToggleLike }) {
   const [idx, setIdx] = useState(startIdx)
   const [progress, setProgress] = useState(0)
-  const [liked, setLiked] = useState(false)
+  const [burst, setBurst] = useState(false)
   const timerRef = useRef(null)
   const progressIntervalRef = useRef(null)
+  const burstTimerRef = useRef(null)
 
   const story = stories[idx]
   const moodData = getMood(story?.mood)
+  const liked = !!story?.liked
 
   // Блокируем скролл body при открытии
   useEffect(() => {
@@ -146,14 +149,18 @@ function StoriesViewer({ stories, startIdx, onClose }) {
 
   // При смене индекса запускаем новый таймер
   useEffect(() => {
-    setLiked(false)
     startTimer()
-    
+
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current)
       if (progressIntervalRef.current) clearInterval(progressIntervalRef.current)
     }
   }, [idx, startTimer])
+
+  // Чистим таймер всплеска сердца при размонтировании
+  useEffect(() => () => {
+    if (burstTimerRef.current) clearTimeout(burstTimerRef.current)
+  }, [])
 
   function goNext() {
     if (timerRef.current) clearTimeout(timerRef.current)
@@ -177,28 +184,29 @@ function StoriesViewer({ stories, startIdx, onClose }) {
 
   function triggerHeart(e) {
     e.stopPropagation()
-    setLiked(true)
-    setTimeout(() => setLiked(false), 300)
-  }
-
-  // Запрещаем движение страницы при таче на фото
-  const preventTouchMove = (e) => {
-    e.preventDefault()
+    const next = !liked
+    onToggleLike?.(story.id, next)
+    if (next) {
+      setBurst(true)
+      if (burstTimerRef.current) clearTimeout(burstTimerRef.current)
+      burstTimerRef.current = setTimeout(() => setBurst(false), 600)
+    }
   }
 
   if (!story) return null
 
-  return (
-    <div 
-      className="stories-overlay" 
-      style={{ 
-        position: 'fixed', 
-        inset: 0, 
-        zIndex: 1000, 
-        background: '#000000', 
-        display: 'flex', 
+  return createPortal(
+    <div
+      className="stories-overlay"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 1000,
+        background: '#000000',
+        display: 'flex',
         flexDirection: 'column',
-        touchAction: 'pan-y' // Разрешаем только вертикальный скролл
+        touchAction: 'none', // Фото зафиксировано — никакого скролла/смещения
+        overscrollBehavior: 'none',
       }}
     >
       <style>{`
@@ -299,13 +307,47 @@ function StoriesViewer({ stories, startIdx, onClose }) {
         .stories-heart-btn:active {
           transform: scale(0.92);
         }
-        .heart-liked {
-          animation: likedPop 0.25s ease-out;
+        .stories-heart-btn.is-liked {
+          background: rgba(255,59,92,0.18);
+          border-color: rgba(255,59,92,0.55);
         }
-        @keyframes likedPop {
-          0% { transform: scale(1); }
-          50% { transform: scale(1.3); fill: #C8334A; }
+        .heart-svg {
+          position: relative;
+          z-index: 2;
+          transition: transform 0.18s ease;
+        }
+        .heart-svg path { transition: fill 0.18s ease; }
+        .heart-pop {
+          animation: heartPop 0.55s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+        }
+        @keyframes heartPop {
+          0%   { transform: scale(1); }
+          30%  { transform: scale(1.42); }
+          55%  { transform: scale(0.88); }
           100% { transform: scale(1); }
+        }
+        /* Particle burst when liking */
+        .stories-heart-burst {
+          position: absolute;
+          inset: 0;
+          z-index: 1;
+          pointer-events: none;
+        }
+        .burst-piece {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          width: 7px;
+          height: 7px;
+          margin: -3.5px 0 0 -3.5px;
+          border-radius: 50%;
+          background: #FF3B5C;
+          opacity: 0;
+          animation: burstFly 0.6s ease-out forwards;
+        }
+        @keyframes burstFly {
+          0%   { opacity: 1; transform: rotate(var(--a)) translateY(0) scale(1); }
+          100% { opacity: 0; transform: rotate(var(--a)) translateY(-38px) scale(0.3); }
         }
       `}</style>
 
@@ -342,7 +384,7 @@ function StoriesViewer({ stories, startIdx, onClose }) {
       </button>
 
       {/* Image Container */}
-      <div className="stories-image-container" onTouchMove={preventTouchMove}>
+      <div className="stories-image-container">
         {story.photo_url ? (
           <img
             key={story.id}
@@ -406,13 +448,26 @@ function StoriesViewer({ stories, startIdx, onClose }) {
       </div>
 
       {/* Heart button */}
-      <button className="stories-heart-btn" onClick={triggerHeart}>
-        <svg viewBox="0 0 24 22" width="26" height="24" fill="none" className={liked ? 'heart-liked' : ''}>
+      <button
+        className={`stories-heart-btn${liked ? ' is-liked' : ''}`}
+        onClick={triggerHeart}
+        aria-pressed={liked}
+        aria-label={liked ? 'Убрать лайк' : 'Поставить лайк'}
+      >
+        {burst && (
+          <span className="stories-heart-burst" aria-hidden="true">
+            {[0, 1, 2, 3, 4, 5].map(i => (
+              <span key={i} className="burst-piece" style={{ '--a': `${i * 60}deg` }} />
+            ))}
+          </span>
+        )}
+        <svg viewBox="0 0 24 22" width="26" height="24" fill="none" className={`heart-svg${burst ? ' heart-pop' : ''}`}>
           <path d="M12 20S2 13.5 2 6C2 3.5 4 1.5 6.5 1.5C8.5 1.5 10 3 12 5.5C14 3 15.5 1.5 17.5 1.5C20 1.5 22 3.5 22 6C22 13.5 12 20 12 20Z"
-            fill={liked ? '#C8334A' : 'rgba(255,255,255,0.25)'} stroke="white" strokeWidth="1.5"/>
+            fill={liked ? '#FF3B5C' : 'rgba(255,255,255,0.25)'} stroke="white" strokeWidth="1.5"/>
         </svg>
       </button>
-    </div>
+    </div>,
+    document.body
   )
 }
 export default function Moments({ session, profile }) {
@@ -503,6 +558,17 @@ export default function Moments({ session, profile }) {
     setShowStories(true)
   }
 
+  const toggleLike = useCallback(async (id, value) => {
+    // Оптимистично обновляем UI
+    setMoments(prev => prev.map(m => (m.id === id ? { ...m, liked: value } : m)))
+    const { error } = await supabase.from('moments').update({ liked: value }).eq('id', id)
+    if (error) {
+      // Откатываем при ошибке
+      setMoments(prev => prev.map(m => (m.id === id ? { ...m, liked: !value } : m)))
+      console.error('Не удалось сохранить лайк:', error)
+    }
+  }, [])
+
   return (
     <>
       <style>{`
@@ -582,6 +648,7 @@ export default function Moments({ session, profile }) {
           align-items: start;
         }
         .moment-card-new {
+          position: relative;
           margin-bottom: 0;
           border-radius: 22px;
           overflow: hidden;
@@ -590,6 +657,22 @@ export default function Moments({ session, profile }) {
           box-shadow: 0 2px 16px rgba(0,0,0,0.07);
           animation: momentIn 0.45s ease both;
           cursor: pointer;
+        }
+        .moment-like-badge {
+          position: absolute;
+          top: 10px;
+          right: 10px;
+          z-index: 2;
+          width: 30px;
+          height: 30px;
+          border-radius: 50%;
+          background: rgba(0,0,0,0.32);
+          backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          pointer-events: none;
         }
         .app.dark .moment-card-new {
           background: #2C1018;
@@ -730,6 +813,13 @@ export default function Moments({ session, profile }) {
                   style={{ animationDelay: `${i * 0.05}s` }}
                   onClick={() => openStories(i)}
                 >
+                  {moment.liked && (
+                    <span className="moment-like-badge">
+                      <svg viewBox="0 0 24 22" width="15" height="14" fill="#FF3B5C" stroke="white" strokeWidth="1.5">
+                        <path d="M12 20S2 13.5 2 6C2 3.5 4 1.5 6.5 1.5C8.5 1.5 10 3 12 5.5C14 3 15.5 1.5 17.5 1.5C20 1.5 22 3.5 22 6C22 13.5 12 20 12 20Z"/>
+                      </svg>
+                    </span>
+                  )}
                   {moment.photo_url && !imgErrors[moment.id] ? (
                     <img
                       className={`moment-img ${i % 3 === 0 ? 'moment-img-tall' : 'moment-img-wide'}`}
@@ -775,6 +865,7 @@ export default function Moments({ session, profile }) {
           stories={moments}
           startIdx={storiesIdx}
           onClose={() => setShowStories(false)}
+          onToggleLike={toggleLike}
         />
       )}
 

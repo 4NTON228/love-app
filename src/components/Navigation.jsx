@@ -178,21 +178,11 @@ export default function Navigation({ activeTab, setActiveTab }) {
           border-top: 0.5px solid rgba(255,255,255,0.10);
           display: flex;
           align-items: stretch;
-          height: calc(58px + env(safe-area-inset-bottom, 0px));
+          height: calc(56px + env(safe-area-inset-bottom, 0px));
           padding-bottom: env(safe-area-inset-bottom, 0px);
           z-index: 50;
         }
-        /* solid fill for the home-indicator safe area (covers any seam in standalone PWA) */
-        .nav-new::after {
-          content: '';
-          position: absolute;
-          top: 100%;
-          left: 0; right: 0;
-          height: env(safe-area-inset-bottom, 0px);
-          background: #160a10;
-        }
-        .app.dark .nav-new,
-        .app.dark .nav-new::after {
+        .app.dark .nav-new {
           background: #120810;
           border-top-color: rgba(255,255,255,0.08);
         }

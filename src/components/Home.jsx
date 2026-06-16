@@ -207,12 +207,6 @@ const CAMERA_ICON = (
     <circle cx="12" cy="13" r="4" />
   </svg>
 )
-const MAIL_ICON = (
-  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="2" y="5" width="20" height="14" rx="2" />
-    <polyline points="2,5 12,13 22,5" />
-  </svg>
-)
 const CHAT_ICON = (
   <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
@@ -734,10 +728,8 @@ export default function Home({ session, profile, onNavigate }) {
   /* ── Stable callbacks for memoized children ── */
   const openSettings     = useCallback(() => onNavigate?.('settings'), [onNavigate])
   const openMoments      = useCallback(() => onNavigate?.('moments'),  [onNavigate])
-  const openLetter       = useCallback(() => onNavigate?.('letter'),   [onNavigate])
   const openChat         = useCallback(() => onNavigate?.('chat'),     [onNavigate])
   const openCalendar     = useCallback(() => onNavigate?.('calendar'), [onNavigate])
-  const openClock        = useCallback(() => onNavigate?.('clock'),    [onNavigate])
   const openPartnerModal = useCallback(() => setShowPartnerModal(true),  [])
   const closePartnerModal= useCallback(() => setShowPartnerModal(false), [])
   const startEditMeeting = useCallback(() => setEditMeeting(true),  [])
@@ -761,10 +753,7 @@ export default function Home({ session, profile, onNavigate }) {
         {/* ── Hero card ── */}
         <section className="hero-card">
           <div className="hero-top">
-            <div className="hero-chip">
-              <span className="hero-chip-dot" />
-              Только для двоих
-            </div>
+            <span />
             <button type="button" className="hero-button" onClick={openSettings}>
               Настройки
             </button>
@@ -829,14 +818,10 @@ export default function Home({ session, profile, onNavigate }) {
             <div className="hero-title-wrap">
               <div className="hero-overline">Главная история</div>
               <h1 className="hero-title">{headline}</h1>
-              {anniversaryYears > 0 ? (
+              {anniversaryYears > 0 && (
                 <div className="hero-anniversary">
                   🎉 С годовщиной! {anniversaryYears} {yearsWord(anniversaryYears)} вместе
                 </div>
-              ) : (
-                <p className="hero-subtitle">
-                  Пространство только для двоих — спокойное, красивое, ваше.
-                </p>
               )}
             </div>
 
@@ -873,21 +858,12 @@ export default function Home({ session, profile, onNavigate }) {
             delay={0.08}
           />
           <QuickAction
-            badge="Раздел"
-            title="Письмо"
-            subtitle="Тёплое личное послание для любимого человека."
-            icon={MAIL_ICON}
-            onClick={openLetter}
-            delay={0.14}
-          />
-          <QuickAction
             badge="Быстрый переход"
             title="Чат"
             subtitle="Открыть ваш диалог прямо сейчас."
             icon={CHAT_ICON}
             onClick={openChat}
-            wide
-            delay={0.2}
+            delay={0.14}
           />
         </div>
 
@@ -991,9 +967,6 @@ export default function Home({ session, profile, onNavigate }) {
               <div className="actions-row">
                 <button type="button" className="btn-ghost" onClick={startEditMessage}>
                   Редактировать
-                </button>
-                <button type="button" className="btn-ghost" onClick={openClock}>
-                  Часы любви
                 </button>
               </div>
             </>

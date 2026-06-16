@@ -22,29 +22,6 @@ function IconChat({ active }) {
   )
 }
 
-function IconClock({ active }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" strokeLinecap="round"
-      stroke={active ? 'var(--rose,#A8283C)' : 'currentColor'}
-      strokeWidth={active ? '1.7' : '1.5'}>
-      <circle cx="12" cy="12" r="9" />
-      <line x1="12" y1="12" x2="12" y2="7.5" strokeWidth={active ? '1.9' : '1.7'} />
-      <line x1="12" y1="12" x2="15.5" y2="14" strokeWidth="1.5" />
-    </svg>
-  )
-}
-
-function IconLetter({ active }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" strokeLinecap="round" strokeLinejoin="round"
-      stroke={active ? 'var(--rose,#A8283C)' : 'currentColor'}
-      strokeWidth={active ? '1.7' : '1.5'}>
-      <rect x="2" y="5" width="20" height="14" rx="2" />
-      <polyline points="2,5 12,13 22,5" />
-    </svg>
-  )
-}
-
 function IconMore({ active }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" strokeLinecap="round" strokeLinejoin="round"
@@ -145,9 +122,7 @@ const MAIN_TABS = [
 ]
 
 const MORE_ITEMS = [
-  { id: 'letter',   label: 'Письмо',    Icon: IconLetter   },
   { id: 'advisor',  label: 'Советник',  Icon: IconAdvisor  },
-  { id: 'clock',    label: 'Часы',      Icon: IconClock    },
   { id: 'calendar', label: 'Дни',       Icon: IconCalendar },
   { id: 'plans',    label: 'Планы',     Icon: IconPlans    },
   { id: 'premium',  label: 'Premium',   Icon: IconPremium  },
@@ -155,9 +130,8 @@ const MORE_ITEMS = [
 ]
 
 const QUICK_ADD = [
-  { id: 'moments',  label: 'Добавить фото',   Icon: IconCamera   },
-  { id: 'letter',   label: 'Написать письмо', Icon: IconLetter   },
-  { id: 'calendar', label: 'Добавить событие',Icon: IconCalendar },
+  { id: 'moments',  label: 'Добавить фото',    Icon: IconCamera   },
+  { id: 'calendar', label: 'Добавить событие', Icon: IconCalendar },
 ]
 
 const MORE_IDS = MORE_ITEMS.map(m => m.id)
@@ -334,81 +308,88 @@ export default function Navigation({ activeTab, setActiveTab }) {
 
         .more-drawer {
           position: fixed;
-          bottom: calc(58px + env(safe-area-inset-bottom, 0px));
+          bottom: 0;
           left: 0; right: 0;
-          background: var(--surface, #FFFFFF);
-          border-radius: 20px 20px 0 0;
-          border-top: 0.5px solid var(--border, rgba(0,0,0,0.07));
-          padding: 14px 16px 20px;
-          z-index: 50;
-          animation: slideUp 0.28s cubic-bezier(0.22,1,0.36,1) both;
-          box-shadow: 0 -12px 48px rgba(0,0,0,0.1);
+          background: linear-gradient(180deg, #2a1620 0%, #160a10 100%);
+          border-radius: 26px 26px 0 0;
+          border-top: 1px solid rgba(255,255,255,0.10);
+          padding: 12px 16px calc(env(safe-area-inset-bottom, 0px) + 22px);
+          z-index: 51;
+          animation: moreUp 0.4s cubic-bezier(0.22,1,0.36,1) both;
+          box-shadow: 0 -20px 60px rgba(0,0,0,0.55);
         }
-        .app.dark .more-drawer {
-          background: #151412;
-          border-top-color: rgba(255,255,255,0.05);
-          box-shadow: 0 -12px 48px rgba(0,0,0,0.5);
+        @keyframes moreUp {
+          from { transform: translateY(100%); }
+          to   { transform: translateY(0); }
         }
 
         .more-handle {
-          width: 32px; height: 3px;
+          width: 38px; height: 4px;
           border-radius: 99px;
-          background: var(--blush-2, #EAE5DC);
-          margin: 0 auto 16px;
+          background: rgba(255,255,255,0.22);
+          margin: 0 auto 8px;
         }
-        .app.dark .more-handle { background: rgba(255,255,255,0.1); }
+        .more-drawer-title {
+          font-family: var(--font-display, 'Cormorant Garamond', serif);
+          font-size: 22px;
+          color: #fff;
+          text-align: center;
+          margin: 0 0 16px;
+        }
 
         .more-grid {
           display: grid;
           grid-template-columns: repeat(3, 1fr);
-          gap: 8px;
+          gap: 12px;
         }
 
         .more-item {
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 7px;
-          padding: 16px 6px 13px;
-          border-radius: 14px;
+          gap: 10px;
+          padding: 18px 6px 14px;
+          border-radius: 20px;
           cursor: pointer;
-          background: var(--blush, #F6F3EE);
-          border: 0.5px solid var(--border, rgba(0,0,0,0.07));
-          transition: opacity 0.15s, transform 0.15s, background 0.2s, border-color 0.2s;
+          background: rgba(255,255,255,0.06);
+          border: 1px solid rgba(255,255,255,0.08);
+          transition: transform 0.15s ease, background 0.2s, border-color 0.2s;
           -webkit-tap-highlight-color: transparent;
+          opacity: 0;
+          animation: moreItemIn 0.4s cubic-bezier(0.22,1,0.36,1) both;
         }
-        .app.dark .more-item { background: #1A1916; border-color: rgba(255,255,255,0.05); }
-        .more-item:active { opacity: 0.65; transform: scale(0.96); }
-
+        @keyframes moreItemIn {
+          from { opacity: 0; transform: translateY(14px) scale(0.94); }
+          to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .more-item:active { transform: scale(0.94); }
         .more-item.active-item {
-          background: hsl(var(--h,349), var(--s,59%), 96%);
-          border-color: hsl(var(--h,349), var(--s,59%), 87%);
-        }
-        .app.dark .more-item.active-item {
-          background: hsl(var(--h,349), var(--s,59%), 12%);
-          border-color: hsl(var(--h,349), var(--s,59%), 22%);
+          background: rgba(255,155,176,0.16);
+          border-color: rgba(255,155,176,0.5);
         }
 
         .more-item-icon {
-          width: 26px; height: 26px;
-          color: var(--ink-mid, #48423C);
+          width: 50px; height: 50px;
+          border-radius: 16px;
+          background: linear-gradient(160deg, rgba(255,141,160,0.28), rgba(216,69,107,0.18));
+          border: 1px solid rgba(255,255,255,0.12);
+          color: #ffd3dc;
           display: flex; align-items: center; justify-content: center;
         }
-        .app.dark .more-item-icon { color: var(--ink-mid, #9E9990); }
-        .more-item-icon svg { width: 22px; height: 22px; }
-        .more-item.active-item .more-item-icon { color: var(--rose, #A8283C); }
+        .more-item-icon svg { width: 24px; height: 24px; }
+        .more-item.active-item .more-item-icon {
+          background: linear-gradient(160deg, #ff8da0, #d8456b);
+          color: #fff;
+        }
 
         .more-item-label {
           font-family: var(--font-body);
-          font-size: 11px;
-          font-weight: 400;
-          color: var(--muted, #8A8480);
+          font-size: 12px;
+          font-weight: 500;
+          color: rgba(255,255,255,0.72);
           text-align: center;
         }
-        .more-item.active-item .more-item-label {
-          color: var(--rose, #A8283C);
-          font-weight: 500;
-        }
+        .more-item.active-item .more-item-label { color: #fff; }
       `}</style>
 
       {showMore && (
@@ -416,15 +397,17 @@ export default function Navigation({ activeTab, setActiveTab }) {
           <div className="more-overlay" onClick={() => setShowMore(false)} />
           <div className="more-drawer">
             <div className="more-handle" />
+            <div className="more-drawer-title">Разделы</div>
             <div className="more-grid">
-              {MORE_ITEMS.map(({ id, label, Icon }) => (
+              {MORE_ITEMS.map(({ id, label, Icon }, i) => (
                 <button
                   key={id}
                   className={`more-item${activeTab === id ? ' active-item' : ''}`}
+                  style={{ animationDelay: `${0.04 + i * 0.05}s` }}
                   onClick={() => handleMoreItem(id)}
                 >
                   <span className="more-item-icon">
-                    <Icon active={activeTab === id} />
+                    <Icon active={false} />
                   </span>
                   <span className="more-item-label">{label}</span>
                 </button>
@@ -439,10 +422,15 @@ export default function Navigation({ activeTab, setActiveTab }) {
           <div className="more-overlay" onClick={() => setShowAdd(false)} />
           <div className="more-drawer">
             <div className="more-handle" />
-            <div className="more-title">Что добавим?</div>
+            <div className="more-drawer-title">Что добавим?</div>
             <div className="more-grid">
-              {QUICK_ADD.map(({ id, label, Icon }) => (
-                <button key={id} className="more-item" onClick={() => handleQuickAdd(id)}>
+              {QUICK_ADD.map(({ id, label, Icon }, i) => (
+                <button
+                  key={id}
+                  className="more-item"
+                  style={{ animationDelay: `${0.04 + i * 0.05}s` }}
+                  onClick={() => handleQuickAdd(id)}
+                >
                   <span className="more-item-icon"><Icon active={false} /></span>
                   <span className="more-item-label">{label}</span>
                 </button>

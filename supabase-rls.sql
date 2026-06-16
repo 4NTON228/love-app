@@ -54,4 +54,4 @@ CREATE POLICY "delete_push_sub" ON push_subscriptions FOR DELETE USING (auth.uid
 CREATE POLICY "upload_photos" ON storage.objects FOR INSERT
   WITH CHECK (bucket_id = 'photos' AND auth.role() = 'authenticated');
 CREATE POLICY "view_photos" ON storage.objects FOR SELECT
-  USING (bucket_id = 'photos');
+  USING (bucket_id = 'photos' AND auth.role() = 'authenticated');

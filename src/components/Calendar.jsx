@@ -141,7 +141,7 @@ export default function Calendar({ session, profile }) {
         resetForm(); setShowModal(false); loadEvents()
         if (profile?.partner_id) {
           sendPushNotification(
-            profile?.name || 'Новое событие',
+            `📅 ${profile?.name || 'Партнёр'} · Новое событие`,
             `${emoji || '📅'} ${title}`,
             profile.partner_id,
             session.user.id

@@ -155,8 +155,8 @@ export default function Plans({ session, profile }) {
       setTitle(''); setCategory('dream'); setShowModal(false); loadPlans()
       if (profile?.partner_id) {
         sendPushNotification(
-          profile?.name || 'Новый план',
-          `🗺️ ${title}`,
+          `🗺️ ${profile?.name || 'Партнёр'} · Новый план`,
+          `${title}`,
           profile.partner_id,
           session.user.id
         ).catch(() => {})

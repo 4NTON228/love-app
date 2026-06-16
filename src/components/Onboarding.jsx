@@ -676,8 +676,9 @@ export default function Onboarding({ session, onComplete, onSignOut }) {
         if (data.invite_code) {
           setInviteCode(data.invite_code)
         } else {
-          // Генерируем код приглашения если его ещё нет
-          const code = Math.random().toString(36).slice(2, 10).toUpperCase()
+          // Резервная генерация (обычно код уже создан триггером БД).
+          // Нижний регистр обязателен — все RPC ищут код через lower().
+          const code = Math.random().toString(36).slice(2, 10).toLowerCase()
           const { error } = await supabase
             .from('profiles')
             .update({ invite_code: code })

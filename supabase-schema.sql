@@ -16,6 +16,19 @@ CREATE TABLE IF NOT EXISTS profiles (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Безопасный helper: возвращает partner_id текущего пользователя.
+-- SECURITY DEFINER обходит RLS, чтобы избежать бесконечной рекурсии
+-- в политиках самой таблицы profiles.
+CREATE OR REPLACE FUNCTION get_partner_id()
+RETURNS uuid
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public AS $$
+  SELECT partner_id FROM profiles WHERE id = auth.uid()
+$$;
+REVOKE EXECUTE ON FUNCTION get_partner_id() FROM anon;
+
 DROP POLICY IF EXISTS "select_profiles" ON profiles;
 DROP POLICY IF EXISTS "view_profiles" ON profiles;
 DROP POLICY IF EXISTS "update_profiles" ON profiles;
@@ -24,8 +37,9 @@ DROP POLICY IF EXISTS "Users can view own and partner profile" ON profiles;
 DROP POLICY IF EXISTS "Users can update own profile" ON profiles;
 DROP POLICY IF EXISTS "Users can insert own profile" ON profiles;
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+-- Видно только свой профиль и профиль партнёра (НЕ все профили подряд).
 CREATE POLICY "select_profiles" ON profiles
-  FOR SELECT USING (auth.role() = 'authenticated');
+  FOR SELECT USING (id = auth.uid() OR id = get_partner_id());
 CREATE POLICY "update_profiles" ON profiles
   FOR UPDATE USING (auth.uid() = id);
 CREATE POLICY "insert_profiles" ON profiles
@@ -52,11 +66,11 @@ DROP POLICY IF EXISTS "Couple can update settings" ON couple_settings;
 DROP POLICY IF EXISTS "Users can insert settings" ON couple_settings;
 ALTER TABLE couple_settings ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "select_settings" ON couple_settings
-  FOR SELECT USING (auth.role() = 'authenticated');
+  FOR SELECT USING (user_id = auth.uid() OR user_id = get_partner_id());
 CREATE POLICY "insert_settings" ON couple_settings
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "update_settings" ON couple_settings
-  FOR UPDATE USING (auth.role() = 'authenticated');
+  FOR UPDATE USING (auth.uid() = user_id);
 CREATE POLICY "delete_settings" ON couple_settings
   FOR DELETE USING (auth.uid() = user_id);
 
@@ -85,7 +99,7 @@ DROP POLICY IF EXISTS "Users can update own calendar events" ON calendar_events;
 DROP POLICY IF EXISTS "Users can delete own calendar events" ON calendar_events;
 ALTER TABLE calendar_events ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "select_calendar" ON calendar_events
-  FOR SELECT USING (auth.role() = 'authenticated');
+  FOR SELECT USING (user_id = auth.uid() OR user_id = get_partner_id());
 CREATE POLICY "insert_calendar" ON calendar_events
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "update_calendar" ON calendar_events
@@ -117,7 +131,7 @@ DROP POLICY IF EXISTS "Users can update own moments" ON moments;
 DROP POLICY IF EXISTS "Users can delete own moments" ON moments;
 ALTER TABLE moments ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "select_moments" ON moments
-  FOR SELECT USING (auth.role() = 'authenticated');
+  FOR SELECT USING (user_id = auth.uid() OR user_id = get_partner_id());
 CREATE POLICY "insert_moments" ON moments
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "update_moments" ON moments
@@ -148,11 +162,12 @@ DROP POLICY IF EXISTS "Couple can update plans" ON plans;
 DROP POLICY IF EXISTS "Users can delete own plans" ON plans;
 ALTER TABLE plans ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "select_plans" ON plans
-  FOR SELECT USING (auth.role() = 'authenticated');
+  FOR SELECT USING (user_id = auth.uid() OR user_id = get_partner_id());
 CREATE POLICY "insert_plans" ON plans
   FOR INSERT WITH CHECK (auth.uid() = user_id);
+-- Оба партнёра могут отмечать планы выполненными, но не посторонние.
 CREATE POLICY "update_plans" ON plans
-  FOR UPDATE USING (auth.role() = 'authenticated');
+  FOR UPDATE USING (user_id = auth.uid() OR user_id = get_partner_id());
 CREATE POLICY "delete_plans" ON plans
   FOR DELETE USING (auth.uid() = user_id);
 
@@ -186,12 +201,14 @@ DROP POLICY IF EXISTS "insert_messages" ON messages;
 DROP POLICY IF EXISTS "update_messages" ON messages;
 DROP POLICY IF EXISTS "delete_messages" ON messages;
 ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
+-- Сообщения видны только автору и его партнёру.
 CREATE POLICY "select_messages" ON messages
-  FOR SELECT USING (auth.role() = 'authenticated');
+  FOR SELECT USING (user_id = auth.uid() OR user_id = get_partner_id());
 CREATE POLICY "insert_messages" ON messages
   FOR INSERT WITH CHECK (auth.uid() = user_id);
+-- Редактировать/реакции — оба в паре; удалять — только автор.
 CREATE POLICY "update_messages" ON messages
-  FOR UPDATE USING (auth.role() = 'authenticated');
+  FOR UPDATE USING (user_id = auth.uid() OR user_id = get_partner_id());
 CREATE POLICY "delete_messages" ON messages
   FOR DELETE USING (auth.uid() = user_id);
 
@@ -210,7 +227,7 @@ DROP POLICY IF EXISTS "insert_push" ON push_subscriptions;
 DROP POLICY IF EXISTS "delete_push" ON push_subscriptions;
 ALTER TABLE push_subscriptions ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "select_push" ON push_subscriptions
-  FOR SELECT USING (auth.role() = 'authenticated');
+  FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "insert_push" ON push_subscriptions
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "delete_push" ON push_subscriptions
@@ -229,21 +246,18 @@ DROP POLICY IF EXISTS "Authenticated users can upload photos" ON storage.objects
 DROP POLICY IF EXISTS "Anyone can view photos" ON storage.objects;
 CREATE POLICY "upload_photos" ON storage.objects
   FOR INSERT WITH CHECK (bucket_id = 'photos' AND auth.role() = 'authenticated');
+-- Только авторизованные могут листать объекты через storage API.
+-- Прямой доступ по публичному URL продолжает работать (бакет public),
+-- но анонимное перечисление файлов закрыто.
 CREATE POLICY "view_photos" ON storage.objects
-  FOR SELECT USING (bucket_id = 'photos');
+  FOR SELECT USING (bucket_id = 'photos' AND auth.role() = 'authenticated');
 
 -- ==========================================
 -- 9. ДАННЫЕ
 -- ==========================================
-DELETE FROM couple_settings;
-INSERT INTO couple_settings (user_id, love_message, next_meeting)
-VALUES
-  ('ab73068c-b71a-4a57-9fa0-867543f1a2b0', 'Эльвира, ты — самое прекрасное, что случилось в моей жизни ❤️', '2026-03-01T18:00:00Z'),
-  ('6a9fee91-73c3-4deb-963f-78f758576479', 'Спасибо, что ты есть. Ты делаешь мою жизнь волшебной ❤️', '2026-03-01T18:00:00Z');
-
-UPDATE profiles
-SET couple_start_date = '2025-10-17'
-WHERE id IN ('ab73068c-b71a-4a57-9fa0-867543f1a2b0', '6a9fee91-73c3-4deb-963f-78f758576479');
+-- ВНИМАНИЕ: не храните реальные user_id и личные сообщения в репозитории.
+-- Начальные данные пары задаются в самом приложении после регистрации,
+-- а не хардкодом в общедоступном SQL-файле.
 
 -- ==========================================
 -- 10. ПРОВЕРКА

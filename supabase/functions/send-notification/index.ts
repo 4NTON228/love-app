@@ -26,6 +26,42 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     )
 
+    // ── Авторизация: подтверждаем, кто вызывает функцию ──────────────────
+    // Без этой проверки любой мог бы слать push-уведомления любому пользователю.
+    const authHeader = req.headers.get('Authorization') || ''
+    const jwt = authHeader.replace(/^Bearer\s+/i, '')
+    if (!jwt) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    const { data: userData, error: authErr } = await supabase.auth.getUser(jwt)
+    const caller = userData?.user
+    if (authErr || !caller) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    // Получатель должен быть либо сам отправитель, либо его подтверждённый партнёр.
+    const { data: callerProfile } = await supabase
+      .from('profiles')
+      .select('partner_id')
+      .eq('id', caller.id)
+      .single()
+
+    const allowed =
+      recipientId === caller.id || recipientId === callerProfile?.partner_id
+    if (!allowed) {
+      return new Response(JSON.stringify({ error: 'Forbidden' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
     // Берём подписки получателя
     const { data: subs, error } = await supabase
       .from('push_subscriptions')

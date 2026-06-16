@@ -88,28 +88,28 @@
    DESIGN TOKENS — DARK MODE
 ══════════════════════════════════════════ */
 .app.dark {
-  --bg:            #0C0B09;
-  --bg-card:       #111009;
-  --blush:         #0C0B09;
-  --blush-2:       #1A1916;
-  --surface:       #151412;
-  --surface-2:     #1A1916;
-  --border:        rgba(255,255,255,0.06);
-  --border-subtle: rgba(255,255,255,0.03);
-  --ink:           #EDE9E2;
-  --ink-mid:       #9E9990;
-  --muted:         #6A6560;
-  --text:          #EDE9E2;
-  --text-light:    #9E9990;
-  --text-muted:    #6A6560;
-  --secondary:     #1A1916;
+  --bg:            #160a10;
+  --bg-card:       #1f0e16;
+  --blush:         #160a10;
+  --blush-2:       #2a1620;
+  --surface:       #1f0e16;
+  --surface-2:     #2a1620;
+  --border:        rgba(255,255,255,0.07);
+  --border-subtle: rgba(255,255,255,0.04);
+  --ink:           #F3E8EC;
+  --ink-mid:       #B79DA8;
+  --muted:         #8A7480;
+  --text:          #F3E8EC;
+  --text-light:    #B79DA8;
+  --text-muted:    #8A7480;
+  --secondary:     #2a1620;
   --shadow:        0 2px 12px rgba(0,0,0,0.45);
   --shadow-md:     0 4px 24px rgba(0,0,0,0.55);
   --shadow-lg:     0 8px 48px rgba(0,0,0,0.65);
   --shadow-card:   0 2px 16px rgba(0,0,0,0.5);
-  --gradient-banner: linear-gradient(160deg, #0C0B09 0%, #151412 100%);
-  --rose-faint:    hsl(var(--h), 40%, 13%);
-  --rose-muted:    hsl(var(--h), 30%, 22%);
+  --gradient-banner: linear-gradient(160deg, #160a10 0%, #2a1620 100%);
+  --rose-faint:    hsl(var(--h), 40%, 14%);
+  --rose-muted:    hsl(var(--h), 30%, 24%);
 }
 
 /* ═══════════════════════════════════════════
@@ -134,7 +134,7 @@ input, textarea, button, select { font-family: var(--font-body); }
   max-width: 480px; margin: 0 auto; width: 100%;
   position: relative; overflow: hidden; background: var(--bg);
 }
-.app.dark { background: #0C0B09 !important; color: #EDE9E2; }
+.app.dark { background: #160a10 !important; color: #F3E8EC; }
 
 .app-content {
   flex: 1; overflow-y: auto; overflow-x: hidden;

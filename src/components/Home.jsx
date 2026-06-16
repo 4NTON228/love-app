@@ -52,8 +52,89 @@ function HeartWave() {
   )
 }
 
+/* ─────────────────────────────────────────────
+   Confetti — anniversary celebration
+───────────────────────────────────────────── */
+function Confetti() {
+  const pieces = useMemo(
+    () => Array.from({ length: 60 }, (_, i) => ({
+      id: i,
+      left: Math.random() * 100,
+      delay: Math.random() * 1.2,
+      dur: 2.4 + Math.random() * 2.2,
+      size: 7 + Math.random() * 8,
+      rot: Math.random() * 360,
+      color: ['#ffd76a', '#ff8da0', '#ffffff', '#d8456b', '#ffb3c1'][i % 5],
+    })),
+    []
+  )
+  return createPortal(
+    <div className="confetti-layer" aria-hidden="true">
+      <style>{`
+        .confetti-layer { position: fixed; inset: 0; z-index: 4001; pointer-events: none; overflow: hidden; }
+        .confetti-piece {
+          position: absolute; top: -24px;
+          will-change: transform, opacity;
+          animation: confFall var(--d, 3s) linear var(--delay, 0s) forwards;
+          border-radius: 2px;
+        }
+        @keyframes confFall {
+          0%   { transform: translateY(-10px) rotate(var(--r,0deg)); opacity: 1; }
+          100% { transform: translateY(108vh) rotate(calc(var(--r,0deg) + 540deg)); opacity: 0; }
+        }
+      `}</style>
+      {pieces.map(p => (
+        <span
+          key={p.id}
+          className="confetti-piece"
+          style={{
+            left: `${p.left}%`,
+            width: `${p.size}px`,
+            height: `${p.size * 1.4}px`,
+            background: p.color,
+            '--d': `${p.dur}s`,
+            '--delay': `${p.delay}s`,
+            '--r': `${p.rot}deg`,
+          }}
+        />
+      ))}
+    </div>,
+    document.body
+  )
+}
+
 function pad(v) {
   return String(v).padStart(2, '0')
+}
+
+function yearsWord(n) {
+  const m10 = n % 10
+  const m100 = n % 100
+  if (m10 === 1 && m100 !== 11) return 'год'
+  if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return 'года'
+  return 'лет'
+}
+
+/* Status moods (emoji) shared between partners */
+const STATUS_MOODS = [
+  { e: '🥰', label: 'влюблён' },
+  { e: '😊', label: 'хорошо' },
+  { e: '🔥', label: 'огонь' },
+  { e: '😴', label: 'устал' },
+  { e: '😔', label: 'грустно' },
+  { e: '🤔', label: 'скучаю' },
+]
+
+function relTime(ts) {
+  if (!ts) return null
+  const diff = Date.now() - new Date(ts).getTime()
+  const min = Math.floor(diff / 60000)
+  if (min < 2) return 'онлайн'
+  if (min < 60) return `${min} мин назад`
+  const h = Math.floor(min / 60)
+  if (h < 24) return `${h} ч назад`
+  const d = Math.floor(h / 24)
+  return d === 1 ? 'вчера' : `${d} дн назад`
 }
 
 function getRelTime(start) {
@@ -366,6 +447,9 @@ export default function Home({ session, profile, onNavigate }) {
   const [showPartnerModal, setShowPartnerModal] = useState(false)
   const [showWave,       setShowWave]       = useState(false)
   const [thinkingSent,   setThinkingSent]   = useState(false)
+  const [myMood,         setMyMood]         = useState(null)
+  const [streak,         setStreak]         = useState(0)
+  const [partnerSeen,    setPartnerSeen]    = useState(null)
   const thinkChannelRef = useRef(null)
   const waveTimerRef = useRef(null)
 
@@ -380,6 +464,30 @@ export default function Home({ session, profile, onNavigate }) {
   const anniversary = useMemo(() => (
     coupleStart ? getAnniversary(coupleStart) : { daysUntil: null, progress: 0 }
   ), [coupleStart])
+
+  // Сегодня годовщина? (тот же день и месяц, но не в самый первый год)
+  const anniversaryYears = useMemo(() => {
+    if (!coupleStart) return 0
+    const now = new Date()
+    if (now.getDate() === coupleStart.getDate() && now.getMonth() === coupleStart.getMonth()) {
+      const y = now.getFullYear() - coupleStart.getFullYear()
+      return y > 0 ? y : 0
+    }
+    return 0
+  }, [coupleStart])
+
+  const [showConfetti, setShowConfetti] = useState(false)
+  useEffect(() => {
+    if (anniversaryYears > 0) {
+      const todayKey = `anniv-${new Date().toISOString().slice(0, 10)}`
+      setShowConfetti(true)
+      const t = setTimeout(() => setShowConfetti(false), 6000)
+      // показываем салют один раз в день
+      if (localStorage.getItem(todayKey)) setShowConfetti(false)
+      else localStorage.setItem(todayKey, '1')
+      return () => clearTimeout(t)
+    }
+  }, [anniversaryYears])
 
   const myName      = profile?.name || 'Ты'
   const partnerName = partnerProfile?.name || (hasPartner ? 'Партнёр' : 'Только ты')
@@ -427,6 +535,59 @@ export default function Home({ session, profile, onNavigate }) {
     toast.success('Сердечко отправлено 💗')
   }, [hasPartner, thinkingSent, playWave, session?.user?.id, profile?.partner_id, myName])
 
+  /* ── My mood from profile ── */
+  useEffect(() => { setMyMood(profile?.mood || null) }, [profile?.mood])
+
+  const setMood = useCallback(async (emoji) => {
+    const next = myMood === emoji ? null : emoji
+    setMyMood(next)
+    try {
+      await supabase.from('profiles')
+        .update({ mood: next, mood_at: next ? new Date().toISOString() : null })
+        .eq('id', session.user.id)
+    } catch (_e) { /* столбца может ещё не быть — тихо игнорируем */ }
+  }, [myMood, session?.user?.id])
+
+  /* ── Daily visit streak (localStorage, per device) ── */
+  useEffect(() => {
+    if (!session?.user?.id) return
+    const key = `streak_${session.user.id}`
+    const todayStr = new Date().toISOString().slice(0, 10)
+    let saved = { count: 0, date: null }
+    try { saved = JSON.parse(localStorage.getItem(key) || '{}') } catch (_e) { /* ignore */ }
+    if (saved.date === todayStr) { setStreak(saved.count || 1); return }
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
+    const count = saved.date === yesterday ? (saved.count || 0) + 1 : 1
+    localStorage.setItem(key, JSON.stringify({ count, date: todayStr }))
+    setStreak(count)
+  }, [session?.user?.id])
+
+  /* ── Keep my presence fresh + watch partner presence/mood live ── */
+  useEffect(() => {
+    if (!session?.user?.id) return
+    const ping = () => supabase.from('profiles')
+      .update({ last_seen: new Date().toISOString() }).eq('id', session.user.id).then(() => {}, () => {})
+    ping()
+    const id = setInterval(ping, 60000)
+    return () => clearInterval(id)
+  }, [session?.user?.id])
+
+  useEffect(() => { setPartnerSeen(partnerProfile?.last_seen || null) }, [partnerProfile?.last_seen])
+
+  useEffect(() => {
+    if (!profile?.partner_id) return
+    const ch = supabase
+      .channel(`partner-presence-${profile.partner_id}`)
+      .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${profile.partner_id}` },
+        p => {
+          setPartnerSeen(p.new.last_seen || null)
+          setPartnerProfile(prev => prev ? { ...prev, mood: p.new.mood, mood_at: p.new.mood_at, last_seen: p.new.last_seen } : prev)
+        })
+      .subscribe()
+    return () => { supabase.removeChannel(ch) }
+  }, [profile?.partner_id])
+
   /* ── Data loading — parallel queries ── */
   useEffect(() => {
     let mounted = true
@@ -438,7 +599,7 @@ export default function Home({ session, profile, onNavigate }) {
       try {
         const partnerQ = profile?.partner_id
           ? supabase.from('profiles')
-              .select('id, name, avatar_url, birthday')
+              .select('*')
               .eq('id', profile.partner_id)
               .single()
           : Promise.resolve({ data: null })
@@ -584,6 +745,12 @@ export default function Home({ session, profile, onNavigate }) {
   const startEditMessage = useCallback(() => setEditMessage(true),  [])
   const cancelEditMessage= useCallback(() => setEditMessage(false), [])
 
+  const partnerStatusText = relTime(partnerSeen)
+  const partnerOnline = partnerStatusText === 'онлайн'
+  const partnerMood = (partnerProfile?.mood && partnerProfile?.mood_at &&
+    (Date.now() - new Date(partnerProfile.mood_at).getTime() < 86400000))
+    ? partnerProfile.mood : null
+
   return (
     <div className="home-screen">
       <HeartsBackground />
@@ -626,12 +793,51 @@ export default function Home({ session, profile, onNavigate }) {
               )}
             </div>
 
+            {hasPartner && (
+              <div className="hero-status">
+                <div className="hero-status-line">
+                  {partnerStatusText && (
+                    <span className="status-chip">
+                      <span className={`status-dot${partnerOnline ? ' online' : ''}`} />
+                      {partnerName}: {partnerStatusText}
+                    </span>
+                  )}
+                  {partnerMood && (
+                    <span className="status-chip">{partnerMood} настроение</span>
+                  )}
+                  {streak > 1 && (
+                    <span className="status-chip">🔥 {streak} дн подряд</span>
+                  )}
+                </div>
+                <div className="mood-row">
+                  <span className="mood-row-label">Как ты?</span>
+                  {STATUS_MOODS.map(m => (
+                    <button
+                      key={m.e}
+                      type="button"
+                      className={`mood-pick${myMood === m.e ? ' active' : ''}`}
+                      onClick={() => setMood(m.e)}
+                      title={m.label}
+                    >
+                      {m.e}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="hero-title-wrap">
               <div className="hero-overline">Главная история</div>
               <h1 className="hero-title">{headline}</h1>
-              <p className="hero-subtitle">
-                Пространство только для двоих — спокойное, красивое, ваше.
-              </p>
+              {anniversaryYears > 0 ? (
+                <div className="hero-anniversary">
+                  🎉 С годовщиной! {anniversaryYears} {yearsWord(anniversaryYears)} вместе
+                </div>
+              ) : (
+                <p className="hero-subtitle">
+                  Пространство только для двоих — спокойное, красивое, ваше.
+                </p>
+              )}
             </div>
 
             <HeroCounter
@@ -804,6 +1010,7 @@ export default function Home({ session, profile, onNavigate }) {
       )}
 
       {showWave && <HeartWave />}
+      {showConfetti && <Confetti />}
     </div>
   )
 }

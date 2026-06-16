@@ -69,7 +69,8 @@ export default function App() {
     return params.get('tab') || 'home'
   })
   const [profile, setProfile] = useState(null)
-  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('appDarkMode') === 'true')
+  // Тёмная тема по умолчанию (единый стиль), если пользователь явно не выбрал светлую
+  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('appDarkMode') !== 'false')
 
   function toggleDarkMode() {
     setDarkMode(v => {

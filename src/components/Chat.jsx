@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, memo, useMemo, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { sendPushNotification } from '../lib/push'
 import { useCrypto } from '../hooks/useCrypto'
-import { encryptMessage, safeDecryptMessage, isMessageEncrypted } from '../lib/crypto'
+import { encryptMessage, safeDecryptWithKeys, isMessageEncrypted } from '../lib/crypto'
 
 const REACTIONS = ['❤️','🔥','😍','😂','👍','💔']
 const VALID_REACTIONS = new Set(REACTIONS)
@@ -930,17 +930,17 @@ export default function Chat({ session, profile, darkMode }) {
   const voiceCancelledRef = useRef(false)
 
   // ── E2EE ────────────────────────────────────────────────────────────────────
-  const { roomKey } = useCrypto(session, profile)
+  const { roomKey, roomKeys } = useCrypto(session, profile)
 
   // Enrich a raw DB message with decrypted text (mutates a copy, never original)
   const decryptMsg = useCallback(async (m) => {
     if (!isMessageEncrypted(m)) return m
-    if (!roomKey) return { ...m, _decryptFailed: false, _legacy: false }
-    const { ok, text } = await safeDecryptMessage(m.ciphertext, roomKey)
+    if (!roomKeys?.length) return { ...m, _decryptFailed: false, _legacy: false }
+    const { ok, text } = await safeDecryptWithKeys(m.ciphertext, roomKeys)
     return ok
       ? { ...m, text }          // text field now holds plaintext — no other component changes needed
       : { ...m, text: null, _decryptFailed: true }
-  }, [roomKey])
+  }, [roomKeys])
 
   const decryptBatch = useCallback(
     (msgs) => Promise.all((msgs || []).map(decryptMsg)),
@@ -954,12 +954,12 @@ export default function Chat({ session, profile, darkMode }) {
   const decryptMsgRef = useRef(decryptMsg)
   useEffect(() => { decryptMsgRef.current = decryptMsg }, [decryptMsg])
 
-  // Re-decrypt all messages whenever roomKey becomes available
+  // Re-decrypt all messages whenever the room keys become available / change
   useEffect(() => {
-    if (!roomKey || !messages.length) return
+    if (!roomKeys?.length || !messages.length) return
     decryptBatch(messages).then(setMessages)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [roomKey])
+  }, [roomKeys])
   // ─────────────────────────────────────────────────────────────────────────────
 
   const dark = darkMode

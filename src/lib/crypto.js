@@ -207,6 +207,20 @@ export async function safeDecryptMessage(envelope, roomKey) {
   }
 }
 
+/**
+ * Try to decrypt an envelope against several candidate room keys
+ * (handles key rotation: the message may have been encrypted with a
+ * previously-derived key). Returns the first success.
+ */
+export async function safeDecryptWithKeys(envelope, roomKeys) {
+  const keys = (Array.isArray(roomKeys) ? roomKeys : [roomKeys]).filter(Boolean)
+  for (const key of keys) {
+    const { ok, text } = await safeDecryptMessage(envelope, key)
+    if (ok) return { ok: true, text }
+  }
+  return { ok: false, text: null }
+}
+
 // ── File / photo encryption ──────────────────────────────────────────────────
 
 /**

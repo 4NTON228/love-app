@@ -725,7 +725,8 @@ export default function Home({ session, profile, onNavigate }) {
     if (!session?.user?.id) return
     setSaving(true)
     try {
-      const saved = await persistSettings({ next_meeting: localToUTC(newMeeting) })
+      // reset the reminder flag so the new meeting time will notify
+      const saved = await persistSettings({ next_meeting: localToUTC(newMeeting), meeting_notified_at: null })
       setSettings(saved)
       setSettingsId(saved?.id || null)
       setNewMeeting(utcToLocal(saved?.next_meeting))

@@ -316,6 +316,25 @@
   color: var(--text-muted);
 }
 
+/* ── Anniversary banner ── */
+.hero-anniversary {
+  margin-top: 2px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(255,215,106,0.22), rgba(255,141,160,0.22));
+  border: 1px solid rgba(255,215,106,0.45);
+  color: #fff;
+  font-family: var(--font-body, sans-serif);
+  font-size: 13.5px;
+  font-weight: 600;
+  text-align: center;
+  animation: annivPulse 2s ease-in-out infinite;
+}
+@keyframes annivPulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 rgba(255,215,106,0); }
+  50%      { transform: scale(1.02); box-shadow: 0 6px 22px rgba(255,215,106,0.3); }
+}
+
 /* ── "Думаю о тебе" button ── */
 .thinking-btn {
   margin-top: 4px;

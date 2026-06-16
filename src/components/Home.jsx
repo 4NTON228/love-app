@@ -52,8 +52,67 @@ function HeartWave() {
   )
 }
 
+/* ─────────────────────────────────────────────
+   Confetti — anniversary celebration
+───────────────────────────────────────────── */
+function Confetti() {
+  const pieces = useMemo(
+    () => Array.from({ length: 60 }, (_, i) => ({
+      id: i,
+      left: Math.random() * 100,
+      delay: Math.random() * 1.2,
+      dur: 2.4 + Math.random() * 2.2,
+      size: 7 + Math.random() * 8,
+      rot: Math.random() * 360,
+      color: ['#ffd76a', '#ff8da0', '#ffffff', '#d8456b', '#ffb3c1'][i % 5],
+    })),
+    []
+  )
+  return createPortal(
+    <div className="confetti-layer" aria-hidden="true">
+      <style>{`
+        .confetti-layer { position: fixed; inset: 0; z-index: 4001; pointer-events: none; overflow: hidden; }
+        .confetti-piece {
+          position: absolute; top: -24px;
+          will-change: transform, opacity;
+          animation: confFall var(--d, 3s) linear var(--delay, 0s) forwards;
+          border-radius: 2px;
+        }
+        @keyframes confFall {
+          0%   { transform: translateY(-10px) rotate(var(--r,0deg)); opacity: 1; }
+          100% { transform: translateY(108vh) rotate(calc(var(--r,0deg) + 540deg)); opacity: 0; }
+        }
+      `}</style>
+      {pieces.map(p => (
+        <span
+          key={p.id}
+          className="confetti-piece"
+          style={{
+            left: `${p.left}%`,
+            width: `${p.size}px`,
+            height: `${p.size * 1.4}px`,
+            background: p.color,
+            '--d': `${p.dur}s`,
+            '--delay': `${p.delay}s`,
+            '--r': `${p.rot}deg`,
+          }}
+        />
+      ))}
+    </div>,
+    document.body
+  )
+}
+
 function pad(v) {
   return String(v).padStart(2, '0')
+}
+
+function yearsWord(n) {
+  const m10 = n % 10
+  const m100 = n % 100
+  if (m10 === 1 && m100 !== 11) return 'год'
+  if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return 'года'
+  return 'лет'
 }
 
 function getRelTime(start) {
@@ -381,6 +440,30 @@ export default function Home({ session, profile, onNavigate }) {
     coupleStart ? getAnniversary(coupleStart) : { daysUntil: null, progress: 0 }
   ), [coupleStart])
 
+  // Сегодня годовщина? (тот же день и месяц, но не в самый первый год)
+  const anniversaryYears = useMemo(() => {
+    if (!coupleStart) return 0
+    const now = new Date()
+    if (now.getDate() === coupleStart.getDate() && now.getMonth() === coupleStart.getMonth()) {
+      const y = now.getFullYear() - coupleStart.getFullYear()
+      return y > 0 ? y : 0
+    }
+    return 0
+  }, [coupleStart])
+
+  const [showConfetti, setShowConfetti] = useState(false)
+  useEffect(() => {
+    if (anniversaryYears > 0) {
+      const todayKey = `anniv-${new Date().toISOString().slice(0, 10)}`
+      setShowConfetti(true)
+      const t = setTimeout(() => setShowConfetti(false), 6000)
+      // показываем салют один раз в день
+      if (localStorage.getItem(todayKey)) setShowConfetti(false)
+      else localStorage.setItem(todayKey, '1')
+      return () => clearTimeout(t)
+    }
+  }, [anniversaryYears])
+
   const myName      = profile?.name || 'Ты'
   const partnerName = partnerProfile?.name || (hasPartner ? 'Партнёр' : 'Только ты')
   const headline    = hasPartner ? `${myName} и ${partnerName}` : myName
@@ -629,9 +712,15 @@ export default function Home({ session, profile, onNavigate }) {
             <div className="hero-title-wrap">
               <div className="hero-overline">Главная история</div>
               <h1 className="hero-title">{headline}</h1>
-              <p className="hero-subtitle">
-                Пространство только для двоих — спокойное, красивое, ваше.
-              </p>
+              {anniversaryYears > 0 ? (
+                <div className="hero-anniversary">
+                  🎉 С годовщиной! {anniversaryYears} {yearsWord(anniversaryYears)} вместе
+                </div>
+              ) : (
+                <p className="hero-subtitle">
+                  Пространство только для двоих — спокойное, красивое, ваше.
+                </p>
+              )}
             </div>
 
             <HeroCounter
@@ -804,6 +893,7 @@ export default function Home({ session, profile, onNavigate }) {
       )}
 
       {showWave && <HeartWave />}
+      {showConfetti && <Confetti />}
     </div>
   )
 }

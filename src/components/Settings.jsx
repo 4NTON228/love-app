@@ -128,10 +128,11 @@ function PartnerSection({ profile }) {
   const [partnerProfile, setPartnerProfile] = useState(null)
   const [inviteCode, setInviteCode] = useState(profile?.invite_code || null)
 
-  // Генерируем invite_code если его нет
+  // Резервная генерация invite_code (обычно код уже создан триггером БД).
+  // Нижний регистр обязателен — все RPC ищут код через lower().
   useEffect(() => {
     if (!profile?.invite_code && profile?.id) {
-      const code = Math.random().toString(36).slice(2, 10).toUpperCase()
+      const code = Math.random().toString(36).slice(2, 10).toLowerCase()
       supabase.from('profiles').update({ invite_code: code }).eq('id', profile.id)
         .then(({ error }) => { if (!error) setInviteCode(code) })
     }

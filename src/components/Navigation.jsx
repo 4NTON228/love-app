@@ -128,15 +128,24 @@ function IconPremium({ active }) {
   )
 }
 
+function IconPlus() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+      <line x1="12" y1="5" x2="12" y2="19" />
+      <line x1="5" y1="12" x2="19" y2="12" />
+    </svg>
+  )
+}
+
 const MAIN_TABS = [
   { id: 'home',    label: 'Главная', Icon: IconHome   },
   { id: 'chat',    label: 'Чат',     Icon: IconChat   },
   { id: 'moments', label: 'Фото',    Icon: IconCamera },
-  { id: 'letter',  label: 'Письмо',  Icon: IconLetter },
   { id: 'more',    label: 'Ещё',     Icon: IconMore   },
 ]
 
 const MORE_ITEMS = [
+  { id: 'letter',   label: 'Письмо',    Icon: IconLetter   },
   { id: 'advisor',  label: 'Советник',  Icon: IconAdvisor  },
   { id: 'clock',    label: 'Часы',      Icon: IconClock    },
   { id: 'calendar', label: 'Дни',       Icon: IconCalendar },
@@ -145,24 +154,43 @@ const MORE_ITEMS = [
   { id: 'settings', label: 'Профиль',   Icon: IconPerson   },
 ]
 
+const QUICK_ADD = [
+  { id: 'moments',  label: 'Добавить фото',   Icon: IconCamera   },
+  { id: 'letter',   label: 'Написать письмо', Icon: IconLetter   },
+  { id: 'calendar', label: 'Добавить событие',Icon: IconCalendar },
+]
+
 const MORE_IDS = MORE_ITEMS.map(m => m.id)
 
 export default function Navigation({ activeTab, setActiveTab }) {
   const [showMore, setShowMore] = useState(false)
+  const [showAdd, setShowAdd] = useState(false)
   const isMoreActive = MORE_IDS.includes(activeTab)
 
   function handlePress(id) {
     if (id === 'more') {
+      setShowAdd(false)
       setShowMore(v => !v)
       return
     }
     setActiveTab(id)
     setShowMore(false)
+    setShowAdd(false)
   }
 
   function handleMoreItem(id) {
     setActiveTab(id)
     setShowMore(false)
+  }
+
+  function handleQuickAdd(id) {
+    setActiveTab(id)
+    setShowAdd(false)
+  }
+
+  function toggleAdd() {
+    setShowMore(false)
+    setShowAdd(v => !v)
   }
 
   return (
@@ -250,6 +278,50 @@ export default function Navigation({ activeTab, setActiveTab }) {
           color: var(--rose, #A8283C);
           font-weight: 500;
         }
+
+        /* ── Center "+" floating action button ── */
+        .nav-fab-slot {
+          flex: 1;
+          position: relative;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .nav-fab {
+          position: absolute;
+          top: -18px;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 54px; height: 54px;
+          border-radius: 50%;
+          background: linear-gradient(160deg, #ff8da0 0%, #d8456b 100%);
+          border: 4px solid #160a10;
+          box-shadow: 0 8px 22px rgba(216,69,107,0.5);
+          display: flex; align-items: center; justify-content: center;
+          color: #fff;
+          cursor: pointer;
+          -webkit-tap-highlight-color: transparent;
+          transition: transform 0.18s ease, box-shadow 0.18s ease;
+        }
+        .app.dark .nav-fab { border-color: #120810; }
+        .nav-fab:active { transform: translateX(-50%) scale(0.9); }
+        .nav-fab-icon {
+          width: 26px; height: 26px;
+          display: flex; align-items: center; justify-content: center;
+          transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1);
+        }
+        .nav-fab-icon svg { width: 24px; height: 24px; }
+        .nav-fab.open .nav-fab-icon { transform: rotate(135deg); }
+
+        /* quick-add sheet title */
+        .more-title {
+          font-family: var(--font-display, serif);
+          font-size: 19px;
+          color: var(--text, #1A1714);
+          text-align: center;
+          margin: 2px 0 14px;
+        }
+        .app.dark .more-title { color: #EDE9E2; }
 
         /* ── More drawer overlay ── */
         .more-overlay {
@@ -362,8 +434,51 @@ export default function Navigation({ activeTab, setActiveTab }) {
         </>
       )}
 
+      {showAdd && (
+        <>
+          <div className="more-overlay" onClick={() => setShowAdd(false)} />
+          <div className="more-drawer">
+            <div className="more-handle" />
+            <div className="more-title">Что добавим?</div>
+            <div className="more-grid">
+              {QUICK_ADD.map(({ id, label, Icon }) => (
+                <button key={id} className="more-item" onClick={() => handleQuickAdd(id)}>
+                  <span className="more-item-icon"><Icon active={false} /></span>
+                  <span className="more-item-label">{label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+
       <nav className="nav-new">
-        {MAIN_TABS.map(({ id, label, Icon }) => {
+        {MAIN_TABS.slice(0, 2).map(({ id, label, Icon }) => {
+          const isActive = activeTab === id
+          return (
+            <button
+              key={id}
+              className={`nav-tab${isActive ? ' active' : ''}`}
+              onClick={() => handlePress(id)}
+            >
+              <div className="nav-tab-pill" />
+              <span className="nav-tab-icon"><Icon active={isActive} /></span>
+              <span className="nav-tab-label">{label}</span>
+            </button>
+          )
+        })}
+
+        <div className="nav-fab-slot">
+          <button
+            className={`nav-fab${showAdd ? ' open' : ''}`}
+            onClick={toggleAdd}
+            aria-label="Добавить"
+          >
+            <span className="nav-fab-icon"><IconPlus /></span>
+          </button>
+        </div>
+
+        {MAIN_TABS.slice(2).map(({ id, label, Icon }) => {
           const isActive = id === 'more' ? (isMoreActive || showMore) : activeTab === id
           return (
             <button
@@ -372,9 +487,7 @@ export default function Navigation({ activeTab, setActiveTab }) {
               onClick={() => handlePress(id)}
             >
               <div className="nav-tab-pill" />
-              <span className="nav-tab-icon">
-                <Icon active={isActive} />
-              </span>
+              <span className="nav-tab-icon"><Icon active={isActive} /></span>
               <span className="nav-tab-label">{label}</span>
             </button>
           )

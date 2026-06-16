@@ -571,8 +571,8 @@ export default function Moments({ session, profile }) {
       toast.success('Момент сохранён')
       if (profile?.partner_id) {
         sendPushNotification(
-          profile?.name || 'Новый момент',
-          photo ? `📸 ${title}` : `💝 ${title}`,
+          `📸 ${profile?.name || 'Партнёр'} · Новый момент`,
+          photo ? `📷 ${title}` : `💝 ${title}`,
           profile.partner_id,
           session.user.id
         ).catch(() => {})

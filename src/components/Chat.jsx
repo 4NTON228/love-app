@@ -947,6 +947,13 @@ export default function Chat({ session, profile, darkMode }) {
     [decryptMsg],
   )
 
+  // Долгоживущая realtime-подписка создаётся один раз и иначе захватила бы
+  // устаревший decryptMsg (с roomKey=null). Ref всегда указывает на актуальную
+  // функцию — поэтому сообщения, пришедшие до готовности ключа шифрования,
+  // расшифровываются сразу, а не остаются пустыми до перезагрузки страницы.
+  const decryptMsgRef = useRef(decryptMsg)
+  useEffect(() => { decryptMsgRef.current = decryptMsg }, [decryptMsg])
+
   // Re-decrypt all messages whenever roomKey becomes available
   useEffect(() => {
     if (!roomKey || !messages.length) return
@@ -1042,8 +1049,8 @@ export default function Chat({ session, profile, darkMode }) {
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, p => {
         // Игнорируем сообщения чужих пар
         if (p.new.user_id !== uid && p.new.user_id !== pid) return
-        // Decrypt before adding to state
-        decryptMsg(p.new).then(decrypted => {
+        // Decrypt before adding to state (use ref for the current room key)
+        decryptMsgRef.current(p.new).then(decrypted => {
           setMessages(prev => {
             if (prev.find(m => m.id === decrypted.id)) return prev
             return [...prev, decrypted]
@@ -1060,8 +1067,8 @@ export default function Chat({ session, profile, darkMode }) {
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, p => {
         if (p.new.user_id !== uid && p.new.user_id !== pid) return
-        // Re-decrypt on edit
-        decryptMsg(p.new).then(decrypted => {
+        // Re-decrypt on edit (use ref for the current room key)
+        decryptMsgRef.current(p.new).then(decrypted => {
           setMessages(prev => prev.map(m => m.id === decrypted.id ? decrypted : m))
         })
       })
@@ -1191,8 +1198,8 @@ export default function Chat({ session, profile, darkMode }) {
         scrollToBottom()
         if (partner?.id) {
           // Never send plaintext content in push — E2EE-safe generic notification
-          const pushBody = photoUrl && !plainText ? 'Фото' : 'Новое сообщение'
-          sendPushNotification(profile?.name || 'Сообщение', pushBody, partner.id, uid).catch(() => {})
+          const pushBody = photoUrl && !plainText ? '📷 Фото' : '💬 Новое сообщение'
+          sendPushNotification(`💬 ${profile?.name || 'Сообщение'}`, pushBody, partner.id, uid).catch(() => {})
         }
       }
       setNewText('')
@@ -1275,7 +1282,7 @@ export default function Chat({ session, profile, darkMode }) {
           const { data: latest } = await supabase.from('messages').select('*').eq('user_id', uid).eq('video_url', url).limit(1)
           if (latest?.[0]) setMessages(prev => prev.find(m => m.id === latest[0].id) ? prev : [...prev, latest[0]])
           scrollToBottom()
-          if (partner?.id) sendPushNotification(profile?.name || 'Сообщение', 'Видео-кружочек', partner.id, uid).catch(() => {})
+          if (partner?.id) sendPushNotification(`💬 ${profile?.name || 'Сообщение'}`, '📹 Видео-сообщение', partner.id, uid).catch(() => {})
         } catch (e) { console.error(e) }
         broadcastRef.current?.send({ type: 'broadcast', event: 'recording', payload: { userId: uid, kind: null } })
         setSending(false)
@@ -1358,7 +1365,7 @@ export default function Chat({ session, profile, darkMode }) {
           const { data: latest } = await supabase.from('messages').select('*').eq('user_id', uid).eq('audio_url', url).limit(1)
           if (latest?.[0]) setMessages(prev => prev.find(m => m.id === latest[0].id) ? prev : [...prev, latest[0]])
           scrollToBottom()
-          if (partner?.id) sendPushNotification(profile?.name || 'Сообщение', 'Голосовое сообщение', partner.id, uid).catch(() => {})
+          if (partner?.id) sendPushNotification(`💬 ${profile?.name || 'Сообщение'}`, '🎤 Голосовое сообщение', partner.id, uid).catch(() => {})
         } catch (e) { console.error('voice send error:', e); alert('Ошибка отправки: ' + e.message) }
         broadcastRef.current?.send({ type: 'broadcast', event: 'recording', payload: { userId: uid, kind: null } })
         setSending(false)

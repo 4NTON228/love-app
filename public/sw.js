@@ -10,9 +10,11 @@ self.addEventListener('push', (event) => {
       icon: '/icon-192.png',
       badge: '/icon-192.png',
       vibrate: [200, 100, 200],
-      tag: 'love-app-notification',
+      // Уникальный тег, чтобы уведомления разного типа (сообщение/момент/план)
+      // не затирали друг друга, а показывались отдельно.
+      tag: data.tag || ('love-' + Date.now()),
       renotify: true,
-      data: { url: '/?tab=chat' }
+      data: { url: data.url || '/?tab=chat' }
     })
   )
 })

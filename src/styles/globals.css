@@ -120,7 +120,7 @@
   -webkit-tap-highlight-color: transparent;
 }
 html, body {
-  height: 100%; overflow: hidden; background: #F6F3EE;
+  height: 100%; overflow: hidden; background: #160a10;
 }
 body {
   font-family: var(--font-body); font-size: 15px;

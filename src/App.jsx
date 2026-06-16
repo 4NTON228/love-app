@@ -152,36 +152,81 @@ export default function App() {
 
   if (loading || profileLoading) {
     return (
-      <div style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 9999,
-        background: '#0E0C0A',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 24,
-      }}>
-        <div style={{
-          fontFamily: "'Cormorant Garamond', Georgia, serif",
-          fontStyle: 'italic',
-          fontWeight: 300,
-          fontSize: 28,
-          color: 'rgba(237,233,226,0.9)',
-          letterSpacing: 2,
-          animation: 'ldFade 2s ease-in-out infinite',
-        }}>
-          Love App
-        </div>
-        <div style={{
-          width: 32, height: 1,
-          background: 'linear-gradient(90deg, transparent, rgba(168,40,60,0.6), transparent)',
-          animation: 'ldFade 2s ease-in-out 0.3s infinite',
-        }} />
+      <div className="splash-screen">
         <style>{`
-          @keyframes ldFade { 0%,100%{opacity:0.5} 50%{opacity:1} }
+          .splash-screen {
+            position: fixed; inset: 0; z-index: 9999;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            gap: 26px;
+            overflow: hidden;
+            background:
+              radial-gradient(circle at 82% 8%, rgba(255,214,150,0.22), transparent 42%),
+              radial-gradient(circle at 12% 94%, rgba(60,20,45,0.55), transparent 52%),
+              linear-gradient(165deg, #3d1838 0%, #6a2747 28%, #9a3c50 56%, #bd5552 80%, #cb6650 100%);
+          }
+          .splash-heart {
+            position: relative;
+            width: 84px; height: 78px;
+            animation: splashBeat 1.4s ease-in-out infinite;
+            filter: drop-shadow(0 8px 24px rgba(255,120,150,0.45));
+          }
+          .splash-heart svg { width: 100%; height: 100%; display: block; }
+          .splash-heart::after {
+            content: ''; position: absolute; inset: -40%;
+            background: radial-gradient(circle, rgba(255,200,170,0.35), transparent 60%);
+            border-radius: 50%;
+            animation: splashGlow 1.4s ease-in-out infinite;
+            z-index: -1;
+          }
+          .splash-word {
+            font-family: 'Cormorant Garamond', Georgia, serif;
+            font-style: italic; font-weight: 400;
+            font-size: 34px; letter-spacing: 1.5px;
+            color: #fff;
+            text-shadow: 0 2px 20px rgba(120,20,50,0.4);
+            opacity: 0;
+            animation: splashWord 0.9s ease 0.15s forwards;
+          }
+          .splash-bar {
+            width: 120px; height: 3px; border-radius: 999px;
+            background: rgba(255,255,255,0.18);
+            overflow: hidden;
+            opacity: 0;
+            animation: splashWord 0.9s ease 0.3s forwards;
+          }
+          .splash-bar-fill {
+            width: 40%; height: 100%; border-radius: 999px;
+            background: linear-gradient(90deg, transparent, #ffe7a8, #fff, transparent);
+            animation: splashSlide 1.3s ease-in-out infinite;
+          }
+          @keyframes splashBeat {
+            0%, 100% { transform: scale(1); }
+            15% { transform: scale(1.16); }
+            30% { transform: scale(1); }
+            45% { transform: scale(1.10); }
+          }
+          @keyframes splashGlow {
+            0%, 100% { opacity: 0.5; transform: scale(0.9); }
+            22%      { opacity: 1;   transform: scale(1.1); }
+          }
+          @keyframes splashWord {
+            from { opacity: 0; transform: translateY(10px); }
+            to   { opacity: 1; transform: translateY(0); }
+          }
+          @keyframes splashSlide {
+            0%   { transform: translateX(-130%); }
+            100% { transform: translateX(330%); }
+          }
         `}</style>
+        <div className="splash-heart">
+          <svg viewBox="0 0 60 56" fill="none">
+            <path d="M30 52C30 52 3 35 3 16C3 8 9.5 2 18 2C22.5 2 26.5 4.5 30 9C33.5 4.5 37.5 2 42 2C50.5 2 57 8 57 16C57 35 30 52 30 52Z"
+              fill="#fff" fillOpacity="0.95"/>
+          </svg>
+        </div>
+        <div className="splash-word">Love App</div>
+        <div className="splash-bar"><div className="splash-bar-fill" /></div>
       </div>
     )
   }

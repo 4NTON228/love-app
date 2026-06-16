@@ -109,7 +109,12 @@ export default function Auth() {
     reset()
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: window.location.origin }
+      options: {
+        redirectTo: window.location.origin,
+        // Всегда показывать выбор Google-аккаунта, а не входить молча
+        // под уже залогиненным в браузере аккаунтом.
+        queryParams: { prompt: 'select_account' },
+      },
     })
     if (error) setError(error.message)
   }

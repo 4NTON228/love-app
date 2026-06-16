@@ -115,6 +115,28 @@ function yearsWord(n) {
   return 'лет'
 }
 
+/* Status moods (emoji) shared between partners */
+const STATUS_MOODS = [
+  { e: '🥰', label: 'влюблён' },
+  { e: '😊', label: 'хорошо' },
+  { e: '🔥', label: 'огонь' },
+  { e: '😴', label: 'устал' },
+  { e: '😔', label: 'грустно' },
+  { e: '🤔', label: 'скучаю' },
+]
+
+function relTime(ts) {
+  if (!ts) return null
+  const diff = Date.now() - new Date(ts).getTime()
+  const min = Math.floor(diff / 60000)
+  if (min < 2) return 'онлайн'
+  if (min < 60) return `${min} мин назад`
+  const h = Math.floor(min / 60)
+  if (h < 24) return `${h} ч назад`
+  const d = Math.floor(h / 24)
+  return d === 1 ? 'вчера' : `${d} дн назад`
+}
+
 function getRelTime(start) {
   const diff = Date.now() - start.getTime()
   const totalDays = Math.max(0, Math.floor(diff / 86400000))
@@ -425,6 +447,9 @@ export default function Home({ session, profile, onNavigate }) {
   const [showPartnerModal, setShowPartnerModal] = useState(false)
   const [showWave,       setShowWave]       = useState(false)
   const [thinkingSent,   setThinkingSent]   = useState(false)
+  const [myMood,         setMyMood]         = useState(null)
+  const [streak,         setStreak]         = useState(0)
+  const [partnerSeen,    setPartnerSeen]    = useState(null)
   const thinkChannelRef = useRef(null)
   const waveTimerRef = useRef(null)
 
@@ -510,6 +535,59 @@ export default function Home({ session, profile, onNavigate }) {
     toast.success('Сердечко отправлено 💗')
   }, [hasPartner, thinkingSent, playWave, session?.user?.id, profile?.partner_id, myName])
 
+  /* ── My mood from profile ── */
+  useEffect(() => { setMyMood(profile?.mood || null) }, [profile?.mood])
+
+  const setMood = useCallback(async (emoji) => {
+    const next = myMood === emoji ? null : emoji
+    setMyMood(next)
+    try {
+      await supabase.from('profiles')
+        .update({ mood: next, mood_at: next ? new Date().toISOString() : null })
+        .eq('id', session.user.id)
+    } catch (_e) { /* столбца может ещё не быть — тихо игнорируем */ }
+  }, [myMood, session?.user?.id])
+
+  /* ── Daily visit streak (localStorage, per device) ── */
+  useEffect(() => {
+    if (!session?.user?.id) return
+    const key = `streak_${session.user.id}`
+    const todayStr = new Date().toISOString().slice(0, 10)
+    let saved = { count: 0, date: null }
+    try { saved = JSON.parse(localStorage.getItem(key) || '{}') } catch (_e) { /* ignore */ }
+    if (saved.date === todayStr) { setStreak(saved.count || 1); return }
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
+    const count = saved.date === yesterday ? (saved.count || 0) + 1 : 1
+    localStorage.setItem(key, JSON.stringify({ count, date: todayStr }))
+    setStreak(count)
+  }, [session?.user?.id])
+
+  /* ── Keep my presence fresh + watch partner presence/mood live ── */
+  useEffect(() => {
+    if (!session?.user?.id) return
+    const ping = () => supabase.from('profiles')
+      .update({ last_seen: new Date().toISOString() }).eq('id', session.user.id).then(() => {}, () => {})
+    ping()
+    const id = setInterval(ping, 60000)
+    return () => clearInterval(id)
+  }, [session?.user?.id])
+
+  useEffect(() => { setPartnerSeen(partnerProfile?.last_seen || null) }, [partnerProfile?.last_seen])
+
+  useEffect(() => {
+    if (!profile?.partner_id) return
+    const ch = supabase
+      .channel(`partner-presence-${profile.partner_id}`)
+      .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${profile.partner_id}` },
+        p => {
+          setPartnerSeen(p.new.last_seen || null)
+          setPartnerProfile(prev => prev ? { ...prev, mood: p.new.mood, mood_at: p.new.mood_at, last_seen: p.new.last_seen } : prev)
+        })
+      .subscribe()
+    return () => { supabase.removeChannel(ch) }
+  }, [profile?.partner_id])
+
   /* ── Data loading — parallel queries ── */
   useEffect(() => {
     let mounted = true
@@ -521,7 +599,7 @@ export default function Home({ session, profile, onNavigate }) {
       try {
         const partnerQ = profile?.partner_id
           ? supabase.from('profiles')
-              .select('id, name, avatar_url, birthday')
+              .select('*')
               .eq('id', profile.partner_id)
               .single()
           : Promise.resolve({ data: null })
@@ -667,6 +745,12 @@ export default function Home({ session, profile, onNavigate }) {
   const startEditMessage = useCallback(() => setEditMessage(true),  [])
   const cancelEditMessage= useCallback(() => setEditMessage(false), [])
 
+  const partnerStatusText = relTime(partnerSeen)
+  const partnerOnline = partnerStatusText === 'онлайн'
+  const partnerMood = (partnerProfile?.mood && partnerProfile?.mood_at &&
+    (Date.now() - new Date(partnerProfile.mood_at).getTime() < 86400000))
+    ? partnerProfile.mood : null
+
   return (
     <div className="home-screen">
       <HeartsBackground />
@@ -708,6 +792,39 @@ export default function Home({ session, profile, onNavigate }) {
                 </>
               )}
             </div>
+
+            {hasPartner && (
+              <div className="hero-status">
+                <div className="hero-status-line">
+                  {partnerStatusText && (
+                    <span className="status-chip">
+                      <span className={`status-dot${partnerOnline ? ' online' : ''}`} />
+                      {partnerName}: {partnerStatusText}
+                    </span>
+                  )}
+                  {partnerMood && (
+                    <span className="status-chip">{partnerMood} настроение</span>
+                  )}
+                  {streak > 1 && (
+                    <span className="status-chip">🔥 {streak} дн подряд</span>
+                  )}
+                </div>
+                <div className="mood-row">
+                  <span className="mood-row-label">Как ты?</span>
+                  {STATUS_MOODS.map(m => (
+                    <button
+                      key={m.e}
+                      type="button"
+                      className={`mood-pick${myMood === m.e ? ' active' : ''}`}
+                      onClick={() => setMood(m.e)}
+                      title={m.label}
+                    >
+                      {m.e}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="hero-title-wrap">
               <div className="hero-overline">Главная история</div>

@@ -170,12 +170,14 @@ export default function Navigation({ activeTab, setActiveTab }) {
       <style>{`
         /* ── Bottom nav bar ── */
         .nav-new {
+          --rose: #ff9bb0;
+          --muted: rgba(255,255,255,0.58);
           position: fixed;
           bottom: 0; left: 0; right: 0;
-          background: rgba(246,243,238,0.92);
+          background: rgba(26,11,16,0.86);
           backdrop-filter: blur(24px) saturate(180%);
           -webkit-backdrop-filter: blur(24px) saturate(180%);
-          border-top: 0.5px solid rgba(0,0,0,0.06);
+          border-top: 0.5px solid rgba(255,255,255,0.10);
           display: flex;
           align-items: stretch;
           height: calc(58px + env(safe-area-inset-bottom, 0px));
@@ -183,8 +185,8 @@ export default function Navigation({ activeTab, setActiveTab }) {
           z-index: 50;
         }
         .app.dark .nav-new {
-          background: rgba(12,11,9,0.94);
-          border-top-color: rgba(255,255,255,0.05);
+          background: rgba(16,9,12,0.92);
+          border-top-color: rgba(255,255,255,0.08);
         }
 
         /* ── Individual tab button ── */
@@ -213,12 +215,12 @@ export default function Navigation({ activeTab, setActiveTab }) {
           transform: translateX(-50%) scale(0);
           width: 48px; height: 30px;
           border-radius: 15px;
-          background: hsl(var(--h,349), var(--s,59%), 94%);
+          background: rgba(255,155,176,0.16);
           transition: transform 0.28s cubic-bezier(0.22,1,0.36,1);
           pointer-events: none;
         }
         .app.dark .nav-tab-pill {
-          background: hsl(var(--h,349), var(--s,59%), 13%);
+          background: rgba(255,155,176,0.14);
         }
         .nav-tab.active .nav-tab-pill {
           transform: translateX(-50%) scale(1);

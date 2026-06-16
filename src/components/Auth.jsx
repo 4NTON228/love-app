@@ -25,14 +25,6 @@ const STYLE = `
     transition:background 0.2s, transform 0.15s;
   }
   .auth-btn-google:active { background:rgba(255,255,255,0.12); transform:scale(0.98); }
-  .auth-btn-vk {
-    width:100%; background:rgba(0,119,255,0.18); color:rgba(180,210,255,0.92);
-    border:0.5px solid rgba(0,119,255,0.28); border-radius:13px;
-    padding:13px; font-size:13px; font-weight:400; cursor:pointer;
-    margin-top:10px; display:flex; align-items:center; justify-content:center; gap:10px;
-    transition:opacity 0.2s, transform 0.15s;
-  }
-  .auth-btn-vk:active { opacity:0.82; transform:scale(0.98); }
   .auth-divider {
     display:flex; align-items:center; gap:10px; margin:14px 0 6px;
     color:rgba(255,255,255,0.22); font-size:11px; letter-spacing:0.6px;
@@ -113,12 +105,6 @@ export default function Auth() {
     setLoading(false)
   }
 
-  function handleVK() {
-    reset()
-    const vkAuthUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/vk-auth?action=login`
-    window.location.href = vkAuthUrl
-  }
-
   async function handleGoogle() {
     reset()
     const { error } = await supabase.auth.signInWithOAuth({
@@ -127,12 +113,6 @@ export default function Auth() {
     })
     if (error) setError(error.message)
   }
-
-  const VKIcon = () => (
-    <svg width="20" height="12" viewBox="0 0 20 12" fill="rgba(180,210,255,0.8)">
-      <path d="M10.6 12c-5.9 0-9.3-4-9.4-10.7H4c.1 4.9 2.2 7 3.9 7.4V1.3h2.8v4.3c1.7-.2 3.5-2.2 4.1-4.3H17c-.5 2.6-2.3 4.6-3.7 5.4 1.4.7 3.4 2.4 4.2 5.3h-3.1c-.6-1.9-2.1-3.4-4.1-3.6V12h-.7z"/>
-    </svg>
-  )
 
   const GoogleIcon = () => (
     <svg width="16" height="16" viewBox="0 0 48 48">
@@ -212,9 +192,6 @@ export default function Auth() {
               {loading ? 'Входим…' : 'Войти'}
             </button>
             <div className="auth-divider">или</div>
-            <button type="button" className="auth-btn-vk" onClick={handleVK}>
-              <VKIcon /> Войти через ВКонтакте
-            </button>
             <button type="button" className="auth-btn-google" onClick={handleGoogle}>
               <GoogleIcon /> Войти через Google
             </button>
@@ -246,9 +223,6 @@ export default function Auth() {
               {loading ? 'Создаём аккаунт…' : 'Создать аккаунт'}
             </button>
             <div className="auth-divider">или</div>
-            <button type="button" className="auth-btn-vk" onClick={handleVK}>
-              <VKIcon /> Зарегистрироваться через ВКонтакте
-            </button>
             <button type="button" className="auth-btn-google" onClick={handleGoogle}>
               <GoogleIcon /> Зарегистрироваться через Google
             </button>

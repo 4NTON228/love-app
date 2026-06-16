@@ -1,26 +1,24 @@
 -- ============================================================
--- meeting-reminder — schedule the "вы скоро увидитесь" push
+-- meeting-reminder — ALREADY ENABLED on project bqyisdgwtgxxomukozko
 -- ============================================================
--- The edge function `meeting-reminder` is already deployed. It must be
--- called on a schedule so it can fire when a couple's next_meeting time
--- arrives. Run this ONCE in Supabase → SQL Editor (same way the other
--- cron jobs — process-time-capsules, relationship-keeper — are scheduled).
+-- For the record. The edge function `meeting-reminder` is deployed and a
+-- pg_cron job runs it every 5 minutes; when a couple's next_meeting time
+-- arrives both partners get a "💕 Вы скоро увидитесь!" push (once per
+-- meeting, gated by couple_settings.meeting_notified_at).
 --
--- Replace <SERVICE_ROLE_KEY> with your project's service role key
--- (Supabase → Project Settings → API → service_role secret).
--- The project ref is already filled in.
-
-select cron.schedule(
-  'meeting-reminder',
-  '*/5 * * * *',   -- every 5 minutes
-  $$
-  select net.http_post(
-    url     := 'https://bqyisdgwtgxxomukozko.supabase.co/functions/v1/meeting-reminder',
-    headers := '{"Content-Type":"application/json","Authorization":"Bearer <SERVICE_ROLE_KEY>"}'::jsonb
-  );
-  $$
-);
-
--- To remove it later:  select cron.unschedule('meeting-reminder');
--- Added column used by the function:
---   ALTER TABLE couple_settings ADD COLUMN IF NOT EXISTS meeting_notified_at TIMESTAMPTZ;
+-- Extensions enabled: pg_cron, pg_net.
+-- Column added:        couple_settings.meeting_notified_at TIMESTAMPTZ
+--
+-- The schedule that was applied (anon key is public, only reaches the
+-- idempotent function):
+--
+-- select cron.schedule('meeting-reminder', '*/5 * * * *', $$
+--   select net.http_post(
+--     url := 'https://bqyisdgwtgxxomukozko.supabase.co/functions/v1/meeting-reminder',
+--     headers := jsonb_build_object('Content-Type','application/json',
+--       'apikey','<ANON_KEY>','Authorization','Bearer <ANON_KEY>')
+--   );
+-- $$);
+--
+-- Inspect:    select * from cron.job where jobname = 'meeting-reminder';
+-- Remove:     select cron.unschedule('meeting-reminder');

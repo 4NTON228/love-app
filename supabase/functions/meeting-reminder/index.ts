@@ -1,17 +1,16 @@
 /**
  * meeting-reminder — Edge Function (Supabase Cron)
  *
- * Runs on a schedule (e.g. every 5 minutes via pg_cron). When a couple's
- * next_meeting time has arrived it sends BOTH partners a push:
+ * Runs every 5 minutes (pg_cron job "meeting-reminder"). When a couple's
+ * next_meeting time has arrived it pushes BOTH partners:
  *   "💕 Вы скоро увидитесь!"
- * and stamps meeting_notified_at so it fires exactly once per meeting.
+ * and stamps couple_settings.meeting_notified_at so it fires exactly once
+ * per meeting. Idempotent + low-risk, so it is safe to invoke with the
+ * public anon key from the scheduled job.
  *
- * Schedule (Supabase → Database → Extensions → pg_cron):
- *   select cron.schedule('meeting-reminder', '*\/5 * * * *',
- *     $$select net.http_post(
- *       url := 'https://<project>.supabase.co/functions/v1/meeting-reminder',
- *       headers := '{"Authorization":"Bearer <SERVICE_ROLE_KEY>"}'::jsonb
- *     )$$);
+ * Cron is already configured in the database (see
+ * supabase-meeting-reminder-cron.sql). It uses its own SERVICE_ROLE_KEY
+ * env for DB access regardless of the caller.
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -21,18 +20,11 @@ const supabase = createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
 )
 
-Deno.serve(async (req) => {
-  const authHeader = req.headers.get('Authorization') ?? ''
-  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-  if (!authHeader.includes(serviceKey.slice(0, 20))) {
-    return new Response('Unauthorized', { status: 401 })
-  }
-
+Deno.serve(async () => {
   const now = new Date().toISOString()
   let processed = 0
 
   try {
-    // Meetings whose time has arrived and haven't been notified for THIS meeting yet
     const { data: rows } = await supabase
       .from('couple_settings')
       .select('id, user_id, couple_id, next_meeting, meeting_notified_at')
@@ -40,7 +32,6 @@ Deno.serve(async (req) => {
       .lte('next_meeting', now)
 
     for (const row of rows ?? []) {
-      // Skip if already notified for this exact meeting time
       if (row.meeting_notified_at && new Date(row.meeting_notified_at) >= new Date(row.next_meeting)) {
         continue
       }
@@ -55,7 +46,6 @@ Deno.serve(async (req) => {
 
       if (!claimed || claimed.length === 0) continue
 
-      // Resolve both partners
       const recipients = new Set<string>()
       if (row.user_id) recipients.add(row.user_id)
       const { data: prof } = await supabase

@@ -1,6 +1,56 @@
-import { memo, useCallback, useEffect, useMemo, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { supabase } from '../lib/supabase'
+import { sendPushNotification } from '../lib/push'
+import { toast } from '../lib/helpers'
 import './Home.css'
+
+/* ─────────────────────────────────────────────
+   HeartWave — full-screen burst of rising hearts
+───────────────────────────────────────────── */
+function HeartWave() {
+  const hearts = useMemo(
+    () => Array.from({ length: 16 }, (_, i) => ({
+      id: i,
+      left: Math.random() * 100,
+      delay: Math.random() * 0.5,
+      dur: 1.7 + Math.random() * 1.3,
+      size: 16 + Math.random() * 28,
+    })),
+    []
+  )
+  return createPortal(
+    <div className="heart-wave" aria-hidden="true">
+      <style>{`
+        .heart-wave { position: fixed; inset: 0; z-index: 4000; pointer-events: none; overflow: hidden; }
+        .hw-heart {
+          position: absolute; bottom: -40px;
+          color: #ff5c7a;
+          opacity: 0;
+          will-change: transform, opacity;
+          animation: hwRise var(--d, 2s) ease-in forwards;
+          filter: drop-shadow(0 4px 10px rgba(255,92,122,0.5));
+        }
+        @keyframes hwRise {
+          0%   { transform: translateY(0) scale(0.6) rotate(0deg); opacity: 0; }
+          15%  { opacity: 1; }
+          80%  { opacity: 1; }
+          100% { transform: translateY(-105vh) scale(1.1) rotate(20deg); opacity: 0; }
+        }
+      `}</style>
+      {hearts.map(h => (
+        <span
+          key={h.id}
+          className="hw-heart"
+          style={{ left: `${h.left}%`, fontSize: `${h.size}px`, animationDelay: `${h.delay}s`, '--d': `${h.dur}s` }}
+        >
+          ♥
+        </span>
+      ))}
+    </div>,
+    document.body
+  )
+}
 
 function pad(v) {
   return String(v).padStart(2, '0')
@@ -314,6 +364,10 @@ export default function Home({ session, profile, onNavigate }) {
   const [newMeeting,     setNewMeeting]     = useState('')
   const [saving,         setSaving]         = useState(false)
   const [showPartnerModal, setShowPartnerModal] = useState(false)
+  const [showWave,       setShowWave]       = useState(false)
+  const [thinkingSent,   setThinkingSent]   = useState(false)
+  const thinkChannelRef = useRef(null)
+  const waveTimerRef = useRef(null)
 
   const hasPartner        = !!profile?.partner_id
   const effectiveCoupleDate = sharedCoupleDate ?? profile?.couple_start_date ?? null
@@ -331,6 +385,47 @@ export default function Home({ session, profile, onNavigate }) {
   const partnerName = partnerProfile?.name || (hasPartner ? 'Партнёр' : 'Только ты')
   const headline    = hasPartner ? `${myName} и ${partnerName}` : myName
   const loveMessage = settings?.love_message || DEFAULT_MESSAGE
+
+  /* ── "Думаю о тебе" — realtime heart wave + push ── */
+  const thinkKey = useMemo(() => {
+    if (profile?.couple_id) return `think-${profile.couple_id}`
+    const ids = [session?.user?.id, profile?.partner_id].filter(Boolean).sort()
+    return ids.length === 2 ? `think-${ids[0]}-${ids[1]}` : null
+  }, [profile?.couple_id, profile?.partner_id, session?.user?.id])
+
+  const playWave = useCallback(() => {
+    setShowWave(true)
+    if (waveTimerRef.current) clearTimeout(waveTimerRef.current)
+    waveTimerRef.current = setTimeout(() => setShowWave(false), 3200)
+  }, [])
+
+  useEffect(() => {
+    if (!thinkKey) return
+    const ch = supabase.channel(thinkKey, { config: { broadcast: { self: false } } })
+    ch.on('broadcast', { event: 'heart' }, () => playWave())
+    ch.subscribe()
+    thinkChannelRef.current = ch
+    return () => {
+      supabase.removeChannel(ch)
+      thinkChannelRef.current = null
+      if (waveTimerRef.current) clearTimeout(waveTimerRef.current)
+    }
+  }, [thinkKey, playWave])
+
+  const sendThinking = useCallback(() => {
+    if (!hasPartner || thinkingSent) return
+    playWave()
+    setThinkingSent(true)
+    setTimeout(() => setThinkingSent(false), 4000)
+    thinkChannelRef.current?.send({ type: 'broadcast', event: 'heart', payload: { from: session?.user?.id } })
+    sendPushNotification(
+      `${myName} 💗`,
+      'думает о тебе',
+      profile.partner_id,
+      session.user.id
+    ).catch(() => {})
+    toast.success('Сердечко отправлено 💗')
+  }, [hasPartner, thinkingSent, playWave, session?.user?.id, profile?.partner_id, myName])
 
   /* ── Data loading — parallel queries ── */
   useEffect(() => {
@@ -546,6 +641,18 @@ export default function Home({ session, profile, onNavigate }) {
               hasStartDate={hasStartDate}
               onNavigate={onNavigate}
             />
+
+            {hasPartner && (
+              <button
+                type="button"
+                className={`thinking-btn${thinkingSent ? ' sent' : ''}`}
+                onClick={sendThinking}
+                disabled={thinkingSent}
+              >
+                <span className="thinking-btn-heart">♥</span>
+                {thinkingSent ? 'Отправлено' : 'Думаю о тебе'}
+              </button>
+            )}
           </div>
         </section>
 
@@ -695,6 +802,8 @@ export default function Home({ session, profile, onNavigate }) {
           onClose={closePartnerModal}
         />
       )}
+
+      {showWave && <HeartWave />}
     </div>
   )
 }

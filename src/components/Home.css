@@ -497,10 +497,10 @@
   color: var(--text-soft); font-size: 13px; line-height: 1.6;
 }
 
-/* ── Section row ── */
+/* ── Section row — stacked full-width cards (countdown needs room) ── */
 .section-row {
   display: grid;
-  grid-template-columns: 1.15fr 0.85fr;
+  grid-template-columns: 1fr;
   gap: 12px;
 }
 .info-card {
@@ -546,9 +546,21 @@
 }
 
 /* ── Meeting countdown ── */
+.meeting-phrase {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-soft);
+}
+.meeting-phrase strong {
+  color: var(--gold);
+  font-weight: 700;
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-variant-numeric: tabular-nums lining-nums;
+}
 .meeting-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0,1fr));
+  grid-template-columns: repeat(4, minmax(0,1fr));
   gap: 8px;
 }
 .meeting-cell {
@@ -577,7 +589,8 @@
 }
 .note-text strong { color: var(--text-main); font-weight: 500; }
 .field {
-  width: 100%; padding: 13px 15px;
+  width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box;
+  padding: 13px 15px;
   border-radius: 16px;
   border: 1px solid rgba(255,255,255,0.32);
   background: rgba(255,255,255,0.18);

@@ -114,6 +114,15 @@ function yearsWord(n) {
   if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return 'года'
   return 'лет'
 }
+function plural(n, one, few, many) {
+  const m10 = n % 10
+  const m100 = n % 100
+  if (m10 === 1 && m100 !== 11) return one
+  if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return few
+  return many
+}
+function dayWord(n) { return plural(n, 'день', 'дня', 'дней') }
+function hourWord(n) { return plural(n, 'час', 'часа', 'часов') }
 
 /* Status moods (emoji) shared between partners */
 const STATUS_MOODS = [
@@ -368,6 +377,9 @@ const MeetingBody = memo(function MeetingBody({ nextMeeting, onEdit }) {
   if (countdown) {
     return (
       <div className="meeting-row">
+        <p className="meeting-phrase">
+          через <strong>{countdown.days}</strong> {dayWord(countdown.days)} <strong>{countdown.hours}</strong> {hourWord(countdown.hours)} вы увидитесь 💕
+        </p>
         <div className="meeting-grid">
           {[
             [countdown.days,         'дни'],
@@ -713,7 +725,8 @@ export default function Home({ session, profile, onNavigate }) {
     if (!session?.user?.id) return
     setSaving(true)
     try {
-      const saved = await persistSettings({ next_meeting: localToUTC(newMeeting) })
+      // reset the reminder flag so the new meeting time will notify
+      const saved = await persistSettings({ next_meeting: localToUTC(newMeeting), meeting_notified_at: null })
       setSettings(saved)
       setSettingsId(saved?.id || null)
       setNewMeeting(utcToLocal(saved?.next_meeting))

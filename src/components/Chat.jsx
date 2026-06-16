@@ -1073,8 +1073,12 @@ export default function Chat({ session, profile, darkMode }) {
       window.removeEventListener('focus', onFocus)
       document.removeEventListener('visibilitychange', onVisible)
     }
+  // Перезапускаем загрузку + realtime-подписку, когда становится известен
+  // partner_id (pid). Иначе при гонке (чат смонтирован до подгрузки пары)
+  // фильтр и realtime-обработчик захватывают устаревший pid=null и не
+  // показывают сообщения партнёра.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [uid])
+  }, [uid, pid])
 
   useEffect(() => {
     if (!partner?.id) return

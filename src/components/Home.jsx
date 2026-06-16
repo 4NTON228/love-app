@@ -673,7 +673,7 @@ export default function Home({ session, profile, onNavigate }) {
           ) : (
             <>
               <p className="note-text">
-                <strong>"{loveMessage}"</strong>
+                <strong>&laquo;{loveMessage}&raquo;</strong>
               </p>
               <div className="actions-row">
                 <button type="button" className="btn-ghost" onClick={startEditMessage}>

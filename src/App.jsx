@@ -10,8 +10,6 @@ const Chat        = lazy(() => import('./components/Chat'))
 const Calendar    = lazy(() => import('./components/Calendar'))
 const Moments     = lazy(() => import('./components/Moments'))
 const Plans       = lazy(() => import('./components/Plans'))
-const LoveClock   = lazy(() => import('./components/LoveClock'))
-const LoveLetter  = lazy(() => import('./components/LoveLetter'))
 const Settings    = lazy(() => import('./components/Settings'))
 const AIAdvisor   = lazy(() => import('./components/AIAdvisor'))
 const Premium     = lazy(() => import('./components/Premium'))
@@ -263,10 +261,6 @@ export default function App() {
         return <Home session={session} profile={profile} darkMode={darkMode} onNavigate={setActiveTab} />
       case 'chat':
         return <Chat session={session} profile={profile} darkMode={darkMode} />
-      case 'clock':
-        return <LoveClock session={session} profile={profile} />
-      case 'letter':
-        return <LoveLetter session={session} profile={profile} />
       case 'calendar':
         return <Calendar session={session} profile={profile} />
       case 'moments':

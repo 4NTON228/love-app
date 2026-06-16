@@ -19,7 +19,7 @@
   min-height: 100svh;
   position: relative;
   overflow: hidden;
-  padding: 20px 16px calc(96px + env(safe-area-inset-bottom, 0px));
+  padding: calc(env(safe-area-inset-top, 0px) + 24px) 16px calc(96px + env(safe-area-inset-bottom, 0px));
   background:
     radial-gradient(circle at 84% 4%,  rgba(255, 214, 150, 0.30), transparent 40%),
     radial-gradient(circle at 8% 96%,  rgba(60, 20, 45, 0.55),    transparent 52%),

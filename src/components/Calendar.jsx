@@ -1,98 +1,59 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 import { sendPushNotification } from '../lib/push'
 
-/* ── SVG icons ── */
-function IcoTrash() {
-  return (
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="3 6 5 6 21 6"/>
-      <path d="M19 6l-1 14H6L5 6"/>
-      <path d="M10 11v6M14 11v6"/>
-      <path d="M9 6V4h6v2"/>
-    </svg>
-  )
-}
+/* ── icons ── */
 function IcoClose() {
-  return (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-      <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-    </svg>
-  )
+  return (<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>)
 }
 function IcoCamera() {
-  return (
-    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
-      <circle cx="12" cy="13" r="4"/>
-    </svg>
-  )
-}
-function IcoCalendarLg() {
-  return (
-    <svg viewBox="0 0 60 60" width="48" height="48" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="6" y="10" width="48" height="44" rx="6"/>
-      <line x1="16" y1="4" x2="16" y2="16"/>
-      <line x1="44" y1="4" x2="44" y2="16"/>
-      <line x1="6" y1="24" x2="54" y2="24"/>
-      <rect x="16" y="32" width="10" height="10" rx="2" fill="rgba(255,255,255,0.2)" stroke="none"/>
-      <rect x="34" y="32" width="10" height="10" rx="2" fill="rgba(255,255,255,0.2)" stroke="none"/>
-    </svg>
-  )
+  return (<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>)
 }
 function IcoPlus() {
-  return (
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-    </svg>
-  )
+  return (<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>)
+}
+function IcoChevron({ dir }) {
+  return (<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">{dir === 'left' ? <polyline points="15 6 9 12 15 18"/> : <polyline points="9 6 15 12 9 18"/>}</svg>)
+}
+function IcoTrash() {
+  return (<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>)
+}
+function IcoCheck() {
+  return (<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>)
 }
 function LoadingHeart() {
   return (
-    <svg viewBox="0 0 60 56" width="48" height="44" fill="none">
-      <style>{`@keyframes hbLoad2{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}.hbL2{animation:hbLoad2 1.2s ease-in-out infinite;transform-origin:center}`}</style>
-      <g className="hbL2">
-        <path d="M30 52C30 52 3 35 3 16C3 8 9.5 2 18 2C22.5 2 26.5 4.5 30 9C33.5 4.5 37.5 2 42 2C50.5 2 57 8 57 16C57 35 30 52 30 52Z"
-          fill="rgba(200,51,74,0.4)" stroke="rgba(200,51,74,0.6)" strokeWidth="2"/>
-      </g>
+    <svg viewBox="0 0 60 56" width="44" height="40" fill="none">
+      <style>{`@keyframes hbC{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}.hbC{animation:hbC 1.2s ease-in-out infinite;transform-origin:center}`}</style>
+      <g className="hbC"><path d="M30 52C30 52 3 35 3 16C3 8 9.5 2 18 2C22.5 2 26.5 4.5 30 9C33.5 4.5 37.5 2 42 2C50.5 2 57 8 57 16C57 35 30 52 30 52Z" fill="rgba(255,141,160,0.5)" stroke="rgba(255,141,160,0.7)" strokeWidth="2"/></g>
     </svg>
   )
 }
 
-const MONTHS_RU = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек']
-const MONTHS_FULL = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря']
-
-// Event emoji picker — these are user-selected content (not UI chrome)
+const MONTHS_FULL = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь']
+const MONTHS_GEN = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря']
+const WEEKDAYS = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс']
 const EMOJIS = ['❤️','🥰','🎉','🎂','🎬','🍕','✈️','🌅','🎵','💐','🏖️','🎄','🌸','🎭','🌙','⭐']
 
-function getDaysUntil(dateStr) {
-  const target = new Date(dateStr)
-  const now = new Date()
-  now.setHours(0,0,0,0)
-  target.setHours(0,0,0,0)
-  const diff = Math.ceil((target - now) / (1000 * 60 * 60 * 24))
-  return diff
-}
-
-function formatEventDate(dateStr) {
-  const d = new Date(dateStr)
-  return {
-    day: d.getDate(),
-    month: MONTHS_RU[d.getMonth()],
-    monthFull: MONTHS_FULL[d.getMonth()],
-    year: d.getFullYear(),
-  }
+function keyOf(d) {
+  const x = new Date(d)
+  return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`
 }
 
 export default function Calendar({ session, profile }) {
   const uid = session?.user?.id
   const pid = profile?.partner_id
+
   const [events, setEvents] = useState([])
-  const [showModal, setShowModal] = useState(false)
+  const [photos, setPhotos] = useState([])
+  const [plans, setPlans] = useState([])
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
+  const [view, setView] = useState(() => { const n = new Date(); return { y: n.getFullYear(), m: n.getMonth() } })
+  const [selected, setSelected] = useState(() => keyOf(new Date()))
   const [lightbox, setLightbox] = useState(null)
 
+  const [showModal, setShowModal] = useState(false)
+  const [saving, setSaving] = useState(false)
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [eventDate, setEventDate] = useState('')
@@ -100,33 +61,71 @@ export default function Calendar({ session, profile }) {
   const [photo, setPhoto] = useState(null)
   const [photoPreview, setPhotoPreview] = useState(null)
 
-  const loadEvents = useCallback(async () => {
+  const load = useCallback(async () => {
     const ids = [uid, pid].filter(Boolean)
-    const q = supabase.from('calendar_events').select('*').order('event_date', { ascending: false })
-    const { data } = ids.length === 1
-      ? await q.eq('user_id', ids[0])
-      : await q.in('user_id', ids)
-    setEvents(data || [])
+    if (!ids.length) { setLoading(false); return }
+    const scoped = (q) => ids.length === 1 ? q.eq('user_id', ids[0]) : q.in('user_id', ids)
+    const [ev, mo, pl] = await Promise.all([
+      scoped(supabase.from('calendar_events').select('*')),
+      scoped(supabase.from('moments').select('id,title,photo_url,thumb_url,created_at,mood')),
+      scoped(supabase.from('plans').select('id,title,completed,completed_at,created_at')),
+    ])
+    setEvents(ev.data || [])
+    setPhotos(mo.data || [])
+    setPlans(pl.data || [])
     setLoading(false)
   }, [uid, pid])
 
-  useEffect(() => { loadEvents() }, [loadEvents])
+  useEffect(() => { load() }, [load])
+
+  /* day -> { events, photos, plans } */
+  const byDay = useMemo(() => {
+    const map = {}
+    const add = (k, type, item) => { (map[k] ??= { events: [], photos: [], plans: [] })[type].push(item) }
+    events.forEach(e => e.event_date && add(keyOf(e.event_date), 'events', e))
+    photos.forEach(p => p.created_at && add(keyOf(p.created_at), 'photos', p))
+    plans.forEach(p => { if (p.completed && p.completed_at) add(keyOf(p.completed_at), 'plans', p) })
+    return map
+  }, [events, photos, plans])
+
+  /* grid cells (Monday-first) */
+  const cells = useMemo(() => {
+    const first = new Date(view.y, view.m, 1)
+    const lead = (first.getDay() + 6) % 7
+    const days = new Date(view.y, view.m + 1, 0).getDate()
+    const arr = []
+    for (let i = 0; i < lead; i++) arr.push(null)
+    for (let d = 1; d <= days; d++) arr.push(keyOf(new Date(view.y, view.m, d)))
+    return arr
+  }, [view])
+
+  const todayKey = keyOf(new Date())
+  const sel = byDay[selected] || { events: [], photos: [], plans: [] }
+  const selDate = new Date(selected)
+
+  function shiftMonth(delta) {
+    setView(v => {
+      const d = new Date(v.y, v.m + delta, 1)
+      return { y: d.getFullYear(), m: d.getMonth() }
+    })
+  }
 
   async function uploadPhoto(file) {
     const ext = file.name.split('.').pop()
-    const path = `calendar/${Date.now()}-${Math.random().toString(36).slice(7)}.${ext}`
+    const path = `calendar/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
     const { error } = await supabase.storage.from('photos').upload(path, file)
     if (error) throw error
     return supabase.storage.from('photos').getPublicUrl(path).data.publicUrl
   }
-
   function handlePhotoSelect(e) {
-    const file = e.target.files[0]
-    if (!file) return
-    setPhoto(file)
-    setPhotoPreview(URL.createObjectURL(file))
+    const f = e.target.files[0]
+    if (!f) return
+    setPhoto(f); setPhotoPreview(URL.createObjectURL(f))
   }
-
+  function openAdd() {
+    setEventDate(selected)
+    setShowModal(true)
+  }
   async function handleSubmit(e) {
     e.preventDefault()
     if (!title || !eventDate) return
@@ -135,313 +134,214 @@ export default function Calendar({ session, profile }) {
       let photoUrl = null
       if (photo) photoUrl = await uploadPhoto(photo)
       const { error } = await supabase.from('calendar_events').insert({
-        user_id: session.user.id, title, description, event_date: eventDate, emoji, photo_url: photoUrl
+        user_id: session.user.id, title, description, event_date: eventDate, emoji, photo_url: photoUrl,
       })
       if (!error) {
-        resetForm(); setShowModal(false); loadEvents()
+        setTitle(''); setDescription(''); setEventDate(''); setEmoji('❤️'); setPhoto(null); setPhotoPreview(null)
+        setShowModal(false); load()
         if (profile?.partner_id) {
-          sendPushNotification(
-            `📅 ${profile?.name || 'Партнёр'} · Новое событие`,
-            `${emoji || '📅'} ${title}`,
-            profile.partner_id,
-            session.user.id
-          ).catch(() => {})
+          sendPushNotification(`📅 ${profile?.name || 'Партнёр'} · Новое событие`, `${emoji || '📅'} ${title}`, profile.partner_id, session.user.id).catch(() => {})
         }
       }
     } catch (err) { console.error(err) }
     setSaving(false)
   }
-
   async function deleteEvent(id) {
     if (!confirm('Удалить это событие?')) return
     await supabase.from('calendar_events').delete().eq('id', id)
-    loadEvents()
+    load()
   }
-
-  function resetForm() {
-    setTitle(''); setDescription(''); setEventDate(''); setEmoji('❤️'); setPhoto(null); setPhotoPreview(null)
-  }
-
-  const today = new Date()
-  today.setHours(0,0,0,0)
-  const upcoming = events.filter(e => new Date(e.event_date) >= today).sort((a,b) => new Date(a.event_date) - new Date(b.event_date))
-  const past = events.filter(e => new Date(e.event_date) < today).sort((a,b) => new Date(b.event_date) - new Date(a.event_date))
 
   return (
     <>
       <style>{`
-        .cal-wrap { padding: 0 0 120px; }
+        .cal-wrap { padding: 0 0 130px; }
         .cal-header {
-          background: linear-gradient(175deg, #0D0305 0%, #220810 38%, #46101F 68%, #2E0C18 100%);
-          padding: 60px 20px 28px;
-          border-radius: 0 0 36px 36px;
-          margin-bottom: 20px;
-          box-shadow: 0 16px 60px rgba(14,3,8,0.75), 0 4px 20px rgba(0,0,0,0.5);
-          overflow: hidden;
-          position: relative;
+          background: linear-gradient(165deg, #5e2545 0%, #92384e 44%, #bd5552 76%, #cb6650 100%);
+          padding: calc(env(safe-area-inset-top,0px) + 40px) 20px 26px;
+          border-radius: 0 0 30px 30px;
+          box-shadow: 0 12px 40px rgba(60,20,40,0.45);
+          position: relative; overflow: hidden;
         }
-        .cal-header::after {
-          content: '';
-          position: absolute; inset: 0; border-radius: inherit;
-          background: radial-gradient(ellipse at 50% 0%, rgba(200,51,74,0.38) 0%, transparent 65%);
-          pointer-events: none;
-        }
-        .cal-header-title {
-          font-family: var(--font-display);
-          font-size: 26px;
-          color: white;
-          margin-bottom: 4px;
-        }
-        .cal-header-sub {
-          font-size: 13px;
-          color: rgba(255,255,255,0.65);
-          font-family: var(--font-body);
-        }
+        .cal-header::after { content:''; position:absolute; inset:0; background: radial-gradient(ellipse at 80% 0%, rgba(255,210,150,0.28), transparent 55%); pointer-events:none; }
+        .cal-h-title { font-family: var(--font-display); font-size: 26px; color:#fff; }
+        .cal-h-sub { font-size: 13px; color: rgba(255,255,255,0.7); font-family: var(--font-body); margin-top: 2px; }
         .cal-add-btn {
-          margin-top: 16px;
-          background: rgba(255,255,255,0.2);
-          backdrop-filter: blur(8px);
-          border: 1.5px solid rgba(255,255,255,0.3);
-          border-radius: 14px;
-          color: white;
-          font-family: var(--font-body);
-          font-weight: 700;
-          font-size: 14px;
-          padding: 12px 24px;
-          cursor: pointer;
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
+          margin-top: 14px; width: 100%;
+          background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.28);
+          border-radius: 14px; color: #fff; font-family: var(--font-body); font-weight: 500; font-size: 14px;
+          padding: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;
         }
+        .cal-add-btn:active { background: rgba(255,255,255,0.26); }
 
-        .cal-section-label {
-          font-family: var(--font-body);
-          font-size: 11px;
-          font-weight: 700;
-          text-transform: uppercase;
-          letter-spacing: 1.2px;
-          color: var(--text-muted);
-          padding: 0 16px;
-          margin: 10px 0 6px;
+        .cal-card {
+          margin: 16px 14px 0; padding: 14px;
+          border-radius: 22px;
+          background: var(--surface, #1f0e16);
+          border: 1px solid var(--border, rgba(255,255,255,0.07));
+          box-shadow: var(--shadow-card, 0 2px 16px rgba(0,0,0,0.4));
         }
+        .cal-monthbar { display:flex; align-items:center; justify-content:space-between; margin-bottom: 12px; }
+        .cal-month-title { font-family: var(--font-display); font-size: 21px; color: var(--text); }
+        .cal-nav-btn {
+          width: 36px; height: 36px; border-radius: 12px; border: none; cursor: pointer;
+          background: var(--surface-2, rgba(255,255,255,0.06)); color: var(--text);
+          display:flex; align-items:center; justify-content:center;
+        }
+        .cal-nav-btn:active { background: rgba(255,141,160,0.18); }
 
-        .cal-event-card {
-          margin: 0 14px 12px;
-          background: var(--bg-card, #ffffff);
-          border-radius: 24px;
-          border: 1px solid rgba(200,51,74,0.08);
-          overflow: hidden;
-          box-shadow: 0 2px 16px rgba(0,0,0,0.07), 0 1px 0 rgba(255,255,255,0.8);
-          animation: calIn 0.4s ease both;
-          display: flex;
-          flex-direction: column;
+        .cal-weekdays { display:grid; grid-template-columns: repeat(7,1fr); margin-bottom: 4px; }
+        .cal-weekday { text-align:center; font-size: 10px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.3px; }
+        .cal-grid { display:grid; grid-template-columns: repeat(7,1fr); gap: 2px; }
+        .cal-cell {
+          aspect-ratio: 1; border: none; background: none; cursor: pointer; position: relative;
+          display:flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+          border-radius: 12px; color: var(--text); font-family: var(--font-body); font-size: 14px;
+          -webkit-tap-highlight-color: transparent;
         }
-        .app.dark .cal-event-card {
-          background: #2C1018;
-          border-color: rgba(200,51,74,0.18);
-          box-shadow: 0 4px 24px rgba(0,0,0,0.5);
-        }
-        @keyframes calIn {
-          from { opacity:0; transform: translateY(16px); }
-          to   { opacity:1; transform: translateY(0); }
-        }
-        .cal-event-photo-wrap {
-          position: relative;
-          cursor: pointer;
-        }
-        .cal-event-photo {
-          width: 100%;
-          height: 160px;
-          object-fit: cover;
-          display: block;
-        }
-        .cal-event-badge {
-          position: absolute;
-          top: 10px;
-          right: 10px;
-          background: linear-gradient(135deg, #C8334A, #8B1A2C);
-          color: white;
-          border-radius: 12px;
-          padding: 5px 10px;
-          font-family: var(--font-body);
-          font-size: 12px;
-          font-weight: 700;
-          box-shadow: 0 2px 10px rgba(0,0,0,0.25);
-        }
-        .cal-event-badge.past {
-          background: rgba(0,0,0,0.45);
-        }
-        .cal-event-body {
-          display: flex;
-          align-items: flex-start;
-          gap: 14px;
-          padding: 14px 16px;
-        }
-        .cal-date-pill {
-          flex-shrink: 0;
-          width: 50px;
-          background: var(--blush, #FBF0F2);
-          border-radius: 14px;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          padding: 8px 4px;
-        }
-        .app.dark .cal-date-pill { background: rgba(139,26,44,0.15); }
-        .cal-date-day {
-          font-family: var(--font-display);
-          font-size: 22px;
-          font-weight: 700;
-          color: #8B1A2C;
-          line-height: 1;
-        }
-        .cal-date-month {
-          font-family: var(--font-body);
-          font-size: 11px;
-          font-weight: 700;
-          color: #8B1A2C;
-          text-transform: uppercase;
-          opacity: 0.75;
-        }
-        .cal-event-info { flex: 1; min-width: 0; }
-        .cal-event-title {
-          font-family: var(--font-body);
-          font-weight: 700;
-          font-size: 15px;
-          color: var(--text);
-          margin-bottom: 4px;
-          display: flex;
-          align-items: center;
-          gap: 6px;
-        }
-        .cal-event-desc {
-          font-size: 13px;
-          color: var(--text-muted);
-          line-height: 1.5;
-          margin-bottom: 4px;
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
-        }
-        .cal-event-countdown {
-          display: inline-flex;
-          align-items: center;
-          gap: 4px;
-          background: rgba(200,51,74,0.08);
-          color: var(--primary);
-          border-radius: 8px;
-          padding: 3px 8px;
-          font-size: 12px;
-          font-weight: 600;
-          font-family: var(--font-body);
-        }
-        .cal-event-countdown.today {
-          background: linear-gradient(135deg, #C8334A, #8B1A2C);
-          color: white;
-        }
-        .cal-event-countdown.past-label {
-          background: rgba(0,0,0,0.05);
-          color: var(--text-muted);
-        }
-        .app.dark .cal-event-countdown.past-label { background: rgba(255,255,255,0.06); }
-        .cal-del-btn {
-          background: none;
-          border: none;
-          color: var(--text-muted);
-          font-size: 18px;
-          cursor: pointer;
-          padding: 4px;
-          border-radius: 8px;
-          flex-shrink: 0;
-          align-self: flex-start;
-        }
-        .cal-del-btn:active { background: rgba(200,51,74,0.1); color: var(--primary); }
+        .cal-cell.empty { pointer-events: none; }
+        .cal-cell.today { color: #ff8da0; font-weight: 700; }
+        .cal-cell.sel { background: linear-gradient(160deg, #ff8da0, #d8456b); color: #fff; font-weight: 700; }
+        .cal-cell.sel .cal-dot { box-shadow: 0 0 0 1px rgba(255,255,255,0.6); }
+        .cal-dots { display:flex; gap: 3px; height: 5px; }
+        .cal-dot { width: 5px; height: 5px; border-radius: 50%; }
+        .cal-dot.ev { background: #ff8da0; }
+        .cal-dot.ph { background: #5ec6c6; }
+        .cal-dot.pl { background: #54df86; }
 
-        /* dark */
-        .app.dark .cal-event-card { background: var(--surface-2, #1E0A10); }
-        .app.dark .cal-event-title { color: var(--ink, #F5E8EA); }
+        .cal-day-title { font-family: var(--font-display); font-size: 19px; color: var(--text); margin-bottom: 12px; }
+        .cal-row {
+          display:flex; align-items:center; gap: 12px; padding: 10px 0;
+          border-bottom: 1px solid var(--border, rgba(255,255,255,0.06));
+        }
+        .cal-row:last-child { border-bottom: none; }
+        .cal-row-emoji { font-size: 22px; width: 42px; height: 42px; display:flex; align-items:center; justify-content:center; border-radius:12px; background: var(--surface-2, rgba(255,255,255,0.06)); flex-shrink:0; }
+        .cal-row-thumb { width: 46px; height: 46px; border-radius: 12px; object-fit: cover; flex-shrink: 0; cursor: pointer; }
+        .cal-row-mid { flex: 1; min-width: 0; }
+        .cal-row-name { font-size: 14px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .cal-row-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+        .cal-row-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; padding: 3px 7px; border-radius: 7px; }
+        .cal-row-tag.ev { background: rgba(255,141,160,0.18); color: #ff8da0; }
+        .cal-row-tag.ph { background: rgba(94,198,198,0.18); color: #7ad6d6; }
+        .cal-row-tag.pl { background: rgba(84,223,134,0.16); color: #6fe29a; }
+        .cal-check { width: 26px; height: 26px; border-radius: 50%; background: linear-gradient(135deg,#43d97a,#1f9e54); color:#fff; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+        .cal-del { background:none; border:none; color: var(--text-muted); cursor:pointer; padding:4px; flex-shrink:0; }
+        .cal-del:active { color:#ff8da0; }
+        .cal-empty-day { text-align:center; padding: 18px 0; color: var(--text-muted); font-size: 13px; font-family: var(--font-body); }
 
-        /* lightbox */
-        .cal-lightbox {
-          position: fixed;
-          inset: 0;
-          background: rgba(0,0,0,0.9);
-          z-index: 200;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        .cal-lightbox img {
-          max-width: 95%;
-          max-height: 90vh;
-          object-fit: contain;
-          border-radius: 8px;
-        }
-        .cal-lightbox-close {
-          position: absolute;
-          top: calc(16px + var(--safe-top,0px));
-          right: 16px;
-          background: rgba(255,255,255,0.15);
-          border: none;
-          border-radius: 50%;
-          width: 40px; height: 40px;
-          color: white;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
+        .cal-legend { display:flex; gap:14px; justify-content:center; margin: 12px 14px 0; }
+        .cal-leg { display:flex; align-items:center; gap:5px; font-size: 11px; color: var(--text-muted); font-family: var(--font-body); }
 
-        .cal-empty {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          padding: 60px 20px;
-          gap: 12px;
-        }
-        .cal-empty-text {
-          font-family: var(--font-body);
-          font-size: 15px;
-          color: var(--text-muted);
-          text-align: center;
-          line-height: 1.6;
-        }
+        .cal-loading { display:flex; justify-content:center; padding: 50px; }
+
+        .cal-lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 200; display:flex; align-items:center; justify-content:center; }
+        .cal-lightbox img { max-width: 95%; max-height: 90vh; object-fit: contain; border-radius: 8px; }
+        .cal-lightbox-close { position:absolute; top: calc(16px + var(--safe-top,0px)); right:16px; background: rgba(255,255,255,0.15); border:none; border-radius:50%; width:40px; height:40px; color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; }
       `}</style>
 
       <div className="cal-wrap">
         <div className="cal-header">
-          <div className="cal-header-title">Наш календарь</div>
-          <div className="cal-header-sub">{events.length} событий · {upcoming.length} предстоящих</div>
-          <button className="cal-add-btn" onClick={() => setShowModal(true)}><IcoPlus /> Добавить событие</button>
+          <div className="cal-h-title">Наш календарь</div>
+          <div className="cal-h-sub">{events.length} событий · {photos.length} фото · {plans.filter(p => p.completed).length} выполнено</div>
+          <button className="cal-add-btn" onClick={openAdd}><IcoPlus /> Добавить событие</button>
         </div>
 
         {loading ? (
-          <div className="cal-empty"><LoadingHeart /></div>
-        ) : events.length === 0 ? (
-          <div className="cal-empty">
-            <IcoCalendarLg />
-            <p className="cal-empty-text">Пока нет событий.<br />Добавьте первое воспоминание!</p>
-          </div>
+          <div className="cal-loading"><LoadingHeart /></div>
         ) : (
           <>
-            {upcoming.length > 0 && (
-              <>
-                <div className="cal-section-label">Предстоящие</div>
-                {upcoming.map((ev, i) => <EventCard key={ev.id} event={ev} idx={i} session={session} onDelete={deleteEvent} onPhoto={setLightbox} />)}
-              </>
-            )}
-            {past.length > 0 && (
-              <>
-                <div className="cal-section-label">Прошедшие</div>
-                {past.map((ev, i) => <EventCard key={ev.id} event={ev} idx={i} session={session} onDelete={deleteEvent} onPhoto={setLightbox} past />)}
-              </>
-            )}
+            {/* Month grid */}
+            <div className="cal-card">
+              <div className="cal-monthbar">
+                <button className="cal-nav-btn" onClick={() => shiftMonth(-1)} aria-label="Назад"><IcoChevron dir="left" /></button>
+                <div className="cal-month-title">{MONTHS_FULL[view.m]} {view.y}</div>
+                <button className="cal-nav-btn" onClick={() => shiftMonth(1)} aria-label="Вперёд"><IcoChevron dir="right" /></button>
+              </div>
+              <div className="cal-weekdays">
+                {WEEKDAYS.map(w => <div key={w} className="cal-weekday">{w}</div>)}
+              </div>
+              <div className="cal-grid">
+                {cells.map((k, i) => {
+                  if (!k) return <div key={`e${i}`} className="cal-cell empty" />
+                  const d = byDay[k]
+                  const day = Number(k.slice(8))
+                  const isSel = k === selected
+                  const isToday = k === todayKey
+                  return (
+                    <button
+                      key={k}
+                      className={`cal-cell${isSel ? ' sel' : ''}${isToday && !isSel ? ' today' : ''}`}
+                      onClick={() => setSelected(k)}
+                    >
+                      <span>{day}</span>
+                      <span className="cal-dots">
+                        {d?.events.length > 0 && <span className="cal-dot ev" />}
+                        {d?.photos.length > 0 && <span className="cal-dot ph" />}
+                        {d?.plans.length > 0 && <span className="cal-dot pl" />}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            <div className="cal-legend">
+              <span className="cal-leg"><span className="cal-dot ev" /> События</span>
+              <span className="cal-leg"><span className="cal-dot ph" /> Фото</span>
+              <span className="cal-leg"><span className="cal-dot pl" /> Выполнено</span>
+            </div>
+
+            {/* Selected day detail */}
+            <div className="cal-card">
+              <div className="cal-day-title">{selDate.getDate()} {MONTHS_GEN[selDate.getMonth()]}</div>
+
+              {sel.events.length === 0 && sel.photos.length === 0 && sel.plans.length === 0 ? (
+                <div className="cal-empty-day">В этот день пока ничего нет</div>
+              ) : (
+                <>
+                  {sel.events.map(ev => (
+                    <div className="cal-row" key={`ev${ev.id}`}>
+                      {ev.photo_url
+                        ? <img className="cal-row-thumb" src={ev.photo_url} alt="" onClick={() => setLightbox(ev.photo_url)} />
+                        : <span className="cal-row-emoji">{ev.emoji || '📅'}</span>}
+                      <div className="cal-row-mid">
+                        <div className="cal-row-name">{ev.title}</div>
+                        {ev.description && <div className="cal-row-sub">{ev.description}</div>}
+                      </div>
+                      <span className="cal-row-tag ev">Событие</span>
+                      {ev.user_id === session.user.id && (
+                        <button className="cal-del" onClick={() => deleteEvent(ev.id)} aria-label="Удалить"><IcoTrash /></button>
+                      )}
+                    </div>
+                  ))}
+                  {sel.photos.map(p => (
+                    <div className="cal-row" key={`ph${p.id}`}>
+                      {(p.thumb_url || p.photo_url)
+                        ? <img className="cal-row-thumb" src={p.thumb_url || p.photo_url} alt="" onClick={() => setLightbox(p.photo_url || p.thumb_url)} />
+                        : <span className="cal-row-emoji">📷</span>}
+                      <div className="cal-row-mid">
+                        <div className="cal-row-name">{p.title || 'Момент'}</div>
+                      </div>
+                      <span className="cal-row-tag ph">Фото</span>
+                    </div>
+                  ))}
+                  {sel.plans.map(p => (
+                    <div className="cal-row" key={`pl${p.id}`}>
+                      <span className="cal-check"><IcoCheck /></span>
+                      <div className="cal-row-mid">
+                        <div className="cal-row-name">{p.title}</div>
+                        <div className="cal-row-sub">Выполнено</div>
+                      </div>
+                      <span className="cal-row-tag pl">План</span>
+                    </div>
+                  ))}
+                </>
+              )}
+            </div>
           </>
         )}
       </div>
 
-      {/* Lightbox */}
       {lightbox && (
         <div className="cal-lightbox" onClick={() => setLightbox(null)}>
           <button className="cal-lightbox-close"><IcoClose /></button>
@@ -449,7 +349,6 @@ export default function Calendar({ session, profile }) {
         </div>
       )}
 
-      {/* Modal */}
       {showModal && (
         <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) setShowModal(false) }}>
           <div className="modal">
@@ -492,49 +391,5 @@ export default function Calendar({ session, profile }) {
         </div>
       )}
     </>
-  )
-}
-
-function EventCard({ event, idx, session: _session, onDelete, onPhoto, past = false }) {
-  const { day, month } = formatEventDate(event.event_date)
-  const daysUntil = getDaysUntil(event.event_date)
-  const daysAgo = Math.abs(daysUntil)
-
-  let badgeText = ''
-  if (daysUntil === 0) { badgeText = 'Сегодня!' }
-  else if (daysUntil > 0) { badgeText = `через ${daysUntil} дн` }
-  else { badgeText = `${daysAgo} дн назад` }
-
-  return (
-    <div className="cal-event-card" style={{ animationDelay: `${idx * 0.05}s` }}>
-      {event.photo_url && (
-        <div className="cal-event-photo-wrap" onClick={() => onPhoto(event.photo_url)}>
-          <img className="cal-event-photo" src={event.photo_url} alt={event.title} loading="lazy"
-            onError={e => { e.currentTarget.parentElement.style.display='none' }} />
-          <div className={`cal-event-badge${past ? ' past' : ''}`}>{badgeText}</div>
-        </div>
-      )}
-      <div className="cal-event-body">
-        <div className="cal-date-pill">
-          <div className="cal-date-day">{day}</div>
-          <div className="cal-date-month">{month}</div>
-        </div>
-        <div className="cal-event-info">
-          <div className="cal-event-title">
-            <span>{event.emoji}</span>
-            <span>{event.title}</span>
-          </div>
-          {event.description && <div className="cal-event-desc">{event.description}</div>}
-          {!event.photo_url && (
-            <span className={`cal-event-countdown${daysUntil === 0 ? ' today' : past ? ' past-label' : ''}`}>
-              {badgeText}
-            </span>
-          )}
-        </div>
-        <button className="cal-del-btn" onClick={() => onDelete(event.id)} style={{ display:'flex', alignItems:'center', justifyContent:'center' }}>
-          <IcoTrash />
-        </button>
-      </div>
-    </div>
   )
 }

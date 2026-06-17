@@ -10,6 +10,7 @@ const Chat        = lazy(() => import('./components/Chat'))
 const Calendar    = lazy(() => import('./components/Calendar'))
 const Moments     = lazy(() => import('./components/Moments'))
 const Plans       = lazy(() => import('./components/Plans'))
+const SyncMirror  = lazy(() => import('./components/SyncMirror'))
 const Settings    = lazy(() => import('./components/Settings'))
 const AIAdvisor   = lazy(() => import('./components/AIAdvisor'))
 const Premium     = lazy(() => import('./components/Premium'))
@@ -267,6 +268,8 @@ export default function App() {
         return <Moments session={session} profile={profile} />
       case 'plans':
         return <Plans session={session} profile={profile} />
+      case 'mirror':
+        return <SyncMirror session={session} profile={profile} darkMode={darkMode} />
       case 'advisor':
         return <AIAdvisor session={session} profile={profile} darkMode={darkMode} />
       case 'premium':
@@ -288,10 +291,9 @@ export default function App() {
   }
 
   const getPaddingBottom = () => {
-    if (activeTab === 'chat') {
-      return 'calc(56px + env(safe-area-inset-bottom, 0px))'
-    }
-    return 0
+    // home & moments add their own bottom space; others must clear the floating dock
+    if (activeTab === 'home' || activeTab === 'moments') return 0
+    return 'calc(92px + env(safe-area-inset-bottom, 0px))'
   }
 
   const getPaddingTop = () => {

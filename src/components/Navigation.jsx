@@ -72,12 +72,12 @@ function Navigation({ activeTab, setActiveTab }) {
           left: 0; right: 0; bottom: 0;
           z-index: 50;
           display: flex;
-          height: calc(60px + env(safe-area-inset-bottom, 0px));
+          height: calc(50px + env(safe-area-inset-bottom, 0px));
           padding-bottom: env(safe-area-inset-bottom, 0px);
-          background: rgba(22, 11, 16, 0.86);
-          backdrop-filter: blur(22px) saturate(160%);
-          -webkit-backdrop-filter: blur(22px) saturate(160%);
-          border-top: 1px solid rgba(255,255,255,0.08);
+          background: rgba(18, 9, 13, 0.72);
+          backdrop-filter: blur(30px) saturate(180%);
+          -webkit-backdrop-filter: blur(30px) saturate(180%);
+          border-top: 0.5px solid rgba(255,255,255,0.12);
         }
         .navb-tab {
           flex: 1;
@@ -85,43 +85,36 @@ function Navigation({ activeTab, setActiveTab }) {
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          gap: 4px;
+          gap: 3px;
           background: none;
           border: none;
           cursor: pointer;
           position: relative;
           -webkit-tap-highlight-color: transparent;
-          color: rgba(255,255,255,0.5);
+          color: rgba(235,235,245,0.42);
           transition: color 0.2s ease;
-          padding-top: 6px;
+          padding-top: 7px;
         }
-        .navb-tab:active { transform: translateY(1px); }
         .navb-tab.active { color: #ff8da0; }
 
         .navb-icon-wrap {
-          width: 52px; height: 30px;
-          border-radius: 16px;
           display: flex; align-items: center; justify-content: center;
-          position: relative;
-          transition: background 0.25s ease;
-        }
-        .navb-tab.active .navb-icon-wrap {
-          background: linear-gradient(135deg, rgba(255,141,160,0.26), rgba(216,69,107,0.18));
+          height: 26px;
         }
         .navb-icon-wrap svg {
-          width: 24px; height: 24px;
-          transition: transform 0.28s cubic-bezier(0.34,1.56,0.64,1);
+          width: 26px; height: 26px;
+          transition: transform 0.2s ease;
         }
-        .navb-tab.active .navb-icon-wrap svg { transform: translateY(-1px) scale(1.06); }
+        .navb-tab:active .navb-icon-wrap svg { transform: scale(0.86); }
 
         .navb-label {
           font-family: var(--font-body, sans-serif);
-          font-size: 10.5px;
+          font-size: 10px;
           font-weight: 500;
-          letter-spacing: 0.1px;
+          letter-spacing: 0.2px;
           line-height: 1;
         }
-        .navb-tab.active .navb-label { font-weight: 700; }
+        .navb-tab.active .navb-label { font-weight: 600; }
       `}</style>
 
       <nav className="nav-bar">

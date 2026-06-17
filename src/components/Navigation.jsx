@@ -40,28 +40,22 @@ export default function Navigation({ activeTab, setActiveTab }) {
   const refs = useRef([])
   const BASE = useRef(ITEMS.map(() => 1)).current
   const [scales, setScales] = useState(BASE)
-  const [focus, setFocus] = useState(-1)
   const current = EXTRA.includes(activeTab) ? 'settings' : activeTab
 
   function magnify(clientX) {
-    let best = -1, bestS = 1.001
-    const next = refs.current.map((el, i) => {
+    const next = refs.current.map(el => {
       if (!el) return 1
       const r = el.getBoundingClientRect()
       const c = r.left + r.width / 2
       const d = Math.abs(clientX - c)
       const t = Math.max(0, 1 - d / INFLUENCE)
-      const s = 1 + (MAX - 1) * t
-      if (s > bestS) { bestS = s; best = i }
-      return s
+      return 1 + (MAX - 1) * t
     })
     setScales(next)
-    setFocus(best)
   }
 
   function clearMag() {
     setScales(BASE)
-    setFocus(-1)
   }
 
   function pick(id) {
@@ -75,59 +69,55 @@ export default function Navigation({ activeTab, setActiveTab }) {
         .dock {
           position: fixed;
           left: 50%;
-          bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+          bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
           transform: translateX(-50%);
           z-index: 50;
           display: flex;
           align-items: flex-end;
-          gap: 4px;
-          padding: 9px 12px;
-          border-radius: 26px;
-          background: rgba(24, 12, 18, 0.62);
+          gap: 2px;
+          padding: 7px 8px;
+          border-radius: 22px;
+          background: rgba(24, 12, 18, 0.66);
           backdrop-filter: blur(28px) saturate(180%);
           -webkit-backdrop-filter: blur(28px) saturate(180%);
-          border: 1px solid rgba(255,255,255,0.14);
-          box-shadow: 0 16px 44px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.10);
+          border: 1px solid rgba(255,255,255,0.13);
+          box-shadow: 0 14px 38px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.10);
           touch-action: none;
         }
         .dk-item {
-          width: 46px; height: 46px;
+          width: 48px;
           flex-shrink: 0;
-          display: flex; align-items: center; justify-content: center;
+          display: flex; flex-direction: column;
+          align-items: center; justify-content: flex-end;
+          gap: 2px;
           background: none; border: none; padding: 0; cursor: pointer;
           position: relative;
           -webkit-tap-highlight-color: transparent;
         }
         .dk-ic {
-          width: 46px; height: 46px;
-          border-radius: 14px;
+          width: 38px; height: 38px;
+          border-radius: 12px;
           display: flex; align-items: center; justify-content: center;
           color: rgba(235,235,245,0.5);
           transform-origin: center bottom;
           transition: transform 0.18s cubic-bezier(0.22,1,0.36,1), color 0.2s ease, background 0.2s ease;
           will-change: transform;
         }
-        .dk-ic svg { width: 24px; height: 24px; }
+        .dk-ic svg { width: 22px; height: 22px; }
         .dk-item.active .dk-ic {
           color: #ff8da0;
           background: linear-gradient(160deg, rgba(255,141,160,0.22), rgba(216,69,107,0.14));
-          transform: translateY(-3px) scale(1.12);
+          transform: translateY(-2px) scale(1.06);
         }
         .dk-label {
-          position: absolute;
-          top: -30px; left: 50%;
-          transform: translateX(-50%) translateY(6px);
-          background: rgba(20,10,15,0.92);
-          border: 1px solid rgba(255,255,255,0.12);
-          color: #fff;
           font-family: var(--font-body, sans-serif);
-          font-size: 11px; font-weight: 600;
-          padding: 4px 10px; border-radius: 10px;
+          font-size: 9px; font-weight: 600; line-height: 1;
+          letter-spacing: 0.1px;
+          color: rgba(235,235,245,0.45);
           white-space: nowrap;
-          opacity: 0; pointer-events: none;
-          transition: opacity 0.16s ease, transform 0.16s ease;
+          transition: color 0.2s ease;
         }
-        .dk-item.show .dk-label { opacity: 1; transform: translateX(-50%) translateY(0); }
+        .dk-item.active .dk-label { color: #ff8da0; }
       `}</style>
 
       <nav
@@ -141,7 +131,6 @@ export default function Navigation({ activeTab, setActiveTab }) {
       >
         {ITEMS.map(({ id, label, Icon }, i) => {
           const isActive = current === id
-          const show = focus === i || (focus === -1 && isActive)
           const s = scales[i] || 1
           const icStyle = s > 1.001
             ? { transform: `translateY(${-(s - 1) * RISE}px) scale(${s})` }
@@ -150,7 +139,7 @@ export default function Navigation({ activeTab, setActiveTab }) {
             <button
               key={id}
               ref={el => { refs.current[i] = el }}
-              className={`dk-item${isActive ? ' active' : ''}${show ? ' show' : ''}`}
+              className={`dk-item${isActive ? ' active' : ''}`}
               onClick={() => pick(id)}
               aria-label={label}
             >

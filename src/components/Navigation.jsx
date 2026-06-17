@@ -1,134 +1,150 @@
-import { memo } from 'react'
+import { useRef, useState } from 'react'
 
-/* ── Tab icons — stroke-based, clean ── */
-function IconHome({ active }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" strokeLinecap="round" strokeLinejoin="round"
-      stroke="currentColor" strokeWidth={active ? '2' : '1.7'}>
-      <path d="M3 11.5L12 4l9 7.5" />
-      <path d="M5 9.8V21h5v-5.5h4V21h5V9.8" />
-    </svg>
-  )
+/* ── Icons ── */
+function IHome() {
+  return (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11.5L12 4l9 7.5" /><path d="M5 9.8V21h5v-5.5h4V21h5V9.8" /></svg>)
 }
-function IconChat({ active }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" strokeLinecap="round" strokeLinejoin="round"
-      stroke="currentColor" strokeWidth={active ? '2' : '1.7'}>
-      <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
-    </svg>
-  )
+function IChat() {
+  return (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" /></svg>)
 }
-function IconCamera({ active }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" strokeLinecap="round" strokeLinejoin="round"
-      stroke="currentColor" strokeWidth={active ? '2' : '1.7'}>
-      <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
-      <circle cx="12" cy="13" r="4" />
-    </svg>
-  )
+function ICamera() {
+  return (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" /><circle cx="12" cy="13" r="4" /></svg>)
 }
-function IconCalendar({ active }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" strokeLinecap="round" strokeLinejoin="round"
-      stroke="currentColor" strokeWidth={active ? '2' : '1.7'}>
-      <rect x="3" y="4" width="18" height="17" rx="2" />
-      <line x1="8" y1="2" x2="8" y2="6" />
-      <line x1="16" y1="2" x2="16" y2="6" />
-      <line x1="3" y1="10" x2="21" y2="10" />
-    </svg>
-  )
+function ICalendar() {
+  return (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="17" rx="2" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>)
 }
-function IconPerson({ active }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" strokeLinecap="round" strokeLinejoin="round"
-      stroke="currentColor" strokeWidth={active ? '2' : '1.7'}>
-      <circle cx="12" cy="8" r="4" />
-      <path d="M4 20c0-4.4 3.6-8 8-8s8 3.6 8 8" />
-    </svg>
-  )
+function IPlans() {
+  return (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="10" y1="6" x2="20" y2="6" /><line x1="10" y1="12" x2="20" y2="12" /><line x1="10" y1="18" x2="20" y2="18" /><polyline points="4,6 5.5,7.5 8,5" /><polyline points="4,12 5.5,13.5 8,11" /><circle cx="6" cy="18" r="1.6" /></svg>)
+}
+function IPerson() {
+  return (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4" /><path d="M4 20c0-4.4 3.6-8 8-8s8 3.6 8 8" /></svg>)
 }
 
-/* 5 direct destinations — nothing hidden, no popups */
-const TABS = [
-  { id: 'home',     label: 'Главная', Icon: IconHome     },
-  { id: 'chat',     label: 'Чат',     Icon: IconChat     },
-  { id: 'moments',  label: 'Фото',    Icon: IconCamera   },
-  { id: 'calendar', label: 'Дни',     Icon: IconCalendar },
-  { id: 'settings', label: 'Профиль', Icon: IconPerson   },
+const ITEMS = [
+  { id: 'home',     label: 'Главная', Icon: IHome     },
+  { id: 'chat',     label: 'Чат',     Icon: IChat     },
+  { id: 'moments',  label: 'Фото',    Icon: ICamera   },
+  { id: 'calendar', label: 'Дни',     Icon: ICalendar },
+  { id: 'plans',    label: 'Планы',   Icon: IPlans    },
+  { id: 'settings', label: 'Профиль', Icon: IPerson   },
 ]
 
-// Sections reachable from the Профиль screen (kept routable)
-export const EXTRA_SECTIONS = ['advisor', 'plans', 'premium']
+// Sections that live inside the Профиль screen — keep Профиль highlighted for them
+const EXTRA = ['advisor', 'premium', 'mirror']
 
-function Navigation({ activeTab, setActiveTab }) {
-  // map extra sections onto the Профиль tab so it stays highlighted there
-  const current = EXTRA_SECTIONS.includes(activeTab) ? 'settings' : activeTab
+const MAX = 1.62      // peak magnification
+const INFLUENCE = 78  // px radius of the magnify falloff
+const RISE = 24       // px the icon lifts at peak
+
+export default function Navigation({ activeTab, setActiveTab }) {
+  const refs = useRef([])
+  const [focus, setFocus] = useState(-1)
+  const current = EXTRA.includes(activeTab) ? 'settings' : activeTab
+
+  function magnify(clientX) {
+    let best = -1, bestD = Infinity
+    refs.current.forEach((el, i) => {
+      if (!el) return
+      const r = el.getBoundingClientRect()
+      const c = r.left + r.width / 2
+      const d = Math.abs(clientX - c)
+      const t = Math.max(0, 1 - d / INFLUENCE)
+      const s = 1 + (MAX - 1) * t
+      const ic = el.firstChild
+      if (ic) ic.style.transform = `translateY(${-(s - 1) * RISE}px) scale(${s})`
+      if (d < bestD) { bestD = d; best = i }
+    })
+    setFocus(bestD < INFLUENCE ? best : -1)
+  }
+
+  function clearMag() {
+    refs.current.forEach(el => { if (el?.firstChild) el.firstChild.style.transform = '' })
+    setFocus(-1)
+  }
 
   return (
     <>
       <style>{`
-        .nav-bar {
+        .dock {
           position: fixed;
-          left: 0; right: 0; bottom: 0;
+          left: 50%;
+          bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+          transform: translateX(-50%);
           z-index: 50;
           display: flex;
-          height: calc(50px + env(safe-area-inset-bottom, 0px));
-          padding-bottom: env(safe-area-inset-bottom, 0px);
-          background: rgba(18, 9, 13, 0.72);
-          backdrop-filter: blur(30px) saturate(180%);
-          -webkit-backdrop-filter: blur(30px) saturate(180%);
-          border-top: 0.5px solid rgba(255,255,255,0.12);
+          align-items: flex-end;
+          gap: 4px;
+          padding: 9px 12px;
+          border-radius: 26px;
+          background: rgba(24, 12, 18, 0.62);
+          backdrop-filter: blur(28px) saturate(180%);
+          -webkit-backdrop-filter: blur(28px) saturate(180%);
+          border: 1px solid rgba(255,255,255,0.14);
+          box-shadow: 0 16px 44px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.10);
+          touch-action: none;
         }
-        .navb-tab {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          gap: 3px;
-          background: none;
-          border: none;
-          cursor: pointer;
+        .dk-item {
+          width: 46px; height: 46px;
+          flex-shrink: 0;
+          display: flex; align-items: center; justify-content: center;
+          background: none; border: none; padding: 0; cursor: pointer;
           position: relative;
           -webkit-tap-highlight-color: transparent;
-          color: rgba(235,235,245,0.42);
-          transition: color 0.2s ease;
-          padding-top: 7px;
         }
-        .navb-tab.active { color: #ff8da0; }
-
-        .navb-icon-wrap {
+        .dk-ic {
+          width: 46px; height: 46px;
+          border-radius: 14px;
           display: flex; align-items: center; justify-content: center;
-          height: 26px;
+          color: rgba(235,235,245,0.5);
+          transform-origin: center bottom;
+          transition: transform 0.18s cubic-bezier(0.22,1,0.36,1), color 0.2s ease, background 0.2s ease;
+          will-change: transform;
         }
-        .navb-icon-wrap svg {
-          width: 26px; height: 26px;
-          transition: transform 0.2s ease;
+        .dk-ic svg { width: 24px; height: 24px; }
+        .dk-item.active .dk-ic {
+          color: #ff8da0;
+          background: linear-gradient(160deg, rgba(255,141,160,0.22), rgba(216,69,107,0.14));
+          transform: translateY(-3px) scale(1.12);
         }
-        .navb-tab:active .navb-icon-wrap svg { transform: scale(0.86); }
-
-        .navb-label {
+        .dk-label {
+          position: absolute;
+          top: -30px; left: 50%;
+          transform: translateX(-50%) translateY(6px);
+          background: rgba(20,10,15,0.92);
+          border: 1px solid rgba(255,255,255,0.12);
+          color: #fff;
           font-family: var(--font-body, sans-serif);
-          font-size: 10px;
-          font-weight: 500;
-          letter-spacing: 0.2px;
-          line-height: 1;
+          font-size: 11px; font-weight: 600;
+          padding: 4px 10px; border-radius: 10px;
+          white-space: nowrap;
+          opacity: 0; pointer-events: none;
+          transition: opacity 0.16s ease, transform 0.16s ease;
         }
-        .navb-tab.active .navb-label { font-weight: 600; }
+        .dk-item.show .dk-label { opacity: 1; transform: translateX(-50%) translateY(0); }
       `}</style>
 
-      <nav className="nav-bar">
-        {TABS.map(({ id, label, Icon }) => {
+      <nav
+        className="dock"
+        onMouseMove={e => magnify(e.clientX)}
+        onMouseLeave={clearMag}
+        onTouchStart={e => magnify(e.touches[0].clientX)}
+        onTouchMove={e => magnify(e.touches[0].clientX)}
+        onTouchEnd={clearMag}
+        onTouchCancel={clearMag}
+      >
+        {ITEMS.map(({ id, label, Icon }, i) => {
           const isActive = current === id
+          const show = focus === i || (focus === -1 && isActive)
           return (
             <button
               key={id}
-              className={`navb-tab${isActive ? ' active' : ''}`}
+              ref={el => { refs.current[i] = el }}
+              className={`dk-item${isActive ? ' active' : ''}${show ? ' show' : ''}`}
               onClick={() => setActiveTab(id)}
-              aria-current={isActive ? 'page' : undefined}
+              aria-label={label}
             >
-              <span className="navb-icon-wrap"><Icon active={isActive} /></span>
-              <span className="navb-label">{label}</span>
+              <span className="dk-ic"><Icon /></span>
+              <span className="dk-label">{label}</span>
             </button>
           )
         })}
@@ -136,5 +152,3 @@ function Navigation({ activeTab, setActiveTab }) {
     </>
   )
 }
-
-export default memo(Navigation)

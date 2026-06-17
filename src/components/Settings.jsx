@@ -689,9 +689,9 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
         <div className="settings-section">
           <div className="settings-section-title">Разделы</div>
           {[
-            ['advisor', 'Советник', '🧭'],
-            ['plans',   'Планы',    '🎯'],
-            ['premium', 'Premium',  '⭐'],
+            ['advisor', 'Советник',   '🧭'],
+            ['mirror',  'Вопрос дня', '❓'],
+            ['premium', 'Premium',    '⭐'],
           ].map(([id, label, ic], i, arr) => (
             <button
               key={id}

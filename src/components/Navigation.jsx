@@ -32,34 +32,41 @@ const ITEMS = [
 // Sections that live inside the Профиль screen — keep Профиль highlighted for them
 const EXTRA = ['advisor', 'premium', 'mirror']
 
-const MAX = 1.62      // peak magnification
-const INFLUENCE = 78  // px radius of the magnify falloff
-const RISE = 24       // px the icon lifts at peak
+const MAX = 1.4       // peak magnification (gentle)
+const INFLUENCE = 70  // px radius of the magnify falloff
+const RISE = 14       // px the icon lifts at peak
 
 export default function Navigation({ activeTab, setActiveTab }) {
   const refs = useRef([])
+  const BASE = useRef(ITEMS.map(() => 1)).current
+  const [scales, setScales] = useState(BASE)
   const [focus, setFocus] = useState(-1)
   const current = EXTRA.includes(activeTab) ? 'settings' : activeTab
 
   function magnify(clientX) {
-    let best = -1, bestD = Infinity
-    refs.current.forEach((el, i) => {
-      if (!el) return
+    let best = -1, bestS = 1.001
+    const next = refs.current.map((el, i) => {
+      if (!el) return 1
       const r = el.getBoundingClientRect()
       const c = r.left + r.width / 2
       const d = Math.abs(clientX - c)
       const t = Math.max(0, 1 - d / INFLUENCE)
       const s = 1 + (MAX - 1) * t
-      const ic = el.firstChild
-      if (ic) ic.style.transform = `translateY(${-(s - 1) * RISE}px) scale(${s})`
-      if (d < bestD) { bestD = d; best = i }
+      if (s > bestS) { bestS = s; best = i }
+      return s
     })
-    setFocus(bestD < INFLUENCE ? best : -1)
+    setScales(next)
+    setFocus(best)
   }
 
   function clearMag() {
-    refs.current.forEach(el => { if (el?.firstChild) el.firstChild.style.transform = '' })
+    setScales(BASE)
     setFocus(-1)
+  }
+
+  function pick(id) {
+    setActiveTab(id)
+    clearMag()
   }
 
   return (
@@ -135,15 +142,19 @@ export default function Navigation({ activeTab, setActiveTab }) {
         {ITEMS.map(({ id, label, Icon }, i) => {
           const isActive = current === id
           const show = focus === i || (focus === -1 && isActive)
+          const s = scales[i] || 1
+          const icStyle = s > 1.001
+            ? { transform: `translateY(${-(s - 1) * RISE}px) scale(${s})` }
+            : undefined
           return (
             <button
               key={id}
               ref={el => { refs.current[i] = el }}
               className={`dk-item${isActive ? ' active' : ''}${show ? ' show' : ''}`}
-              onClick={() => setActiveTab(id)}
+              onClick={() => pick(id)}
               aria-label={label}
             >
-              <span className="dk-ic"><Icon /></span>
+              <span className="dk-ic" style={icStyle}><Icon /></span>
               <span className="dk-label">{label}</span>
             </button>
           )

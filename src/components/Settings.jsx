@@ -243,7 +243,7 @@ function PartnerSection({ profile }) {
   )
 }
 
-export default function Settings({ session, profile, darkMode, toggleDarkMode, onProfileUpdate }) {
+export default function Settings({ session, profile, darkMode, toggleDarkMode, onProfileUpdate, onNavigate }) {
   const [name, setName] = useState(profile?.name || '')
   const [birthday, setBirthday] = useState(profile?.birthday || '')
   const [coupleStart, setCoupleStart] = useState(profile?.couple_start_date || '')
@@ -683,6 +683,32 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
               <div className="settings-chip">{formatBirthday(birthday)}</div>
             </div>
           )}
+        </div>
+
+        {/* Разделы (вынесены из нижней панели для простоты) */}
+        <div className="settings-section">
+          <div className="settings-section-title">Разделы</div>
+          {[
+            ['advisor', 'Советник', '🧭'],
+            ['plans',   'Планы',    '🎯'],
+            ['premium', 'Premium',  '⭐'],
+          ].map(([id, label, ic], i, arr) => (
+            <button
+              key={id}
+              onClick={() => onNavigate?.(id)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 12, width: '100%',
+                padding: '15px 2px', background: 'none', border: 'none',
+                borderBottom: i < arr.length - 1 ? '1px solid var(--border)' : 'none',
+                cursor: 'pointer', color: 'var(--text)', font: 'inherit', fontSize: 15,
+                WebkitTapHighlightColor: 'transparent',
+              }}
+            >
+              <span style={{ fontSize: 19, width: 26, textAlign: 'center' }}>{ic}</span>
+              <span style={{ flex: 1, textAlign: 'left' }}>{label}</span>
+              <span style={{ color: 'var(--text-muted)', fontSize: 22, lineHeight: 1 }}>›</span>
+            </button>
+          ))}
         </div>
 
         {/* Profile */}

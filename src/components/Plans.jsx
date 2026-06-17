@@ -173,7 +173,9 @@ export default function Plans({ session, profile }) {
       setConfetti(true)
       setTimeout(() => setConfetti(false), 2000)
     }
-    const { error } = await supabase.from('plans').update({ completed: newVal }).eq('id', plan.id)
+    const completed_at = newVal ? new Date().toISOString() : null
+    setPlans(prev => prev.map(p => p.id === plan.id ? { ...p, completed_at } : p))
+    const { error } = await supabase.from('plans').update({ completed: newVal, completed_at }).eq('id', plan.id)
     if (error) {
       // Откатываем если не удалось
       setPlans(prev => prev.map(p => p.id === plan.id ? { ...p, completed: !newVal } : p))

@@ -35,6 +35,16 @@ const MONTHS_GEN = ['января','февраля','марта','апреля',
 const WEEKDAYS = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс']
 const EMOJIS = ['❤️','🥰','🎉','🎂','🎬','🍕','✈️','🌅','🎵','💐','🏖️','🎄','🌸','🎭','🌙','⭐']
 
+/* Mood of the day */
+const DAY_MOODS = [
+  { e: '🥰', label: 'Любовь' },
+  { e: '😊', label: 'Хорошо' },
+  { e: '😌', label: 'Спокойно' },
+  { e: '🔥', label: 'Страсть' },
+  { e: '😕', label: 'Так себе' },
+  { e: '😢', label: 'Грустно' },
+]
+
 function keyOf(d) {
   const x = new Date(d)
   return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`
@@ -47,6 +57,7 @@ export default function Calendar({ session, profile }) {
   const [events, setEvents] = useState([])
   const [photos, setPhotos] = useState([])
   const [plans, setPlans] = useState([])
+  const [moods, setMoods] = useState([])
   const [loading, setLoading] = useState(true)
   const [view, setView] = useState(() => { const n = new Date(); return { y: n.getFullYear(), m: n.getMonth() } })
   const [selected, setSelected] = useState(() => keyOf(new Date()))
@@ -65,28 +76,49 @@ export default function Calendar({ session, profile }) {
     const ids = [uid, pid].filter(Boolean)
     if (!ids.length) { setLoading(false); return }
     const scoped = (q) => ids.length === 1 ? q.eq('user_id', ids[0]) : q.in('user_id', ids)
-    const [ev, mo, pl] = await Promise.all([
+    const [ev, mo, pl, md] = await Promise.all([
       scoped(supabase.from('calendar_events').select('*')),
       scoped(supabase.from('moments').select('id,title,photo_url,thumb_url,created_at,mood')),
       scoped(supabase.from('plans').select('id,title,completed,completed_at,created_at')),
+      scoped(supabase.from('day_moods').select('id,user_id,day,mood,note')),
     ])
     setEvents(ev.data || [])
     setPhotos(mo.data || [])
     setPlans(pl.data || [])
+    setMoods(md.data || [])
     setLoading(false)
   }, [uid, pid])
 
   useEffect(() => { load() }, [load])
 
-  /* day -> { events, photos, plans } */
+  /* day -> { events, photos, plans, moods } */
   const byDay = useMemo(() => {
     const map = {}
-    const add = (k, type, item) => { (map[k] ??= { events: [], photos: [], plans: [] })[type].push(item) }
+    const add = (k, type, item) => { (map[k] ??= { events: [], photos: [], plans: [], moods: [] })[type].push(item) }
     events.forEach(e => e.event_date && add(keyOf(e.event_date), 'events', e))
     photos.forEach(p => p.created_at && add(keyOf(p.created_at), 'photos', p))
     plans.forEach(p => { if (p.completed && p.completed_at) add(keyOf(p.completed_at), 'plans', p) })
+    moods.forEach(m => m.day && add(keyOf(m.day), 'moods', m))
     return map
-  }, [events, photos, plans])
+  }, [events, photos, plans, moods])
+
+  async function saveMood(emoji) {
+    const day = selected
+    const mine = moods.find(m => m.user_id === uid && keyOf(m.day) === day)
+    const next = mine && mine.mood === emoji ? null : emoji  // tap again to clear
+    // optimistic
+    setMoods(prev => {
+      const rest = prev.filter(m => !(m.user_id === uid && keyOf(m.day) === day))
+      return next ? [...rest, { id: mine?.id || `tmp-${day}`, user_id: uid, day, mood: next }] : rest
+    })
+    if (next) {
+      const payload = { user_id: uid, day, mood: next, updated_at: new Date().toISOString() }
+      if (profile?.couple_id) payload.couple_id = profile.couple_id
+      await supabase.from('day_moods').upsert(payload, { onConflict: 'user_id,day' })
+    } else if (mine?.id) {
+      await supabase.from('day_moods').delete().eq('user_id', uid).eq('day', day)
+    }
+  }
 
   /* grid cells (Monday-first) */
   const cells = useMemo(() => {
@@ -100,8 +132,11 @@ export default function Calendar({ session, profile }) {
   }, [view])
 
   const todayKey = keyOf(new Date())
-  const sel = byDay[selected] || { events: [], photos: [], plans: [] }
+  const sel = byDay[selected] || { events: [], photos: [], plans: [], moods: [] }
   const selDate = new Date(selected)
+  const myMood = sel.moods.find(m => m.user_id === uid)?.mood || null
+  const partnerMood = sel.moods.find(m => m.user_id !== uid)?.mood || null
+  const WD_FULL = ['воскресенье','понедельник','вторник','среда','четверг','пятница','суббота']
 
   function shiftMonth(delta) {
     setView(v => {
@@ -209,7 +244,27 @@ export default function Calendar({ session, profile }) {
         .cal-dot.ph { background: #5ec6c6; }
         .cal-dot.pl { background: #54df86; }
 
-        .cal-day-title { font-family: var(--font-display); font-size: 19px; color: var(--text); margin-bottom: 12px; }
+        .cal-card { animation: calCardIn 0.32s cubic-bezier(0.22,1,0.36,1) both; }
+        @keyframes calCardIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .cal-cell-mood { position: absolute; top: 3px; right: 5px; font-size: 11px; line-height: 1; }
+        .cal-day-title { font-family: var(--font-display); font-size: 20px; color: var(--text); margin-bottom: 12px; display:flex; align-items:baseline; gap:8px; }
+        .cal-day-wd { font-family: var(--font-body); font-size: 12px; color: var(--text-muted); text-transform: capitalize; }
+
+        /* mood of the day */
+        .cal-mood-box { padding: 12px; border-radius: 16px; background: var(--surface-2, rgba(255,255,255,0.05)); margin-bottom: 14px; }
+        .cal-mood-q { font-size: 12px; color: var(--text-muted); font-family: var(--font-body); margin-bottom: 8px; }
+        .cal-mood-row { display:flex; gap: 6px; justify-content: space-between; }
+        .cal-mood-btn {
+          flex: 1; aspect-ratio: 1; max-width: 46px;
+          border-radius: 12px; border: 1.5px solid transparent;
+          background: rgba(255,255,255,0.06); cursor: pointer;
+          font-size: 20px; line-height: 1;
+          transition: transform 0.15s ease, background 0.2s, border-color 0.2s;
+          -webkit-tap-highlight-color: transparent;
+        }
+        .cal-mood-btn:active { transform: scale(0.88); }
+        .cal-mood-btn.on { background: rgba(255,141,160,0.22); border-color: rgba(255,141,160,0.7); transform: scale(1.06); }
+        .cal-mood-partner { margin-top: 9px; font-size: 12px; color: var(--text-soft, var(--text-muted)); font-family: var(--font-body); }
         .cal-row {
           display:flex; align-items:center; gap: 12px; padding: 10px 0;
           border-bottom: 1px solid var(--border, rgba(255,255,255,0.06));
@@ -234,9 +289,11 @@ export default function Calendar({ session, profile }) {
 
         .cal-loading { display:flex; justify-content:center; padding: 50px; }
 
-        .cal-lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 200; display:flex; align-items:center; justify-content:center; }
-        .cal-lightbox img { max-width: 95%; max-height: 90vh; object-fit: contain; border-radius: 8px; }
-        .cal-lightbox-close { position:absolute; top: calc(16px + var(--safe-top,0px)); right:16px; background: rgba(255,255,255,0.15); border:none; border-radius:50%; width:40px; height:40px; color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+        .cal-lightbox { position: fixed; inset: 0; background: rgba(8,3,6,0.92); z-index: 200; display:flex; align-items:center; justify-content:center; padding: 20px; animation: lbFade 0.22s ease; }
+        @keyframes lbFade { from { opacity: 0; } to { opacity: 1; } }
+        .cal-lightbox img { max-width: 100%; max-height: 88vh; object-fit: contain; border-radius: 14px; box-shadow: 0 24px 70px rgba(0,0,0,0.7); animation: lbZoom 0.3s cubic-bezier(0.22,1,0.36,1); }
+        @keyframes lbZoom { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
+        .cal-lightbox-close { position:absolute; top: calc(16px + var(--safe-top,0px)); right:16px; background: rgba(255,255,255,0.16); backdrop-filter: blur(10px); border:none; border-radius:50%; width:40px; height:40px; color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; }
       `}</style>
 
       <div className="cal-wrap">
@@ -267,12 +324,14 @@ export default function Calendar({ session, profile }) {
                   const day = Number(k.slice(8))
                   const isSel = k === selected
                   const isToday = k === todayKey
+                  const moodE = d?.moods?.length ? d.moods[0].mood : null
                   return (
                     <button
                       key={k}
                       className={`cal-cell${isSel ? ' sel' : ''}${isToday && !isSel ? ' today' : ''}`}
                       onClick={() => setSelected(k)}
                     >
+                      {moodE && <span className="cal-cell-mood">{moodE}</span>}
                       <span>{day}</span>
                       <span className="cal-dots">
                         {d?.events.length > 0 && <span className="cal-dot ev" />}
@@ -292,11 +351,29 @@ export default function Calendar({ session, profile }) {
             </div>
 
             {/* Selected day detail */}
-            <div className="cal-card">
-              <div className="cal-day-title">{selDate.getDate()} {MONTHS_GEN[selDate.getMonth()]}</div>
+            <div className="cal-card" key={selected}>
+              <div className="cal-day-title">{selDate.getDate()} {MONTHS_GEN[selDate.getMonth()]}<span className="cal-day-wd">{WD_FULL[selDate.getDay()]}</span></div>
+
+              {/* Mood of the day */}
+              <div className="cal-mood-box">
+                <div className="cal-mood-q">Каким был день?</div>
+                <div className="cal-mood-row">
+                  {DAY_MOODS.map(m => (
+                    <button
+                      key={m.e}
+                      className={`cal-mood-btn${myMood === m.e ? ' on' : ''}`}
+                      onClick={() => saveMood(m.e)}
+                      title={m.label}
+                    >{m.e}</button>
+                  ))}
+                </div>
+                {partnerMood && (
+                  <div className="cal-mood-partner">{partnerMood} — настроение партнёра</div>
+                )}
+              </div>
 
               {sel.events.length === 0 && sel.photos.length === 0 && sel.plans.length === 0 ? (
-                <div className="cal-empty-day">В этот день пока ничего нет</div>
+                <div className="cal-empty-day">В этот день нет событий, фото и планов</div>
               ) : (
                 <>
                   {sel.events.map(ev => (

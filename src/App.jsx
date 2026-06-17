@@ -279,6 +279,7 @@ export default function App() {
             darkMode={darkMode}
             toggleDarkMode={toggleDarkMode}
             onProfileUpdate={reloadProfile}
+            onNavigate={setActiveTab}
           />
         )
       default:

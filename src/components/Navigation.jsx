@@ -189,68 +189,72 @@ export default function Navigation({ activeTab, setActiveTab }) {
           border-top-color: rgba(255,255,255,0.08);
         }
 
-        /* ── Individual tab button ── */
+        /* ── Individual tab button (expanding active pill) ── */
         .nav-tab {
           flex: 1;
+          min-width: 0;
           display: flex;
-          flex-direction: column;
+          flex-direction: row;
           align-items: center;
           justify-content: center;
-          padding: 7px 2px 8px;
+          padding: 0 4px;
           cursor: pointer;
           background: none;
           border: none;
-          gap: 3px;
           position: relative;
           -webkit-tap-highlight-color: transparent;
           outline: none;
-          transition: opacity 0.15s;
+          transition: flex-grow 0.34s cubic-bezier(0.22,1,0.36,1);
         }
-        .nav-tab:active { opacity: 0.65; }
+        .nav-tab.active { flex-grow: 2.3; }
+        .nav-tab:active .nav-tab-icon { transform: scale(0.86); }
 
-        /* Pill background that grows when active */
+        /* Pill background of the active tab */
         .nav-tab-pill {
           position: absolute;
-          top: 6px; left: 50%;
-          transform: translateX(-50%) scale(0);
-          width: 48px; height: 30px;
-          border-radius: 15px;
-          background: rgba(255,155,176,0.16);
-          transition: transform 0.28s cubic-bezier(0.22,1,0.36,1);
+          inset: 9px 6px;
+          border-radius: 999px;
+          background: linear-gradient(135deg, rgba(255,141,160,0.24), rgba(216,69,107,0.16));
+          border: 1px solid rgba(255,155,176,0.34);
+          box-shadow: 0 4px 14px rgba(216,69,107,0.18) inset;
+          opacity: 0;
+          transform: scale(0.7);
+          transition: opacity 0.24s ease, transform 0.34s cubic-bezier(0.34,1.56,0.64,1);
           pointer-events: none;
         }
-        .app.dark .nav-tab-pill {
-          background: rgba(255,155,176,0.14);
-        }
-        .nav-tab.active .nav-tab-pill {
-          transform: translateX(-50%) scale(1);
-        }
+        .nav-tab.active .nav-tab-pill { opacity: 1; transform: scale(1); }
 
         .nav-tab-icon {
           display: flex;
           align-items: center;
           justify-content: center;
-          width: 28px; height: 28px;
+          width: 26px; height: 26px;
           position: relative; z-index: 1;
-          transition: transform 0.25s cubic-bezier(0.22,1,0.36,1);
+          flex-shrink: 0;
+          transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1), color 0.2s;
           color: var(--muted, #8A8480);
         }
-        .nav-tab-icon svg { width: 22px; height: 22px; }
-        .nav-tab.active .nav-tab-icon { transform: translateY(-1px); }
+        .nav-tab-icon svg { width: 23px; height: 23px; }
+        .nav-tab.active .nav-tab-icon { color: var(--rose, #A8283C); }
 
         .nav-tab-label {
           font-family: var(--font-body);
-          font-size: 10px;
-          font-weight: 400;
+          font-size: 12.5px;
+          font-weight: 600;
           letter-spacing: 0.1px;
-          color: var(--muted, #8A8480);
-          transition: color 0.2s;
+          color: var(--rose, #A8283C);
           white-space: nowrap;
           position: relative; z-index: 1;
+          max-width: 0;
+          opacity: 0;
+          margin-left: 0;
+          overflow: hidden;
+          transition: max-width 0.34s cubic-bezier(0.22,1,0.36,1), opacity 0.24s ease, margin-left 0.3s ease;
         }
         .nav-tab.active .nav-tab-label {
-          color: var(--rose, #A8283C);
-          font-weight: 500;
+          max-width: 96px;
+          opacity: 1;
+          margin-left: 8px;
         }
 
         /* ── Center "+" floating action button ── */

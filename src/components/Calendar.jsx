@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import { supabase } from '../lib/supabase'
 import { sendPushNotification } from '../lib/push'
 
@@ -383,11 +384,37 @@ export default function Calendar({ session, profile }) {
 
         .cal-loading { display:flex; justify-content:center; padding: 50px; }
 
-        .cal-lightbox { position: fixed; inset: 0; background: rgba(8,3,6,0.92); z-index: 200; display:flex; align-items:center; justify-content:center; padding: 20px; animation: lbFade 0.22s ease; }
+        .cal-lightbox {
+          position: fixed; inset: 0; z-index: 4000;
+          display:flex; align-items:center; justify-content:center;
+          padding: 24px;
+          background: rgba(8,3,6,0.86);
+          backdrop-filter: blur(22px) saturate(120%);
+          -webkit-backdrop-filter: blur(22px) saturate(120%);
+          animation: lbFade 0.22s ease;
+        }
         @keyframes lbFade { from { opacity: 0; } to { opacity: 1; } }
-        .cal-lightbox img { max-width: 100%; max-height: 88vh; object-fit: contain; border-radius: 14px; box-shadow: 0 24px 70px rgba(0,0,0,0.7); animation: lbZoom 0.3s cubic-bezier(0.22,1,0.36,1); }
-        @keyframes lbZoom { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
-        .cal-lightbox-close { position:absolute; top: calc(16px + var(--safe-top,0px)); right:16px; background: rgba(255,255,255,0.16); backdrop-filter: blur(10px); border:none; border-radius:50%; width:40px; height:40px; color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+        .cal-lightbox img {
+          max-width: 100%; max-height: 82vh; object-fit: contain;
+          border-radius: 18px;
+          box-shadow: 0 30px 90px rgba(0,0,0,0.75), 0 0 0 1px rgba(255,255,255,0.08);
+          animation: lbZoom 0.32s cubic-bezier(0.22,1,0.36,1);
+        }
+        @keyframes lbZoom { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+        .cal-lightbox-close {
+          position:absolute; top: calc(18px + var(--safe-top,0px)); right:18px;
+          background: rgba(255,255,255,0.14); backdrop-filter: blur(10px);
+          border:1px solid rgba(255,255,255,0.18); border-radius:50%;
+          width:42px; height:42px; color:#fff; cursor:pointer;
+          display:flex; align-items:center; justify-content:center;
+        }
+        .cal-lightbox-close:active { transform: scale(0.92); }
+        .cal-lightbox-hint {
+          position:absolute; bottom: calc(28px + env(safe-area-inset-bottom,0px)); left:0; right:0;
+          text-align:center; color: rgba(255,255,255,0.45);
+          font-size: 12px; font-family: var(--font-body, sans-serif);
+          pointer-events:none;
+        }
       `}</style>
 
       <div className="cal-wrap">
@@ -557,11 +584,13 @@ export default function Calendar({ session, profile }) {
         )}
       </div>
 
-      {lightbox && (
+      {lightbox && createPortal(
         <div className="cal-lightbox" onClick={() => setLightbox(null)}>
-          <button className="cal-lightbox-close"><IcoClose /></button>
+          <button className="cal-lightbox-close" onClick={() => setLightbox(null)}><IcoClose /></button>
           <img src={lightbox} alt="" onClick={e => e.stopPropagation()} />
-        </div>
+          <div className="cal-lightbox-hint">нажмите, чтобы закрыть</div>
+        </div>,
+        document.body
       )}
 
       {showModal && (

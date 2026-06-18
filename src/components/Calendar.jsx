@@ -44,6 +44,13 @@ const DAY_MOODS = [
   { e: '😕', label: 'Так себе' },
   { e: '😢', label: 'Грустно' },
 ]
+const MOOD_COLOR = { '🥰': '#ff5c7a', '😊': '#f7b94a', '😌': '#4cc6c0', '🔥': '#ff7a45', '😕': '#9aa0a6', '😢': '#5b8def' }
+
+function sameMonthDay(dateStr, m, d) {
+  if (!dateStr) return false
+  const x = new Date(dateStr)
+  return x.getMonth() === m && x.getDate() === d
+}
 
 function keyOf(d) {
   const x = new Date(d)
@@ -58,6 +65,7 @@ export default function Calendar({ session, profile }) {
   const [photos, setPhotos] = useState([])
   const [plans, setPlans] = useState([])
   const [moods, setMoods] = useState([])
+  const [special, setSpecial] = useState({ partnerName: '', partnerBday: null, coupleStart: null, nextMeeting: null })
   const [loading, setLoading] = useState(true)
   const [view, setView] = useState(() => { const n = new Date(); return { y: n.getFullYear(), m: n.getMonth() } })
   const [selected, setSelected] = useState(() => keyOf(new Date()))
@@ -86,8 +94,26 @@ export default function Calendar({ session, profile }) {
     setPhotos(mo.data || [])
     setPlans(pl.data || [])
     setMoods(md.data || [])
+
+    // Special dates: partner birthday, couple anniversary, next meeting
+    try {
+      const [partnerRes, coupleRes, setRes] = await Promise.all([
+        pid ? supabase.from('profiles').select('name,birthday').eq('id', pid).maybeSingle() : Promise.resolve({ data: null }),
+        profile?.couple_id ? supabase.from('couples').select('start_date,couple_start_date').eq('id', profile.couple_id).maybeSingle() : Promise.resolve({ data: null }),
+        profile?.couple_id
+          ? supabase.from('couple_settings').select('next_meeting').eq('couple_id', profile.couple_id).maybeSingle()
+          : supabase.from('couple_settings').select('next_meeting').eq('user_id', uid).maybeSingle(),
+      ])
+      setSpecial({
+        partnerName: partnerRes.data?.name || 'Партнёр',
+        partnerBday: partnerRes.data?.birthday || null,
+        coupleStart: coupleRes.data?.start_date || coupleRes.data?.couple_start_date || profile?.couple_start_date || null,
+        nextMeeting: setRes.data?.next_meeting || null,
+      })
+    } catch (_e) { /* optional */ }
+
     setLoading(false)
-  }, [uid, pid])
+  }, [uid, pid, profile?.couple_id, profile?.couple_start_date])
 
   useEffect(() => { load() }, [load])
 
@@ -137,6 +163,47 @@ export default function Calendar({ session, profile }) {
   const myMood = sel.moods.find(m => m.user_id === uid)?.mood || null
   const partnerMood = sel.moods.find(m => m.user_id !== uid)?.mood || null
   const WD_FULL = ['воскресенье','понедельник','вторник','среда','четверг','пятница','суббота']
+
+  function yearsWord(n) {
+    const a = n % 10, b = n % 100
+    if (a === 1 && b !== 11) return 'год'
+    if (a >= 2 && a <= 4 && (b < 10 || b >= 20)) return 'года'
+    return 'лет'
+  }
+  function specialsFor(key) {
+    const d = new Date(key), m = d.getMonth(), day = d.getDate()
+    const out = []
+    if (sameMonthDay(profile?.birthday, m, day)) out.push({ icon: '🎂', label: 'Твой день рождения' })
+    if (sameMonthDay(special.partnerBday, m, day)) out.push({ icon: '🎂', label: `День рождения · ${special.partnerName}` })
+    if (sameMonthDay(special.coupleStart, m, day)) {
+      const years = d.getFullYear() - new Date(special.coupleStart).getFullYear()
+      out.push({ icon: '💍', label: years > 0 ? `Годовщина · ${years} ${yearsWord(years)}` : 'Начало отношений' })
+    }
+    if (special.nextMeeting && keyOf(special.nextMeeting) === key) out.push({ icon: '📍', label: 'Встреча' })
+    return out
+  }
+  const selSpecials = specialsFor(selected)
+
+  const monthStats = useMemo(() => {
+    let ev = 0, ph = 0, pl = 0; const mc = {}
+    Object.entries(byDay).forEach(([k, v]) => {
+      const d = new Date(k)
+      if (d.getMonth() !== view.m || d.getFullYear() !== view.y) return
+      ev += v.events.length; ph += v.photos.length; pl += v.plans.length
+      v.moods.forEach(m => { if (m.mood) mc[m.mood] = (mc[m.mood] || 0) + 1 })
+    })
+    let top = null, max = 0
+    Object.entries(mc).forEach(([e, c]) => { if (c > max) { max = c; top = e } })
+    return { ev, ph, pl, top }
+  }, [byDay, view])
+
+  const memories = useMemo(() => {
+    const d = new Date(selected), m = d.getMonth(), day = d.getDate(), y = d.getFullYear()
+    const out = []
+    events.forEach(e => { if (sameMonthDay(e.event_date, m, day) && new Date(e.event_date).getFullYear() < y) out.push({ t: 'e', it: e }) })
+    photos.forEach(p => { if (sameMonthDay(p.created_at, m, day) && new Date(p.created_at).getFullYear() < y) out.push({ t: 'p', it: p }) })
+    return out
+  }, [selected, events, photos])
 
   function shiftMonth(delta) {
     setView(v => {
@@ -284,8 +351,35 @@ export default function Calendar({ session, profile }) {
         .cal-del:active { color:#ff8da0; }
         .cal-empty-day { text-align:center; padding: 18px 0; color: var(--text-muted); font-size: 13px; font-family: var(--font-body); }
 
-        .cal-legend { display:flex; gap:14px; justify-content:center; margin: 12px 14px 0; }
+        .cal-legend { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin: 12px 14px 0; }
         .cal-leg { display:flex; align-items:center; gap:5px; font-size: 11px; color: var(--text-muted); font-family: var(--font-body); }
+
+        /* month summary */
+        .cal-summary { display:grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin: 14px 14px 0; }
+        .cal-sum-cell {
+          background: var(--surface, #1f0e16); border: 1px solid var(--border, rgba(255,255,255,0.07));
+          border-radius: 16px; padding: 12px 6px; text-align: center;
+          display:flex; flex-direction:column; align-items:center; gap:3px;
+        }
+        .cal-sum-num { font-family: "Helvetica Neue", Arial, sans-serif; font-size: 22px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+        .cal-sum-mood { font-size: 22px; }
+        .cal-sum-lbl { font-size: 9.5px; letter-spacing: 0.4px; text-transform: uppercase; color: var(--text-muted); }
+
+        /* special day */
+        .cal-cell.special { box-shadow: inset 0 0 0 1.5px rgba(255,210,120,0.6); }
+        .cal-cell-sp { position:absolute; top:2px; right:4px; font-size: 11px; }
+        .cal-special {
+          display:flex; align-items:center; gap:10px; padding: 11px 12px; margin-bottom: 10px;
+          border-radius: 14px;
+          background: linear-gradient(135deg, rgba(255,210,120,0.16), rgba(255,141,160,0.12));
+          border: 1px solid rgba(255,210,120,0.35);
+        }
+        .cal-special-ic { font-size: 20px; }
+        .cal-special-lbl { font-size: 14px; font-weight: 600; color: var(--text); font-family: var(--font-body); }
+
+        /* memories */
+        .cal-memories { margin-top: 8px; padding-top: 12px; border-top: 1px dashed var(--border, rgba(255,255,255,0.1)); }
+        .cal-mem-title { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 6px; }
 
         .cal-loading { display:flex; justify-content:center; padding: 50px; }
 
@@ -325,13 +419,18 @@ export default function Calendar({ session, profile }) {
                   const isSel = k === selected
                   const isToday = k === todayKey
                   const moodE = d?.moods?.length ? d.moods[0].mood : null
+                  const sp = specialsFor(k)
+                  const tint = moodE ? MOOD_COLOR[moodE] : null
+                  const style = (!isSel && tint) ? { background: `${tint}26` } : undefined
                   return (
                     <button
                       key={k}
-                      className={`cal-cell${isSel ? ' sel' : ''}${isToday && !isSel ? ' today' : ''}`}
+                      className={`cal-cell${isSel ? ' sel' : ''}${isToday && !isSel ? ' today' : ''}${sp.length ? ' special' : ''}`}
+                      style={style}
                       onClick={() => setSelected(k)}
                     >
-                      {moodE && <span className="cal-cell-mood">{moodE}</span>}
+                      {sp.length > 0 && <span className="cal-cell-sp">{sp[0].icon}</span>}
+                      {moodE && !sp.length && <span className="cal-cell-mood">{moodE}</span>}
                       <span>{day}</span>
                       <span className="cal-dots">
                         {d?.events.length > 0 && <span className="cal-dot ev" />}
@@ -344,15 +443,31 @@ export default function Calendar({ session, profile }) {
               </div>
             </div>
 
+            {/* Month summary */}
+            <div className="cal-summary">
+              <div className="cal-sum-cell"><span className="cal-sum-num">{monthStats.ev}</span><span className="cal-sum-lbl">событий</span></div>
+              <div className="cal-sum-cell"><span className="cal-sum-num">{monthStats.ph}</span><span className="cal-sum-lbl">фото</span></div>
+              <div className="cal-sum-cell"><span className="cal-sum-num">{monthStats.pl}</span><span className="cal-sum-lbl">выполнено</span></div>
+              <div className="cal-sum-cell"><span className="cal-sum-num cal-sum-mood">{monthStats.top || '—'}</span><span className="cal-sum-lbl">настрой</span></div>
+            </div>
+
             <div className="cal-legend">
               <span className="cal-leg"><span className="cal-dot ev" /> События</span>
               <span className="cal-leg"><span className="cal-dot ph" /> Фото</span>
-              <span className="cal-leg"><span className="cal-dot pl" /> Выполнено</span>
+              <span className="cal-leg"><span className="cal-dot pl" /> Планы</span>
+              <span className="cal-leg">🎂💍 Особые</span>
             </div>
 
             {/* Selected day detail */}
             <div className="cal-card" key={selected}>
               <div className="cal-day-title">{selDate.getDate()} {MONTHS_GEN[selDate.getMonth()]}<span className="cal-day-wd">{WD_FULL[selDate.getDay()]}</span></div>
+
+              {selSpecials.map((s, i) => (
+                <div className="cal-special" key={i}>
+                  <span className="cal-special-ic">{s.icon}</span>
+                  <span className="cal-special-lbl">{s.label}</span>
+                </div>
+              ))}
 
               {/* Mood of the day */}
               <div className="cal-mood-box">
@@ -413,6 +528,29 @@ export default function Calendar({ session, profile }) {
                     </div>
                   ))}
                 </>
+              )}
+
+              {memories.length > 0 && (
+                <div className="cal-memories">
+                  <div className="cal-mem-title">✨ В этот день раньше</div>
+                  {memories.map((mm, i) => {
+                    const it = mm.it
+                    const yr = new Date(mm.t === 'e' ? it.event_date : it.created_at).getFullYear()
+                    const img = mm.t === 'e' ? it.photo_url : (it.thumb_url || it.photo_url)
+                    return (
+                      <div className="cal-row" key={`mem${i}`}>
+                        {img
+                          ? <img className="cal-row-thumb" src={img} alt="" onClick={() => setLightbox(mm.t === 'e' ? it.photo_url : (it.photo_url || it.thumb_url))} />
+                          : <span className="cal-row-emoji">{mm.t === 'e' ? (it.emoji || '📅') : '📷'}</span>}
+                        <div className="cal-row-mid">
+                          <div className="cal-row-name">{it.title || 'Момент'}</div>
+                          <div className="cal-row-sub">{yr}</div>
+                        </div>
+                        <span className="cal-row-tag ph">{new Date().getFullYear() - yr} {yearsWord(new Date().getFullYear() - yr)} назад</span>
+                      </div>
+                    )
+                  })}
+                </div>
               )}
             </div>
           </>

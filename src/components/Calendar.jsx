@@ -113,7 +113,7 @@ export default function Calendar({ session, profile }) {
     } catch (_e) { /* optional */ }
 
     setLoading(false)
-  }, [uid, pid, profile?.couple_id, profile?.couple_start_date, profile?.birthday])
+  }, [uid, pid, profile?.couple_id, profile?.couple_start_date])
 
   useEffect(() => { load() }, [load])
 

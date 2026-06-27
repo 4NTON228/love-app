@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { supabase } from '../lib/supabase'
 import { sendPushNotification } from '../lib/push'
 import { toast } from '../lib/helpers'
+import LoveStory from './LoveStory'
 import './Home.css'
 
 /* ─────────────────────────────────────────────
@@ -453,6 +454,7 @@ export default function Home({ session, profile, onNavigate }) {
   const [showPartnerModal, setShowPartnerModal] = useState(false)
   const [showWave,       setShowWave]       = useState(false)
   const [thinkingSent,   setThinkingSent]   = useState(false)
+  const [showStory,      setShowStory]      = useState(false)
   const [myMood,         setMyMood]         = useState(null)
   const [streak,         setStreak]         = useState(0)
   const [partnerSeen,    setPartnerSeen]    = useState(null)
@@ -860,6 +862,21 @@ export default function Home({ session, profile, onNavigate }) {
           </div>
         </section>
 
+        {/* ── Наша история (cinematic recap) ── */}
+        {hasPartner && (
+          <button type="button" className="story-card" onClick={() => setShowStory(true)}>
+            <span className="story-card-shine" />
+            <span className="story-card-spark">✨</span>
+            <span className="story-card-text">
+              <span className="story-card-title">Наша история</span>
+              <span className="story-card-sub">Кино про вас двоих — нажми ▸</span>
+            </span>
+            <span className="story-card-play">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="#fff"><polygon points="6 4 20 12 6 20 6 4"/></svg>
+            </span>
+          </button>
+        )}
+
         {/* ── Quick actions ── */}
         <div className="quick-grid">
           <QuickAction
@@ -997,6 +1014,15 @@ export default function Home({ session, profile, onNavigate }) {
 
       {showWave && <HeartWave />}
       {showConfetti && <Confetti />}
+      {showStory && (
+        <LoveStory
+          session={session}
+          profile={profile}
+          partnerName={partnerName}
+          coupleStart={coupleStart}
+          onClose={() => setShowStory(false)}
+        />
+      )}
     </div>
   )
 }

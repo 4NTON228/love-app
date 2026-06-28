@@ -429,84 +429,69 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
   return (
     <>
       <style>{`
-        .settings-wrap { padding: 0 0 120px; }
+        .settings-wrap { padding: 0 0 130px; }
 
         /* ── Header ── */
         .settings-header {
-          background: linear-gradient(170deg, #0C0B09 0%, #151210 40%, #1C1510 100%);
-          padding: 72px 20px 36px;
-          border-radius: 0 0 32px 32px;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          margin-bottom: 20px;
-          overflow: hidden;
-          position: relative;
+          background: linear-gradient(165deg, #3d1838 0%, #6a2747 42%, #9a3c50 74%, #bd5552 100%);
+          padding: calc(env(safe-area-inset-top, 0px) + 52px) 20px 34px;
+          border-radius: 0 0 34px 34px;
+          display: flex; flex-direction: column; align-items: center;
+          margin-bottom: 16px;
+          overflow: hidden; position: relative;
+          box-shadow: 0 16px 44px rgba(60,20,40,0.5);
         }
         .settings-header::before {
           content: '';
-          position: absolute;
-          top: -60px; left: 50%;
-          transform: translateX(-50%);
+          position: absolute; top: -40px; right: -20px;
           width: 280px; height: 240px;
-          background: radial-gradient(ellipse, rgba(168,40,60,0.12) 0%, transparent 65%);
+          background: radial-gradient(ellipse, rgba(255,210,150,0.28) 0%, transparent 62%);
           pointer-events: none;
         }
 
         /* ── Avatar ring ── */
         .settings-av-ring {
-          width: 110px; height: 110px;
+          width: 116px; height: 116px;
           border-radius: 50%;
-          padding: 2px;
-          background: rgba(168,40,60,0.3);
-          border: 0.5px solid rgba(168,40,60,0.2);
+          padding: 3px;
+          background: linear-gradient(145deg, #ffd9a8, #ff8da0 45%, #d8456b);
+          box-shadow: 0 14px 36px rgba(40,12,28,0.5);
           position: relative; z-index: 1;
-          flex-shrink: 0;
-          margin-bottom: 16px;
+          flex-shrink: 0; margin-bottom: 14px;
         }
         .settings-av-gap {
           width: 100%; height: 100%;
           border-radius: 50%;
-          background: #110D0B;
-          padding: 2px;
+          background: #2a1620;
+          padding: 3px;
         }
-        .settings-avatar-wrap {
-          position: relative;
-          width: 100%; height: 100%;
-        }
+        .settings-avatar-wrap { position: relative; width: 100%; height: 100%; }
         .settings-avatar {
-          width: 100%; height: 100%;
-          border-radius: 50%;
-          background: rgba(200,51,74,0.1);
-          overflow: hidden;
-          display: flex;
-          align-items: center;
-          justify-content: center;
+          width: 100%; height: 100%; border-radius: 50%;
+          background: linear-gradient(160deg, #ff8d9e, #d8456b);
+          overflow: hidden; display: flex; align-items: center; justify-content: center;
+          color: #fff;
         }
         .settings-avatar-btn {
-          position: absolute;
-          bottom: 2px; right: 2px;
-          background: var(--rose, #A8283C);
-          border: 2px solid #110D0B;
-          border-radius: 50%;
-          width: 28px; height: 28px;
-          cursor: pointer;
-          display: flex; align-items: center; justify-content: center;
+          position: absolute; bottom: 2px; right: 2px;
+          background: linear-gradient(160deg, #ff8da0, #d8456b);
+          border: 3px solid #2a1620;
+          border-radius: 50%; width: 32px; height: 32px;
+          cursor: pointer; display: flex; align-items: center; justify-content: center;
           color: white; z-index: 2;
+          box-shadow: 0 4px 12px rgba(216,69,107,0.5);
         }
         .settings-header-name {
-          font-family: var(--font-display);
-          font-size: 26px; font-weight: 300; font-style: italic;
-          color: rgba(237,233,226,0.9); margin-bottom: 4px;
-          letter-spacing: 0.3px;
+          font-family: var(--font-display, 'Cormorant Garamond', serif);
+          font-size: 30px; font-weight: 600;
+          color: #fff; margin-bottom: 3px; letter-spacing: 0.3px;
           position: relative; z-index: 1;
+          text-shadow: 0 2px 14px rgba(40,12,28,0.4);
         }
         .settings-header-sub {
           font-family: var(--font-body);
-          font-size: 12px;
-          color: rgba(255,255,255,0.42);
-          margin-bottom: 16px;
-          position: relative; z-index: 1;
+          font-size: 12px; color: rgba(255,255,255,0.7);
+          margin-bottom: 14px; position: relative; z-index: 1;
         }
         .settings-chips {
           display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;
@@ -514,44 +499,42 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
         }
         .settings-chip {
           display: inline-flex; align-items: center; gap: 5px;
-          background: rgba(255,255,255,0.08);
-          border: 1px solid rgba(255,255,255,0.16);
-          border-radius: 20px;
-          padding: 5px 14px;
-          font-family: var(--font-body);
-          font-size: 12px; font-weight: 500;
-          color: rgba(255,255,255,0.78);
+          background: rgba(255,255,255,0.18);
+          border: 1px solid rgba(255,255,255,0.3);
+          border-radius: 20px; padding: 5px 14px;
+          font-family: var(--font-body); font-size: 12px; font-weight: 600;
+          color: #fff;
         }
 
         /* ── Sections ── */
         .settings-section {
-          background: var(--surface, #fff);
-          border-radius: 14px;
-          margin: 0 16px 12px;
+          background: var(--surface, #1f0e16);
+          border-radius: 20px;
+          margin: 0 14px 14px;
           overflow: hidden;
-          border: 0.5px solid var(--border, rgba(0,0,0,0.07));
+          border: 1px solid var(--border, rgba(255,255,255,0.07));
+          box-shadow: var(--shadow-card, 0 2px 16px rgba(0,0,0,0.4));
         }
         .settings-section-title {
           font-family: var(--font-body);
           font-size: 11px; font-weight: 700;
-          text-transform: uppercase; letter-spacing: 1.4px;
-          color: var(--text-muted);
-          padding: 16px 18px 8px;
+          text-transform: uppercase; letter-spacing: 1.6px;
+          color: var(--rose, #ff8da0);
+          padding: 16px 18px 6px;
         }
         .settings-row {
           display: flex; align-items: center;
-          padding: 12px 16px; gap: 14px;
-          border-top: 1px solid rgba(0,0,0,0.04);
+          padding: 13px 16px; gap: 13px;
+          border-top: 1px solid var(--border, rgba(255,255,255,0.05));
         }
-        .app.dark .settings-row { border-top-color: rgba(255,255,255,0.05); }
+        .settings-section-title + .settings-row { border-top: none; }
         .settings-row-icon {
-          flex-shrink: 0;
-          width: 36px; height: 36px;
-          border-radius: 10px;
+          flex-shrink: 0; width: 38px; height: 38px;
+          border-radius: 12px;
           display: flex; align-items: center; justify-content: center;
-          background: rgba(168,40,60,0.07);
-          border: 0.5px solid rgba(168,40,60,0.1);
-          color: var(--rose, #A8283C);
+          background: linear-gradient(160deg, rgba(255,141,160,0.20), rgba(216,69,107,0.12));
+          border: 1px solid rgba(255,255,255,0.08);
+          color: var(--rose, #ff8da0);
         }
         .settings-row-label {
           flex: 1;
@@ -559,28 +542,42 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
           font-size: 15px; font-weight: 500;
           color: var(--text);
         }
-        .settings-row-right {
-          font-family: var(--font-body);
-          font-size: 14px; color: var(--text-muted);
+        .settings-row-right { font-family: var(--font-body); font-size: 14px; color: var(--text-muted); }
+
+        /* link rows (Разделы) */
+        .settings-link {
+          display: flex; align-items: center; gap: 13px; width: 100%;
+          padding: 13px 16px; background: none; border: none;
+          border-top: 1px solid var(--border, rgba(255,255,255,0.05));
+          cursor: pointer; color: var(--text); font: inherit;
+          -webkit-tap-highlight-color: transparent;
         }
+        .settings-section-title + .settings-link { border-top: none; }
+        .settings-link:active { background: rgba(255,255,255,0.04); }
+        .settings-link-ic {
+          flex-shrink: 0; width: 38px; height: 38px; border-radius: 12px;
+          display: flex; align-items: center; justify-content: center; font-size: 19px;
+          background: linear-gradient(160deg, rgba(255,141,160,0.20), rgba(216,69,107,0.12));
+          border: 1px solid rgba(255,255,255,0.08);
+        }
+        .settings-link-label { flex: 1; text-align: left; font-size: 15px; font-weight: 500; }
+        .settings-link-arrow { color: var(--text-muted); font-size: 22px; line-height: 1; }
+
         .settings-toggle {
-          width: 50px; height: 28px;
-          background: var(--rose, #C8334A);
-          border-radius: 99px;
-          position: relative; cursor: pointer; border: none; flex-shrink: 0;
+          width: 50px; height: 30px;
+          background: linear-gradient(135deg, #ff8da0, #d8456b);
+          border-radius: 99px; position: relative; cursor: pointer; border: none; flex-shrink: 0;
           transition: background 0.2s;
-          box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
         }
-        .settings-toggle.off { background: rgba(0,0,0,0.15); }
-        .app.dark .settings-toggle.off { background: rgba(255,255,255,0.12); }
+        .settings-toggle.off { background: rgba(255,255,255,0.16); }
         .settings-toggle-thumb {
           position: absolute; top: 3px; left: 3px;
-          width: 22px; height: 22px; border-radius: 50%;
+          width: 24px; height: 24px; border-radius: 50%;
           background: white;
           transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1);
-          box-shadow: 0 1px 6px rgba(0,0,0,0.25);
+          box-shadow: 0 1px 6px rgba(0,0,0,0.35);
         }
-        .settings-toggle:not(.off) .settings-toggle-thumb { transform: translateX(22px); }
+        .settings-toggle:not(.off) .settings-toggle-thumb { transform: translateX(20px); }
 
         /* ── Inputs ── */
         .settings-input {
@@ -593,19 +590,19 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
         /* ── Themes ── */
         .themes-grid {
           display: grid; grid-template-columns: repeat(4, 1fr);
-          gap: 12px; padding: 8px 16px 20px;
+          gap: 14px; padding: 10px 16px 20px;
         }
         .theme-swatch { display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; }
         .theme-circle {
-          width: 50px; height: 50px; border-radius: 50%;
-          box-shadow: 0 2px 10px rgba(0,0,0,0.18);
+          width: 52px; height: 52px; border-radius: 50%;
+          box-shadow: 0 4px 14px rgba(0,0,0,0.3);
           position: relative; transition: transform 0.22s cubic-bezier(0.22,1,0.36,1), box-shadow 0.22s;
           border: 2.5px solid transparent;
         }
         .theme-circle:active { transform: scale(0.94); }
         .theme-circle.active {
-          transform: scale(1.12); border-color: white;
-          box-shadow: 0 5px 22px rgba(0,0,0,0.32);
+          transform: scale(1.12); border-color: #fff;
+          box-shadow: 0 6px 24px rgba(0,0,0,0.4);
         }
         .theme-circle.active::after {
           content: ''; position: absolute; inset: 0; border-radius: 50%;
@@ -615,45 +612,37 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
 
         /* ── Save button ── */
         .settings-save-btn {
-          display: block;
-          width: calc(100% - 28px);
-          margin: 0 14px 14px;
-          background: var(--rose, #A8283C);
-          color: white; border: none; border-radius: 14px;
-          padding: 15px;
-          font-family: var(--font-body); font-weight: 500; font-size: 15px;
+          display: block; width: calc(100% - 28px); margin: 0 14px 16px;
+          background: linear-gradient(135deg, #ff8da0 0%, #d8456b 100%);
+          color: white; border: none; border-radius: 16px; padding: 15px;
+          font-family: var(--font-body); font-weight: 600; font-size: 15px;
           cursor: pointer; letter-spacing: 0.2px;
           transition: opacity 0.2s, transform 0.15s;
-          box-shadow: 0 4px 16px hsl(var(--h,349), var(--s,59%), 41% / 0.3);
+          box-shadow: 0 10px 26px rgba(216,69,107,0.4);
         }
-        .settings-save-btn:active { transform: scale(0.98); opacity: 0.9; }
+        .settings-save-btn:active { transform: scale(0.98); opacity: 0.92; }
         .settings-save-btn:disabled { opacity: 0.5; box-shadow: none; }
-        .settings-save-btn.saved { background: #2A7A4A; box-shadow: 0 4px 14px rgba(42,122,74,0.3); }
+        .settings-save-btn.saved { background: linear-gradient(135deg,#43d97a,#1f9e54); box-shadow: 0 10px 26px rgba(42,122,74,0.35); }
 
-        /* ── Logout ── */
+        /* ── Logout / delete ── */
         .settings-logout-btn {
           display: block; width: calc(100% - 28px); margin: 0 14px;
-          background: rgba(168,40,60,0.05);
-          border: 0.5px solid rgba(168,40,60,0.2);
-          color: var(--rose, #A8283C);
-          border-radius: 14px; padding: 15px;
-          font-family: var(--font-body); font-weight: 500; font-size: 15px;
+          background: rgba(255,255,255,0.06);
+          border: 1px solid rgba(255,141,160,0.3);
+          color: #ff8da0;
+          border-radius: 16px; padding: 15px;
+          font-family: var(--font-body); font-weight: 600; font-size: 15px;
           cursor: pointer; transition: background 0.15s;
         }
-        .settings-logout-btn:active { background: rgba(168,40,60,0.1); }
+        .settings-logout-btn:active { background: rgba(255,141,160,0.1); }
         .settings-delete-btn {
           display: block; width: calc(100% - 28px); margin: 10px 14px 0;
-          background: transparent; border: 0.5px solid rgba(150,20,20,0.2);
-          color: rgba(160,40,40,0.8); border-radius: 14px; padding: 13px;
+          background: transparent; border: 1px solid rgba(200,60,60,0.25);
+          color: rgba(220,90,90,0.85); border-radius: 16px; padding: 13px;
           font-family: var(--font-body); font-weight: 400; font-size: 13px;
           cursor: pointer; transition: background 0.15s;
         }
-        .settings-delete-btn:active { background: rgba(180,20,20,0.06); }
-
-        /* ── Dark mode ── */
-        .app.dark .settings-section { background: rgba(22,18,14,0.95); border-color: rgba(255,255,255,0.06); }
-        .app.dark .settings-row-label { color: rgba(237,233,226,0.85); }
-        .app.dark .settings-input { color: rgba(237,233,226,0.85); }
+        .settings-delete-btn:active { background: rgba(200,60,60,0.1); }
       `}</style>
 
       <div className="settings-wrap">
@@ -692,21 +681,11 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
             ['advisor', 'Советник',   '🧭'],
             ['mirror',  'Вопрос дня', '❓'],
             ['premium', 'Premium',    '⭐'],
-          ].map(([id, label, ic], i, arr) => (
-            <button
-              key={id}
-              onClick={() => onNavigate?.(id)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 12, width: '100%',
-                padding: '15px 2px', background: 'none', border: 'none',
-                borderBottom: i < arr.length - 1 ? '1px solid var(--border)' : 'none',
-                cursor: 'pointer', color: 'var(--text)', font: 'inherit', fontSize: 15,
-                WebkitTapHighlightColor: 'transparent',
-              }}
-            >
-              <span style={{ fontSize: 19, width: 26, textAlign: 'center' }}>{ic}</span>
-              <span style={{ flex: 1, textAlign: 'left' }}>{label}</span>
-              <span style={{ color: 'var(--text-muted)', fontSize: 22, lineHeight: 1 }}>›</span>
+          ].map(([id, label, ic]) => (
+            <button key={id} className="settings-link" onClick={() => onNavigate?.(id)}>
+              <span className="settings-link-ic">{ic}</span>
+              <span className="settings-link-label">{label}</span>
+              <span className="settings-link-arrow">›</span>
             </button>
           ))}
         </div>

@@ -26,28 +26,6 @@ function IcoBirthday() {
     </svg>
   )
 }
-function IcoMoon() {
-  return (
-    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
-    </svg>
-  )
-}
-function IcoSun() {
-  return (
-    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="5"/>
-      <line x1="12" y1="1" x2="12" y2="3"/>
-      <line x1="12" y1="21" x2="12" y2="23"/>
-      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
-      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-      <line x1="1" y1="12" x2="3" y2="12"/>
-      <line x1="21" y1="12" x2="23" y2="12"/>
-      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
-      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-    </svg>
-  )
-}
 function IcoCamera() {
   return (
     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -100,25 +78,6 @@ function formatBirthday(dateStr) {
   if (!dateStr) return null
   return new Date(dateStr).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
 }
-
-const THEMES = [
-  { id: 'rose',      label: 'Роза',       h: 349, s: '59%' },
-  { id: 'blush',     label: 'Румянец',    h: 340, s: '55%' },
-  { id: 'cherry',    label: 'Вишня',      h: 349, s: '70%' },
-  { id: 'plum',      label: 'Слива',      h: 330, s: '48%' },
-  { id: 'iris',      label: 'Ирис',       h: 270, s: '52%' },
-  { id: 'lavender',  label: 'Лаванда',    h: 258, s: '45%' },
-  { id: 'sapphire',  label: 'Сапфир',     h: 220, s: '62%' },
-  { id: 'ocean',     label: 'Океан',      h: 198, s: '65%' },
-  { id: 'teal',      label: 'Бирюза',     h: 176, s: '60%' },
-  { id: 'emerald',   label: 'Изумруд',    h: 148, s: '52%' },
-  { id: 'bronze',    label: 'Бронза',     h: 28,  s: '58%' },
-  { id: 'gold',      label: 'Золото',     h: 44,  s: '62%' },
-  { id: 'copper',    label: 'Медь',       h: 18,  s: '60%' },
-  { id: 'slate',     label: 'Грифель',    h: 218, s: '22%' },
-  { id: 'sage',      label: 'Шалфей',     h: 150, s: '28%' },
-  { id: 'graphite',  label: 'Графит',     h: 220, s: '10%' },
-]
 
 /* ── Partner Invite Section ── */
 function PartnerSection({ profile }) {
@@ -243,7 +202,7 @@ function PartnerSection({ profile }) {
   )
 }
 
-export default function Settings({ session, profile, darkMode, toggleDarkMode, onProfileUpdate, onNavigate }) {
+export default function Settings({ session, profile, onProfileUpdate, onNavigate }) {
   const [name, setName] = useState(profile?.name || '')
   const [birthday, setBirthday] = useState(profile?.birthday || '')
   const [coupleStart, setCoupleStart] = useState(profile?.couple_start_date || '')
@@ -263,7 +222,6 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
   const [savingAvatar, setSavingAvatar] = useState(false)
   const [saved, setSaved] = useState(false)
   const [avatarPreview, setAvatarPreview] = useState(profile?.avatar_url || null)
-  const [activeTheme, setActiveTheme] = useState(() => localStorage.getItem('loveTheme') || 'rose')
   const [pushEnabled, setPushEnabled] = useState(() => notifPermission() === 'granted')
   const [pushLoading, setPushLoading] = useState(false)
   const fileRef = useRef(null)
@@ -373,31 +331,6 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
     setSaving(false)
-  }
-
-  function applyTheme(theme) {
-    setActiveTheme(theme.id)
-    localStorage.setItem('loveTheme', theme.id)
-    localStorage.setItem('loveH', theme.h)
-    localStorage.setItem('loveS', theme.s)
-    const r = document.documentElement
-    r.style.setProperty('--h', theme.h)
-    r.style.setProperty('--s', theme.s)
-    const rose      = `hsl(${theme.h}, ${theme.s}, 41%)`
-    const roseDark  = `hsl(${theme.h}, ${theme.s}, 28%)`
-    const roseLight = `hsl(${theme.h}, ${theme.s}, 54%)`
-    const gradient  = `linear-gradient(135deg, hsl(${theme.h},${theme.s},46%) 0%, hsl(${theme.h},${theme.s},30%) 100%)`
-    r.style.setProperty('--rose',          rose)
-    r.style.setProperty('--rose-dark',     roseDark)
-    r.style.setProperty('--rose-light',    roseLight)
-    r.style.setProperty('--primary',       rose)
-    r.style.setProperty('--primary-dark',  roseDark)
-    r.style.setProperty('--gradient',      gradient)
-    r.style.setProperty('--gradient-warm', gradient)
-    r.style.setProperty('--theme-gradient',gradient)
-    r.style.setProperty('--theme-accent',  rose)
-    r.style.setProperty('--gradient-main', gradient)
-    r.style.setProperty('--bubble-mine',   `linear-gradient(135deg, hsl(${theme.h},${theme.s},49%) 0%, hsl(${theme.h},${theme.s},35%) 100%)`)
   }
 
   async function handleLogout() {
@@ -635,14 +568,33 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
           cursor: pointer; transition: background 0.15s;
         }
         .settings-logout-btn:active { background: rgba(255,141,160,0.1); }
+
+        /* ── Danger zone (separated from logout) ── */
+        .settings-danger {
+          margin: 26px 14px 0;
+          padding: 16px;
+          border-radius: 18px;
+          border: 1px solid rgba(220,80,80,0.28);
+          background: rgba(220,80,80,0.07);
+        }
+        .settings-danger-title {
+          font-family: var(--font-body);
+          font-size: 11px; font-weight: 700; letter-spacing: 1.4px;
+          text-transform: uppercase; color: rgba(232,110,110,0.92);
+          margin-bottom: 10px;
+        }
         .settings-delete-btn {
-          display: block; width: calc(100% - 28px); margin: 10px 14px 0;
-          background: transparent; border: 1px solid rgba(200,60,60,0.25);
-          color: rgba(220,90,90,0.85); border-radius: 16px; padding: 13px;
-          font-family: var(--font-body); font-weight: 400; font-size: 13px;
+          display: block; width: 100%;
+          background: transparent; border: 1px solid rgba(220,80,80,0.45);
+          color: rgba(235,120,120,0.95); border-radius: 14px; padding: 13px;
+          font-family: var(--font-body); font-weight: 600; font-size: 14px;
           cursor: pointer; transition: background 0.15s;
         }
-        .settings-delete-btn:active { background: rgba(200,60,60,0.1); }
+        .settings-delete-btn:active { background: rgba(220,80,80,0.16); }
+        .settings-danger-hint {
+          text-align: center; font-size: 11px; color: var(--text-muted);
+          margin-top: 9px; font-family: var(--font-body);
+        }
       `}</style>
 
       <div className="settings-wrap">
@@ -762,22 +714,12 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
           {saved ? 'Сохранено!' : saving ? 'Сохраняем...' : 'Сохранить послание'}
         </button>
 
-        {/* Appearance */}
+        {/* Notifications */}
         <div className="settings-section">
-          <div className="settings-section-title">Оформление</div>
+          <div className="settings-section-title">Уведомления</div>
           <div className="settings-row">
-            <span className="settings-row-icon" style={{ color: 'var(--rose, #A8283C)' }}>{darkMode ? <IcoMoon /> : <IcoSun />}</span>
-            <span className="settings-row-label">Тёмная тема</span>
-            <button
-              className={`settings-toggle${darkMode ? '' : ' off'}`}
-              onClick={toggleDarkMode}
-            >
-              <div className="settings-toggle-thumb" />
-            </button>
-          </div>
-          <div className="settings-row">
-            <span className="settings-row-icon" style={{ color: 'var(--rose, #A8283C)' }}><IcoBell /></span>
-            <span className="settings-row-label">Уведомления</span>
+            <span className="settings-row-icon"><IcoBell /></span>
+            <span className="settings-row-label">Пуш-уведомления</span>
             <button
               className={`settings-toggle${pushEnabled ? '' : ' off'}`}
               onClick={togglePush}
@@ -789,22 +731,6 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
           </div>
         </div>
 
-        {/* Themes */}
-        <div className="settings-section">
-          <div className="settings-section-title">Цветовая тема</div>
-          <div className="themes-grid">
-            {THEMES.map(t => (
-              <div key={t.id} className="theme-swatch" onClick={() => applyTheme(t)}>
-                <div
-                  className={`theme-circle${activeTheme === t.id ? ' active' : ''}`}
-                  style={{ background: `linear-gradient(135deg, hsl(${t.h},${t.s},46%), hsl(${t.h},${t.s},30%))` }}
-                />
-                <span className="theme-label">{t.label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
         {/* Partner invite */}
         <PartnerSection profile={profile} />
 
@@ -812,9 +738,15 @@ export default function Settings({ session, profile, darkMode, toggleDarkMode, o
         <button className="settings-logout-btn" onClick={handleLogout}>
           Выйти из аккаунта
         </button>
-        <button className="settings-delete-btn" onClick={handleDeleteAccount}>
-          Удалить аккаунт
-        </button>
+
+        {/* Danger zone — separated so delete isn't tapped by accident */}
+        <div className="settings-danger">
+          <div className="settings-danger-title">Опасная зона</div>
+          <button className="settings-delete-btn" onClick={handleDeleteAccount}>
+            Удалить аккаунт навсегда
+          </button>
+          <div className="settings-danger-hint">Действие необратимо · потребуется подтверждение</div>
+        </div>
       </div>
     </>
   )

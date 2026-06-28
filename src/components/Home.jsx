@@ -758,6 +758,46 @@ export default function Home({ session, profile, onNavigate }) {
     (Date.now() - new Date(partnerProfile.mood_at).getTime() < 86400000))
     ? partnerProfile.mood : null
 
+  /* ── Client-side reminders: birthdays / anniversary / events (today & tomorrow) ── */
+  const [remDismissed, setRemDismissed] = useState(false)
+  const reminders = useMemo(() => {
+    const md = d => { const x = new Date(d); return `${x.getMonth() + 1}-${x.getDate()}` }
+    const now = new Date(), tom = new Date(Date.now() + 86400000)
+    const tMD = `${now.getMonth() + 1}-${now.getDate()}`
+    const nMD = `${tom.getMonth() + 1}-${tom.getDate()}`
+    const whenOf = m => (m === tMD ? 'Сегодня' : m === nMD ? 'Завтра' : null)
+    const out = []
+    if (partnerProfile?.birthday) {
+      const w = whenOf(md(partnerProfile.birthday))
+      if (w) out.push({ icon: '🎂', text: `${w} день рождения у ${partnerName}` })
+    }
+    if (coupleStart) {
+      const w = whenOf(`${coupleStart.getMonth() + 1}-${coupleStart.getDate()}`)
+      if (w) {
+        const years = (w === 'Завтра' ? tom : now).getFullYear() - coupleStart.getFullYear()
+        out.push({ icon: '💍', text: years > 0 ? `${w}: ${years} ${yearsWord(years)} вместе` : `${w} — ваша годовщина` })
+      }
+    }
+    if (nextEvent?.event_date) {
+      const w = whenOf(md(nextEvent.event_date))
+      if (w) out.push({ icon: nextEvent.emoji || '📅', text: `${w}: ${nextEvent.title}` })
+    }
+    return out
+  }, [partnerProfile?.birthday, coupleStart, nextEvent, partnerName])
+
+  // fire a local (foreground) system notification once per day
+  useEffect(() => {
+    if (!reminders.length) return
+    const key = `home_reminded_${new Date().toISOString().slice(0, 10)}`
+    if (localStorage.getItem(key)) return
+    localStorage.setItem(key, '1')
+    if (typeof Notification !== 'undefined' && Notification.permission === 'granted' && navigator.serviceWorker) {
+      navigator.serviceWorker.ready.then(reg => {
+        reminders.forEach(r => reg.showNotification('Love App 💕', { body: `${r.icon} ${r.text}`, icon: '/apple-touch-icon.png', tag: `rem-${r.text}` }))
+      }).catch(() => {})
+    }
+  }, [reminders])
+
   return (
     <div className="home-screen">
       <HeartsBackground />
@@ -765,6 +805,19 @@ export default function Home({ session, profile, onNavigate }) {
       <div className="home-bg-blob home-bg-blob-2" />
 
       <div className="home-shell">
+        {reminders.length > 0 && !remDismissed && (
+          <div className="rem-banner">
+            <button type="button" className="rem-close" onClick={() => setRemDismissed(true)} aria-label="Скрыть">×</button>
+            <div className="rem-head">Не забудь ✨</div>
+            {reminders.map((r, i) => (
+              <div className="rem-row" key={i}>
+                <span className="rem-ic">{r.icon}</span>
+                <span className="rem-text">{r.text}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* ── Hero card ── */}
         <section className="hero-card">
           <div className="hero-top">

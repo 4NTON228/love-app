@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import webpush from 'https://esm.sh/web-push@3.6.7'
 import { getCaller, isTrustedServiceCall } from '../_shared/auth.ts'
+import { isExpoSubscription, sendExpoPush } from '../_shared/push.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -70,15 +71,28 @@ Deno.serve(async (req) => {
       })
     }
 
+    // Мобильное приложение — Expo push, браузер — web-push
+    const expoTokens = subs.filter(r => isExpoSubscription(r.subscription)).map(r => (r.subscription as any).expo_token as string)
+    const webSubs = subs.filter(r => !isExpoSubscription(r.subscription))
+
+    let expoSent = 0
+    if (expoTokens.length) {
+      const res = await sendExpoPush(expoTokens, title, body)
+      expoSent = res.sent
+      if (res.invalid.length === expoTokens.length && !webSubs.length) {
+        await supabase.from('push_subscriptions').delete().eq('user_id', recipientId)
+      }
+    }
+
     const vapidPublic  = Deno.env.get('VAPID_PUBLIC_KEY')!
     const vapidPrivate = Deno.env.get('VAPID_PRIVATE_KEY')!
     const vapidSubject = Deno.env.get('VAPID_SUBJECT') || 'mailto:admin@example.com'
 
-    webpush.setVapidDetails(vapidSubject, vapidPublic, vapidPrivate)
+    if (webSubs.length) webpush.setVapidDetails(vapidSubject, vapidPublic, vapidPrivate)
 
     const payload = JSON.stringify({ title, body })
     const results = await Promise.allSettled(
-      subs.map(row => webpush.sendNotification(row.subscription, payload))
+      webSubs.map(row => webpush.sendNotification(row.subscription, payload))
     )
 
     // Удаляем протухшие подписки (410 Gone)
@@ -87,7 +101,7 @@ Deno.serve(async (req) => {
       if (r.status === 'rejected') {
         const statusCode = (r.reason as any)?.statusCode
         if (statusCode === 410 || statusCode === 404) {
-          expiredEndpoints.push((subs[i].subscription as any).endpoint)
+          expiredEndpoints.push((webSubs[i].subscription as any).endpoint)
         }
       }
     })
@@ -95,12 +109,12 @@ Deno.serve(async (req) => {
     if (expiredEndpoints.length > 0) {
       // Удалить по endpoint нет прямого способа через supabase-js без raw SQL,
       // поэтому просто удаляем все подписки этого получателя если все протухли
-      if (expiredEndpoints.length === subs.length) {
+      if (expiredEndpoints.length === webSubs.length && !expoTokens.length) {
         await supabase.from('push_subscriptions').delete().eq('user_id', recipientId)
       }
     }
 
-    const sent = results.filter(r => r.status === 'fulfilled').length
+    const sent = expoSent + results.filter(r => r.status === 'fulfilled').length
     return new Response(JSON.stringify({ sent, total: subs.length }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })

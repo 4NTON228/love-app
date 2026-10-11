@@ -19,6 +19,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import webpush       from 'https://esm.sh/web-push@3.6.7'
 import { getCaller, isTrustedServiceCall } from '../_shared/auth.ts'
 import { sanitizeAIMessages } from '../_shared/ai.ts'
+import { isExpoSubscription, sendExpoPush } from '../_shared/push.ts'
 
 // ── Заголовки CORS ────────────────────────────────────────────
 const cors = {
@@ -49,18 +50,26 @@ async function pushToUser(
     .select('subscription')
     .eq('user_id', userId)
 
-  if (!PUSH_ENABLED || !subs || subs.length === 0) return 0
+  if (!subs || subs.length === 0) return 0
+
+  // Мобильное приложение — через Expo push
+  const expoTokens = subs.filter((r: { subscription: unknown }) => isExpoSubscription(r.subscription))
+    .map((r: { subscription: { expo_token: string } }) => r.subscription.expo_token)
+  const expoSent = expoTokens.length ? (await sendExpoPush(expoTokens, title, body)).sent : 0
+
+  const webSubs = subs.filter((r: { subscription: unknown }) => !isExpoSubscription(r.subscription))
+  if (!PUSH_ENABLED || webSubs.length === 0) return expoSent
 
   const payload = JSON.stringify({ title, body })
   const results = await Promise.allSettled(
-    subs.map((row: { subscription: PushSubscriptionJSON }) =>
+    webSubs.map((row: { subscription: PushSubscriptionJSON }) =>
       webpush.sendNotification(row.subscription, payload),
     ),
   )
 
   // Удаляем протухшие подписки (410 Gone)
   const expired = results
-    .map((r, i) => ({ r, sub: subs[i].subscription }))
+    .map((r, i) => ({ r, sub: webSubs[i].subscription }))
     .filter(({ r }) => r.status === 'rejected' && (r as PromiseRejectedResult).reason?.statusCode === 410)
 
   if (expired.length > 0) {
@@ -72,7 +81,7 @@ async function pushToUser(
       .eq('user_id', userId)
   }
 
-  return results.filter(r => r.status === 'fulfilled').length
+  return expoSent + results.filter(r => r.status === 'fulfilled').length
 }
 
 // ── Банк вопросов для Зеркала (30 вопросов) ──────────────────

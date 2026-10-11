@@ -11,9 +11,16 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { checkOAuthState, newOAuthState, stateCookie } from '../_shared/oauth-state.ts'
 
 const VK_API   = 'https://api.vk.com/method'
 const VK_OAUTH = 'https://oauth.vk.com'
+const COOKIE_PATH = '/functions/v1/vk-auth'
+
+// Редирект, который заодно стирает cookie со state (одноразовый)
+function redirect(location: string, cookie = stateCookie('', COOKIE_PATH)) {
+  return new Response(null, { status: 302, headers: { Location: location, 'Set-Cookie': cookie } })
+}
 
 Deno.serve(async (req) => {
   const url        = new URL(req.url)
@@ -39,16 +46,22 @@ Deno.serve(async (req) => {
     vkUrl.searchParams.set('response_type', 'code')
     vkUrl.searchParams.set('v', '5.131')
     vkUrl.searchParams.set('display', 'mobile')
-    return Response.redirect(vkUrl.toString(), 302)
+    // state против login-CSRF: VK вернёт его в callback, сверяем с cookie
+    const state = newOAuthState()
+    vkUrl.searchParams.set('state', state)
+    return redirect(vkUrl.toString(), stateCookie(state, COOKIE_PATH))
   }
 
   // ── Пользователь отклонил авторизацию ──────────────────────────────────
   if (errorParam) {
-    return Response.redirect(`${appUrl}/?auth_error=vk_denied`, 302)
+    return redirect(`${appUrl}/?auth_error=vk_denied`)
   }
 
   // ── Шаг 2: Получаем токен и создаём/находим Supabase-пользователя ──────
   if (code) {
+    if (!checkOAuthState(url.searchParams.get('state'), req.headers.get('Cookie'))) {
+      return redirect(`${appUrl}/?auth_error=vk_state`)
+    }
     try {
       // Обмениваем code на access_token
       const tokenRes  = await fetch(
@@ -56,13 +69,13 @@ Deno.serve(async (req) => {
         `?client_id=${vkAppId}` +
         `&client_secret=${encodeURIComponent(vkSecret)}` +
         `&redirect_uri=${encodeURIComponent(redirectUri)}` +
-        `&code=${code}`
+        `&code=${encodeURIComponent(code)}`
       )
       const tokenData = await tokenRes.json()
 
       if (tokenData.error) {
         console.error('VK token error:', tokenData)
-        return Response.redirect(`${appUrl}/?auth_error=vk_token`, 302)
+        return redirect(`${appUrl}/?auth_error=vk_token`)
       }
 
       const { access_token, user_id: vkId, email: vkEmail } = tokenData
@@ -79,7 +92,7 @@ Deno.serve(async (req) => {
       const vkUser   = userData.response?.[0]
 
       if (!vkUser) {
-        return Response.redirect(`${appUrl}/?auth_error=vk_user`, 302)
+        return redirect(`${appUrl}/?auth_error=vk_user`)
       }
 
       // Формируем данные пользователя
@@ -94,7 +107,7 @@ Deno.serve(async (req) => {
       const userId = await findOrCreateUser(supabase, email, { name, avatar_url: avatarUrl, vk_id: vkId })
 
       if (!userId) {
-        return Response.redirect(`${appUrl}/?auth_error=user_create`, 302)
+        return redirect(`${appUrl}/?auth_error=user_create`)
       }
 
       // Создаём/обновляем профиль (не трогаем partner_id и invite_code)
@@ -113,15 +126,15 @@ Deno.serve(async (req) => {
 
       if (linkErr || !linkData?.properties?.action_link) {
         console.error('Magic link error:', linkErr)
-        return Response.redirect(`${appUrl}/?auth_error=magic_link`, 302)
+        return redirect(`${appUrl}/?auth_error=magic_link`)
       }
 
       // Редиректим пользователя на magic link — он автоматически войдёт в приложение
-      return Response.redirect(linkData.properties.action_link, 302)
+      return redirect(linkData.properties.action_link)
 
     } catch (e) {
       console.error('VK auth exception:', e)
-      return Response.redirect(`${appUrl}/?auth_error=exception`, 302)
+      return redirect(`${appUrl}/?auth_error=exception`)
     }
   }
 

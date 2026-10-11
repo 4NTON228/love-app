@@ -6,11 +6,12 @@
  *   - couple anniversary (today / tomorrow)
  *   - calendar events (today / tomorrow)
  *
- * Idempotent enough by running once per day. Safe to call with the public
- * anon key (no data is returned; it only pushes legitimately-due reminders).
+ * Runs once per day. Callable only by the cron job (x-cron-secret header =
+ * CRON_SECRET) or with the service_role key — see supabase-daily-reminders-cron.sql.
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { isTrustedServiceCall } from '../_shared/auth.ts'
 
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL')!,
@@ -22,7 +23,13 @@ function ymd(d: Date) { return `${d.getFullYear()}-${String(d.getMonth() + 1).pa
 function md(dateStr: string) { const x = new Date(dateStr); return `${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}` }
 function yearsWord(n: number) { const a = n % 10, b = n % 100; if (a === 1 && b !== 11) return 'год'; if (a >= 2 && a <= 4 && (b < 10 || b >= 20)) return 'года'; return 'лет' }
 
-Deno.serve(async () => {
+Deno.serve(async (req) => {
+  // Только cron (x-cron-secret) или service_role: повторные вызовы извне
+  // рассылали бы парам лишние уведомления.
+  if (!isTrustedServiceCall(req)) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } })
+  }
+
   const now = new Date()
   const tomorrow = new Date(now.getTime() + 86400000)
   const todayMD = mmdd(now), tomMD = mmdd(tomorrow)

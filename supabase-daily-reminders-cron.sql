@@ -7,8 +7,10 @@
 --   • couple anniversary (today / tomorrow)
 --   • calendar events (today / tomorrow)
 --
--- pg_cron + pg_net are already enabled (used by meeting-reminder).
--- 09:00 UTC daily; anon key is public and only reaches the function.
+-- The function only accepts calls that carry the x-cron-secret header
+-- (= Edge Function secret CRON_SECRET). The same value is kept in Supabase
+-- Vault under the name 'cron_secret' — see supabase-cron-secret.sql.
+-- 09:00 UTC daily.
 
 select cron.schedule(
   'daily-reminders',
@@ -17,9 +19,8 @@ select cron.schedule(
   select net.http_post(
     url := 'https://bqyisdgwtgxxomukozko.supabase.co/functions/v1/daily-reminders',
     headers := jsonb_build_object(
-      'Content-Type','application/json',
-      'apikey','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJxeWlzZGd3dGd4eG9tdWtvemtvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5NDcyNjUsImV4cCI6MjA4NjUyMzI2NX0.n7MpTU0-pM_093znX3mvZ4dc82bX5EwB7vnDi7GZ54c',
-      'Authorization','Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJxeWlzZGd3dGd4eG9tdWtvemtvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5NDcyNjUsImV4cCI6MjA4NjUyMzI2NX0.n7MpTU0-pM_093znX3mvZ4dc82bX5EwB7vnDi7GZ54c'
+      'Content-Type', 'application/json',
+      'x-cron-secret', (select decrypted_secret from vault.decrypted_secrets where name = 'cron_secret')
     )
   );
   $CRON$

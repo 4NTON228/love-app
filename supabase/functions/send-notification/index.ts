@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import webpush from 'https://esm.sh/web-push@3.6.7'
+import { getCaller, isTrustedServiceCall } from '../_shared/auth.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -28,38 +29,32 @@ Deno.serve(async (req) => {
 
     // ── Авторизация: подтверждаем, кто вызывает функцию ──────────────────
     // Без этой проверки любой мог бы слать push-уведомления любому пользователю.
-    const authHeader = req.headers.get('Authorization') || ''
-    const jwt = authHeader.replace(/^Bearer\s+/i, '')
-    if (!jwt) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
+    // Серверные функции (daily-reminders, meeting-reminder) вызывают нас
+    // с service_role ключом — им можно слать любому получателю.
+    if (!isTrustedServiceCall(req)) {
+      const caller = await getCaller(req, supabase)
+      if (!caller) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
 
-    const { data: userData, error: authErr } = await supabase.auth.getUser(jwt)
-    const caller = userData?.user
-    if (authErr || !caller) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
+      // Получатель должен быть либо сам отправитель, либо его подтверждённый партнёр.
+      const { data: callerProfile } = await supabase
+        .from('profiles')
+        .select('partner_id')
+        .eq('id', caller.id)
+        .single()
 
-    // Получатель должен быть либо сам отправитель, либо его подтверждённый партнёр.
-    const { data: callerProfile } = await supabase
-      .from('profiles')
-      .select('partner_id')
-      .eq('id', caller.id)
-      .single()
-
-    const allowed =
-      recipientId === caller.id || recipientId === callerProfile?.partner_id
-    if (!allowed) {
-      return new Response(JSON.stringify({ error: 'Forbidden' }), {
-        status: 403,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+      const allowed =
+        recipientId === caller.id || recipientId === callerProfile?.partner_id
+      if (!allowed) {
+        return new Response(JSON.stringify({ error: 'Forbidden' }), {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
     }
 
     // Берём подписки получателя

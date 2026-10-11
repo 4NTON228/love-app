@@ -7,7 +7,9 @@
 //      — рассчитывает метрики теплоты
 //      — проверяет триггеры капсул времени
 //      — находит незавершённые диалоги
-//   2. AI-прокси: тело { messages: [{role, content}], model?, ... }
+//      — доступно только cron (заголовок x-cron-secret) или service_role
+//   2. AI-прокси: тело { messages: [{role, content}] } + JWT пользователя
+//      — модель задаётся секретом AI_MODEL (параметр model от клиента игнорируется)
 //      — использует xAI /v1/responses (модель: grok-4.20-reasoning)
 //      — принимает OpenAI-формат, возвращает OpenAI-формат
 //      — секрет AI_API_KEY задаётся в Supabase Dashboard → Secrets
@@ -15,6 +17,8 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import webpush       from 'https://esm.sh/web-push@3.6.7'
+import { getCaller, isTrustedServiceCall } from '../_shared/auth.ts'
+import { sanitizeAIMessages } from '../_shared/ai.ts'
 
 // ── Заголовки CORS ────────────────────────────────────────────
 const cors = {
@@ -23,12 +27,13 @@ const cors = {
   'Content-Type': 'application/json',
 }
 
-// ── VAPID-ключи (те же что в send-notification) ───────────────
-const VAPID_PUBLIC  = 'BJZU7YGUVM4c0w-tCFGqOdUXqzOTQoYXMOKrn_EHDBUV_eKx9tQtzXf7rgfmLkAhkfh45bEmtGuis8b8m5-BHVs'
-const VAPID_PRIVATE = 'Drbxv8iXT2ryLjkGGhhyy3-_2NZTJ31AARv1F7zaCVE'
-const VAPID_SUBJECT = 'mailto:admin@example.com'
+// ── VAPID-ключи: только из секретов (те же, что в send-notification) ──
+const VAPID_PUBLIC  = Deno.env.get('VAPID_PUBLIC_KEY') ?? ''
+const VAPID_PRIVATE = Deno.env.get('VAPID_PRIVATE_KEY') ?? ''
+const VAPID_SUBJECT = Deno.env.get('VAPID_SUBJECT') || 'mailto:admin@example.com'
+const PUSH_ENABLED  = !!(VAPID_PUBLIC && VAPID_PRIVATE)
 
-webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC, VAPID_PRIVATE)
+if (PUSH_ENABLED) webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC, VAPID_PRIVATE)
 
 // ── Отправка web-push уведомления конкретному пользователю ────
 // Берём подписки из таблицы push_subscriptions (как в send-notification).
@@ -44,7 +49,7 @@ async function pushToUser(
     .select('subscription')
     .eq('user_id', userId)
 
-  if (!subs || subs.length === 0) return 0
+  if (!PUSH_ENABLED || !subs || subs.length === 0) return 0
 
   const payload = JSON.stringify({ title, body })
   const results = await Promise.allSettled(
@@ -122,17 +127,25 @@ Deno.serve(async (req: Request) => {
 
   try {
     const body = await req.json().catch(() => ({}))
-
-    // ── Режим 1: OpenAI-совместимый прокси (к Grok или другому AI) ──
-    if (body.messages && Array.isArray(body.messages)) {
-      return handleAIProxy(body)
-    }
-
-    // ── Режим 2: Задачи обслуживания (cron или ручной вызов) ──
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     )
+
+    // ── Режим 1: OpenAI-совместимый прокси (к Grok или другому AI) ──
+    // Только для вошедших пользователей: иначе ключ AI доступен любому с anon key.
+    if (body.messages && Array.isArray(body.messages)) {
+      const caller = await getCaller(req, supabase)
+      if (!caller) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: cors })
+      }
+      return handleAIProxy(body)
+    }
+
+    // ── Режим 2: Задачи обслуживания — только cron / service_role ──
+    if (!isTrustedServiceCall(req)) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: cors })
+    }
 
     const taskType = body.type ?? 'cron'
     const results: Record<string, unknown> = {}
@@ -535,8 +548,9 @@ async function handleAIProxy(body: Record<string, unknown>): Promise<Response> {
     )
   }
 
-  const messages = (body.messages ?? []) as Array<{ role: string; content: string }>
-  const model    = (body.model as string) ?? 'grok-4.20-reasoning'
+  const messages = sanitizeAIMessages(body.messages)
+  // Модель выбирает сервер, а не клиент (иначе можно заказать самую дорогую)
+  const model    = Deno.env.get('AI_MODEL') ?? 'grok-4.20-reasoning'
 
   // Системный промпт советчика по отношениям
   const systemPrompt =

@@ -8,10 +8,12 @@
 //   4. Напоминает об ожидающих подписи контрактах (раз в день)
 //
 // Запуск вручную: POST { "type": "check_contracts" }
+// Доступ: только cron (заголовок x-cron-secret) или service_role ключ.
 // ══════════════════════════════════════════════════════════════
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import webpush from 'https://esm.sh/web-push@3.6.7'
+import { isTrustedServiceCall } from '../_shared/auth.ts'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -19,11 +21,12 @@ const cors = {
   'Content-Type': 'application/json',
 }
 
-const VAPID_PUBLIC  = 'BJZU7YGUVM4c0w-tCFGqOdUXqzOTQoYXMOKrn_EHDBUV_eKx9tQtzXf7rgfmLkAhkfh45bEmtGuis8b8m5-BHVs'
-const VAPID_PRIVATE = 'Drbxv8iXT2ryLjkGGhhyy3-_2NZTJ31AARv1F7zaCVE'
-const VAPID_SUBJECT = 'mailto:admin@example.com'
+const VAPID_PUBLIC  = Deno.env.get('VAPID_PUBLIC_KEY') ?? ''
+const VAPID_PRIVATE = Deno.env.get('VAPID_PRIVATE_KEY') ?? ''
+const VAPID_SUBJECT = Deno.env.get('VAPID_SUBJECT') || 'mailto:admin@example.com'
+const PUSH_ENABLED  = !!(VAPID_PUBLIC && VAPID_PRIVATE)
 
-webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC, VAPID_PRIVATE)
+if (PUSH_ENABLED) webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC, VAPID_PRIVATE)
 
 async function pushToUser(
   supabase: ReturnType<typeof createClient>,
@@ -36,7 +39,7 @@ async function pushToUser(
     .select('subscription')
     .eq('user_id', userId)
 
-  if (!subs || subs.length === 0) return 0
+  if (!PUSH_ENABLED || !subs || subs.length === 0) return 0
 
   const payload = JSON.stringify({ title, body })
   const results = await Promise.allSettled(
@@ -203,6 +206,10 @@ async function checkContracts(supabase: ReturnType<typeof createClient>) {
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: cors })
+  }
+
+  if (!isTrustedServiceCall(req)) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: cors })
   }
 
   try {

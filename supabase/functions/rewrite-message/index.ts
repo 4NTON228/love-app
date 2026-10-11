@@ -11,6 +11,7 @@
 // ══════════════════════════════════════════════════════════════
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { getCaller } from '../_shared/auth.ts'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -117,6 +118,15 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
+    // Только для вошедших пользователей — иначе ключ AI доступен любому
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+    )
+    if (!(await getCaller(req, supabase))) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: cors })
+    }
+
     const body = await req.json().catch(() => ({}))
     const { message, context, template } = body as {
       message?: string
@@ -129,6 +139,10 @@ Deno.serve(async (req: Request) => {
         JSON.stringify({ error: 'message is required' }),
         { status: 400, headers: cors },
       )
+    }
+
+    if (message.length > 4000 || (context?.length ?? 0) > 2000 || (template?.length ?? 0) > 500) {
+      return new Response(JSON.stringify({ error: 'message too long' }), { status: 413, headers: cors })
     }
 
     const result = await callGrok(message.trim(), context, template)

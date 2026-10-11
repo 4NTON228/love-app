@@ -60,9 +60,17 @@ supabase functions deploy send-notification
 supabase functions deploy process-time-capsules
 
 supabase secrets set AI_API_KEY=sk-...
+supabase secrets set AI_MODEL=grok-4.20-reasoning      # модель выбирает сервер, не клиент
+supabase secrets set VAPID_PUBLIC_KEY=...
 supabase secrets set VAPID_PRIVATE_KEY=...
-supabase secrets set VAPID_EMAIL=mailto:you@example.com
+supabase secrets set VAPID_SUBJECT=mailto:you@example.com
+supabase secrets set CRON_SECRET=$(openssl rand -hex 32)  # см. supabase-cron-secret.sql
 ```
+
+> Cron-функции (`daily-reminders`, `meeting-reminder`, `check-contracts`,
+> `process-time-capsules`, cron-режим `relationship-keeper`) принимают вызов
+> только с заголовком `x-cron-secret` = `CRON_SECRET` или с service_role ключом.
+> AI-прокси (`relationship-keeper` с `messages`, `rewrite-message`) — только с JWT пользователя.
 
 ### 4. Расписание капсул времени (pg_cron)
 
@@ -70,7 +78,8 @@ supabase secrets set VAPID_EMAIL=mailto:you@example.com
 SELECT cron.schedule('capsules', '0 * * * *', $$
     SELECT net.http_post(
         url := 'https://<ref>.supabase.co/functions/v1/process-time-capsules',
-        headers := '{"Authorization": "Bearer <SERVICE_ROLE_KEY>"}' ::jsonb
+        headers := jsonb_build_object('x-cron-secret',
+            (select decrypted_secret from vault.decrypted_secrets where name = 'cron_secret'))
     )
 $$);
 ```

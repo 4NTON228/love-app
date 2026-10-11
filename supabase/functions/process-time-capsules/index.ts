@@ -21,6 +21,7 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { isTrustedServiceCall } from '../_shared/auth.ts'
 
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL')!,
@@ -29,9 +30,9 @@ const supabase = createClient(
 
 Deno.serve(async (req) => {
   // Only allow cron/service invocations
-  const authHeader = req.headers.get('Authorization') ?? ''
-  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-  if (!authHeader.includes(serviceKey.slice(0, 20))) {
+  // (раньше сверялись первые 20 символов ключа — это общий заголовок JWT,
+  // под который подходил и публичный anon key)
+  if (!isTrustedServiceCall(req)) {
     return new Response('Unauthorized', { status: 401 })
   }
 

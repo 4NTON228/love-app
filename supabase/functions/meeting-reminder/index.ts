@@ -5,22 +5,26 @@
  * next_meeting time has arrived it pushes BOTH partners:
  *   "💕 Вы скоро увидитесь!"
  * and stamps couple_settings.meeting_notified_at so it fires exactly once
- * per meeting. Idempotent + low-risk, so it is safe to invoke with the
- * public anon key from the scheduled job.
- *
- * Cron is already configured in the database (see
- * supabase-meeting-reminder-cron.sql). It uses its own SERVICE_ROLE_KEY
- * env for DB access regardless of the caller.
+ * per meeting. Callable only by the cron job (x-cron-secret header =
+ * CRON_SECRET) or with the service_role key — see
+ * supabase-meeting-reminder-cron.sql.
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { isTrustedServiceCall } from '../_shared/auth.ts'
 
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL')!,
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
 )
 
-Deno.serve(async () => {
+Deno.serve(async (req) => {
+  // Только cron (x-cron-secret) или service_role: повторные вызовы извне
+  // рассылали бы парам лишние уведомления.
+  if (!isTrustedServiceCall(req)) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } })
+  }
+
   const now = new Date().toISOString()
   let processed = 0
 

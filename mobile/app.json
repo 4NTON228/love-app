@@ -29,7 +29,12 @@
     },
     "plugins": [
       "expo-router",
-      "expo-secure-store",
+      [
+        "expo-secure-store",
+        {
+          "faceIDPermission": "Face ID не используется приложением."
+        }
+      ],
       "expo-font",
       "expo-image",
       [
@@ -45,7 +50,7 @@
         "expo-image-picker",
         {
           "photosPermission": "Чтобы прикреплять фото к сообщениям и моментам.",
-          "cameraPermission": "Чтобы снимать фото для партнёра."
+          "cameraPermission": "Чтобы снимать фото и видеокружки для партнёра."
         }
       ],
       [
@@ -55,9 +60,22 @@
         }
       ],
       "@react-native-community/datetimepicker",
-      "expo-audio",
       "expo-video",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Чтобы записывать голосовые сообщения и видеокружки."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Чтобы снимать фото и видеокружки для партнёра.",
+          "microphonePermission": "Чтобы записывать голосовые сообщения и видеокружки.",
+          "recordAudioAndroid": true
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

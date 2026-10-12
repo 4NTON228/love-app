@@ -99,8 +99,7 @@ export const VideoCircle = memo(function VideoCircle({ url, isMine, time, readAt
   function toggle() {
     if (isPlaying) player.pause();
     else {
-      if (ended) { player.currentTime = 0; setEnded(false); }
-      player.play();
+      if (ended) { setEnded(false); player.replay(); } else player.play();
     }
   }
 
@@ -267,26 +266,28 @@ export const Message = memo(function Message({ msg, isMine, uid, partnerName, on
   const lastTap = useRef(0);
   const [dx] = useState(() => new Animated.Value(0));
   const [hint, setHint] = useState(0);
-  const dxVal = useRef(0);
 
-  const pan = useMemo(() => PanResponder.create({
+  const pan = useMemo(() => {
+    const g0 = { cur: 0 }; // текущий сдвиг жеста
+    return PanResponder.create({
     onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 10 && Math.abs(g.dx) > Math.abs(g.dy) * 1.5 && (isMine ? g.dx < 0 : g.dx > 0),
     onPanResponderMove: (_, g) => {
       const rightDir = isMine ? g.dx < 0 : g.dx > 0;
       if (!rightDir) return;
       const clamped = Math.min(Math.abs(g.dx), 68) * (isMine ? -1 : 1);
-      dxVal.current = clamped;
+      g0.cur = clamped;
       dx.setValue(clamped);
       setHint(Math.abs(clamped));
     },
     onPanResponderRelease: () => {
-      if (Math.abs(dxVal.current) >= 55) { thud(); onReply(msg.id); }
-      dxVal.current = 0;
+      if (Math.abs(g0.cur) >= 55) { thud(); onReply(msg.id); }
+      g0.cur = 0;
       setHint(0);
       Animated.timing(dx, { toValue: 0, duration: 200, easing: Easing.bezier(0.25, 1, 0.5, 1), useNativeDriver: true }).start();
     },
-    onPanResponderTerminate: () => { dxVal.current = 0; setHint(0); dx.setValue(0); },
-  }), [isMine, msg.id, onReply, dx]);
+    onPanResponderTerminate: () => { g0.cur = 0; setHint(0); dx.setValue(0); },
+    });
+  }, [isMine, msg.id, onReply, dx]);
 
   const radius: Radius = isMine
     ? { tl: 18, tr: 18, br: isLast ? 4 : 8, bl: 18 }
@@ -360,6 +361,17 @@ function MenuIcon({ d, stroke = '#C8334A' }: { d: string; stroke?: string }) {
   return <Svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke={stroke} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><Path d={d} /></Svg>;
 }
 
+const MENU_DIV = 'rgba(232,85,106,0.1)';
+function MenuRow({ label, d, onPress, onClose, danger, last }: { label: string; d: string; onPress: () => void; onClose: () => void; danger?: boolean; last?: boolean }) {
+  return (
+    <Pressable onPress={() => { tap(); onPress(); onClose(); }} accessibilityRole="button"
+      style={({ pressed }) => [st.menuRow, !last && { borderBottomWidth: 0.5, borderBottomColor: MENU_DIV }, pressed && { backgroundColor: 'rgba(255,255,255,0.04)' }]}>
+      <MenuIcon d={d} stroke={danger ? '#E0404A' : '#C8334A'} />
+      <Text style={[st.menuText, danger && { color: '#E0404A' }]}>{label}</Text>
+    </Pressable>
+  );
+}
+
 export function ContextMenu({ menu, onClose, onEdit, onDelete, onPin, onReply, onReact }: {
   menu: CtxMenu; onClose: () => void; onEdit: (id: string, text: string) => void; onDelete: (id: string) => void;
   onPin: (id: string) => void; onReply: (id: string) => void; onReact: (id: string, e: string) => void;
@@ -371,14 +383,7 @@ export function ContextMenu({ menu, onClose, onEdit, onDelete, onPin, onReply, o
     Animated.timing(v, { toValue: 1, duration: 180, easing: Easing.bezier(0.34, 1.56, 0.64, 1), useNativeDriver: true }).start();
   }, [menu, v]);
   if (!menu) return null;
-  const divColor = 'rgba(232,85,106,0.1)';
-  const Row = ({ label, d, onPress, danger, last }: { label: string; d: string; onPress: () => void; danger?: boolean; last?: boolean }) => (
-    <Pressable onPress={() => { tap(); onPress(); onClose(); }} accessibilityRole="button"
-      style={({ pressed }) => [st.menuRow, !last && { borderBottomWidth: 0.5, borderBottomColor: divColor }, pressed && { backgroundColor: 'rgba(255,255,255,0.04)' }]}>
-      <MenuIcon d={d} stroke={danger ? '#E0404A' : '#C8334A'} />
-      <Text style={[st.menuText, danger && { color: '#E0404A' }]}>{label}</Text>
-    </Pressable>
-  );
+  const divColor = MENU_DIV;
   return (
     <Modal visible transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
       <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="Закрыть меню">
@@ -395,12 +400,12 @@ export function ContextMenu({ menu, onClose, onEdit, onDelete, onPin, onReply, o
               </Pressable>
             ))}
           </View>
-          <Row label="Ответить" d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" onPress={() => onReply(menu.msgId)} />
-          {menu.isMe && menu.text ? <Row label="Редактировать" d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.1 2.1 0 013 3L12 15l-4 1 1-4z" onPress={() => onEdit(menu.msgId, menu.text)} /> : null}
-          {menu.text ? <Row label="Копировать" d="M8 4H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-2M16 2H8a2 2 0 00-2 2v0a2 2 0 002 2h8a2 2 0 002-2v0a2 2 0 00-2-2z" onPress={() => { Clipboard.setStringAsync(menu.text); }} /> : null}
-          <Row label={menu.isPinned ? 'Открепить' : 'Закрепить'} last={!menu.isMe}
+          <MenuRow onClose={onClose} label="Ответить" d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" onPress={() => onReply(menu.msgId)} />
+          {menu.isMe && menu.text ? <MenuRow onClose={onClose} label="Редактировать" d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.1 2.1 0 013 3L12 15l-4 1 1-4z" onPress={() => onEdit(menu.msgId, menu.text)} /> : null}
+          {menu.text ? <MenuRow onClose={onClose} label="Копировать" d="M8 4H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-2M16 2H8a2 2 0 00-2 2v0a2 2 0 002 2h8a2 2 0 002-2v0a2 2 0 00-2-2z" onPress={() => { Clipboard.setStringAsync(menu.text); }} /> : null}
+          <MenuRow onClose={onClose} label={menu.isPinned ? 'Открепить' : 'Закрепить'} last={!menu.isMe}
             d="M12 17v5M5 17h14v-1.76a2 2 0 00-1.11-1.79l-1.78-.9A2 2 0 0115 10.76V6h1a2 2 0 000-4H8a2 2 0 000 4h1v4.76a2 2 0 01-1.11 1.79l-1.78.9A2 2 0 005 15.24V17z" onPress={() => onPin(menu.msgId)} />
-          {menu.isMe ? <Row label="Удалить" danger last d="M3 6h18M19 6l-1 14H6L5 6M10 11v6M14 11v6M9 6V4h6v2" onPress={() => onDelete(menu.msgId)} /> : null}
+          {menu.isMe ? <MenuRow onClose={onClose} label="Удалить" danger last d="M3 6h18M19 6l-1 14H6L5 6M10 11v6M14 11v6M9 6V4h6v2" onPress={() => onDelete(menu.msgId)} /> : null}
         </Animated.View>
       </View>
     </Modal>

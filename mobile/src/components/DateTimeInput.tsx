@@ -34,16 +34,26 @@ type Props = {
   maximumDate?: Date;
   minimumDate?: Date;
   label?: string;
+  themeVariant?: 'light' | 'dark';
 };
 
-export function DateTimeInput({ value, onChange, mode = 'date', placeholder = 'дд.мм.гггг', style, textStyle, placeholderColor, maximumDate, minimumDate, label }: Props) {
+export function DateTimeInput({ value, onChange, mode = 'date', placeholder = 'дд.мм.гггг', style, textStyle, placeholderColor, maximumDate, minimumDate, label, themeVariant = 'dark' }: Props) {
   const current = parse(value, mode);
   const emit = (d: Date) => onChange(mode === 'datetime' ? toLocalDateTime(d) : toLocalDate(d));
 
   if (Platform.OS === 'ios') {
+    // Пустое поле как в вебе: плейсхолдер; по нажатию подставляем текущую дату (в пределах min/max) и показываем пикер
+    if (!value) {
+      const fill = () => emit(new Date(Math.min(Math.max(Date.now(), minimumDate?.getTime() ?? -Infinity), maximumDate?.getTime() ?? Infinity)));
+      return (
+        <Pressable onPress={fill} accessibilityRole="button" accessibilityLabel={label ?? placeholder} style={[style, { justifyContent: 'center' }]}>
+          <Text style={[textStyle, placeholderColor ? { color: placeholderColor } : null]}>{placeholder}</Text>
+        </Pressable>
+      );
+    }
     return (
       <View style={[style, { alignItems: 'flex-start', justifyContent: 'center' }]} accessibilityLabel={label}>
-        <DateTimePicker value={current} mode={mode} display="compact" locale="ru-RU" themeVariant="dark"
+        <DateTimePicker value={current} mode={mode} display="compact" locale="ru-RU" themeVariant={themeVariant}
           maximumDate={maximumDate} minimumDate={minimumDate} onChange={(_, d) => d && emit(d)} />
       </View>
     );

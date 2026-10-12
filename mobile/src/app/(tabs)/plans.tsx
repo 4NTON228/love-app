@@ -152,7 +152,7 @@ export default function Plans() {
     setLoading(false);
   }, [uid, pid]);
 
-  useEffect(() => { loadPlans(); }, [loadPlans]);
+  useEffect(() => { (async () => { await loadPlans(); })(); }, [loadPlans]);
 
   async function handleSubmit() {
     if (!title) return;

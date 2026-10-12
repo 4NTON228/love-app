@@ -40,7 +40,7 @@ export function useSubscription() {
         if (c.exp && c.exp > Date.now()) setIsPremium(!!c.active);
       } catch { /* ignore invalid cache */ }
     });
-    check();
+    (async () => { await check(); })();
   }, [check]);
 
   /** Вернулись с платёжной страницы: сбросить кэш и перепроверить через 2 с (ждём вебхук ЮKassa) */

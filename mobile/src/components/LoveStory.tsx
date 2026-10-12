@@ -1,6 +1,6 @@
 // Порт src/components/LoveStory.jsx — «Наша история», кино-сторис о паре.
 import { Image } from 'expo-image';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator, Animated, Easing, Modal, PanResponder, Pressable, StyleSheet, Text, useWindowDimensions, View,
 } from 'react-native';
@@ -103,7 +103,6 @@ export function LoveStory({ uid, profile, partnerName, coupleStart, onClose }: {
     let on = true;
     (async () => {
       const ids = [uid, pid].filter(Boolean) as string[];
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const scoped = (q: any) => (ids.length <= 1 ? q.eq('user_id', uid) : q.in('user_id', ids));
       const [mo, ev, pl, md] = await Promise.all([
         scoped(supabase.from('moments').select('photo_url,thumb_url,created_at', { count: 'exact' }).order('created_at', { ascending: false }).limit(9)),
@@ -128,7 +127,8 @@ export function LoveStory({ uid, profile, partnerName, coupleStart, onClose }: {
     return () => { on = false; };
   }, [uid, pid]);
 
-  const days = useMemo(() => (coupleStart ? Math.max(0, Math.floor((Date.now() - coupleStart.getTime()) / 86400000)) : null), [coupleStart]);
+  const [now] = useState(() => Date.now());
+  const days = useMemo(() => (coupleStart ? Math.max(0, Math.floor((now - coupleStart.getTime()) / 86400000)) : null), [coupleStart, now]);
 
   const slides = useMemo(() => {
     if (!data) return [] as { key: string; grad: Grad }[];
@@ -148,10 +148,10 @@ export function LoveStory({ uid, profile, partnerName, coupleStart, onClose }: {
   const prev = useCallback(() => setIdx((i) => Math.max(0, i - 1)), []);
 
   // свайп вниз — закрыть
-  const pan = useRef(PanResponder.create({
+  const [pan] = useState(() => PanResponder.create({
     onMoveShouldSetPanResponder: (_, g) => g.dy > 12 && Math.abs(g.dy) > Math.abs(g.dx),
     onPanResponderRelease: (_, g) => { if (g.dy > 90 && Math.abs(g.dy) > Math.abs(g.dx)) onClose(); },
-  })).current;
+  }));
 
   const myName = profile.name || 'Ты';
   const slide = slides[idx];

@@ -1,6 +1,6 @@
 // Эффекты из Home.jsx / Home.css: HeartWave, Confetti, HeartsBackground,
 // блик cardSweep и размытые пятна blobDrift.
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Animated, Easing, Modal, StyleSheet, useWindowDimensions, View } from 'react-native';
 import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -29,9 +29,9 @@ function WaveHeart({ left, delay, dur, size, h }: { left: number; delay: number;
 
 export function HeartWave() {
   const { height } = useWindowDimensions();
-  const hearts = useMemo(() => Array.from({ length: 16 }, (_, i) => ({
+  const [hearts] = useState(() => Array.from({ length: 16 }, (_, i) => ({
     id: i, left: Math.random() * 100, delay: Math.random() * 0.5, dur: 1.7 + Math.random() * 1.3, size: 16 + Math.random() * 28,
-  })), []);
+  })));
   return (
     <Modal transparent visible animationType="none" statusBarTranslucent>
       <View pointerEvents="none" style={StyleSheet.absoluteFill} accessibilityElementsHidden>
@@ -62,10 +62,10 @@ function Piece({ left, delay, dur, size, rot, color, h }: { left: number; delay:
 
 export function Confetti() {
   const { height } = useWindowDimensions();
-  const pieces = useMemo(() => Array.from({ length: 60 }, (_, i) => ({
+  const [pieces] = useState(() => Array.from({ length: 60 }, (_, i) => ({
     id: i, left: Math.random() * 100, delay: Math.random() * 1.2, dur: 2.4 + Math.random() * 2.2,
     size: 7 + Math.random() * 8, rot: Math.random() * 360, color: CONF_COLORS[i % 5],
-  })), []);
+  })));
   return (
     <Modal transparent visible animationType="none" statusBarTranslucent>
       <View pointerEvents="none" style={StyleSheet.absoluteFill}>

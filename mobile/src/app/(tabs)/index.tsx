@@ -437,11 +437,12 @@ export default function Home() {
     });
   }, [uid]);
 
-  /* ── «В сети»: обновляем last_seen раз в минуту ── */
+  /* ── «В сети»: обновляем last_seen раз в минуту (заодно — текущее время для рендера) ── */
+  const [nowTs, setNowTs] = useState(() => Date.now());
   useEffect(() => {
     const ping = () => supabase.from('profiles').update({ last_seen: new Date().toISOString() }).eq('id', uid).then(() => {}, () => {});
     ping();
-    const id = setInterval(ping, 60000);
+    const id = setInterval(() => { ping(); setNowTs(Date.now()); }, 60000);
     return () => clearInterval(id);
   }, [uid]);
 
@@ -524,20 +525,21 @@ export default function Home() {
 
   const partnerStatusText = relTime(partnerProfile?.last_seen);
   const partnerOnline = partnerStatusText === 'онлайн';
-  const partnerMood = partnerProfile?.mood && partnerProfile.mood_at && Date.now() - new Date(partnerProfile.mood_at).getTime() < 86400000
+  const partnerMood = partnerProfile?.mood && partnerProfile.mood_at && nowTs - new Date(partnerProfile.mood_at).getTime() < 86400000
     ? partnerProfile.mood : null;
 
   /* ── Напоминания: дни рождения / годовщина / события (сегодня и завтра) ── */
   const [remDismissed, setRemDismissed] = useState(false);
+  const partnerBirthday = partnerProfile?.birthday;
   const reminders = useMemo(() => {
     const md = (d: string) => { const x = new Date(d); return `${x.getMonth() + 1}-${x.getDate()}`; };
-    const now = new Date(), tom = new Date(Date.now() + 86400000);
+    const now = new Date(nowTs), tom = new Date(nowTs + 86400000);
     const tMD = `${now.getMonth() + 1}-${now.getDate()}`;
     const nMD = `${tom.getMonth() + 1}-${tom.getDate()}`;
     const whenOf = (m: string) => (m === tMD ? 'Сегодня' : m === nMD ? 'Завтра' : null);
     const out: { icon: string; text: string }[] = [];
-    if (partnerProfile?.birthday) {
-      const w = whenOf(md(partnerProfile.birthday));
+    if (partnerBirthday) {
+      const w = whenOf(md(partnerBirthday));
       if (w) out.push({ icon: '🎂', text: `${w} день рождения у ${partnerName}` });
     }
     if (coupleStart) {
@@ -552,7 +554,7 @@ export default function Home() {
       if (w) out.push({ icon: nextEvent.emoji || '📅', text: `${w}: ${nextEvent.title}` });
     }
     return out;
-  }, [partnerProfile?.birthday, coupleStart, nextEvent, partnerName]);
+  }, [partnerBirthday, coupleStart, nextEvent, partnerName, nowTs]);
 
   // локальное системное уведомление раз в день (как reg.showNotification в вебе)
   useEffect(() => {
@@ -713,7 +715,7 @@ export default function Home() {
                   <Text style={s.eventDate}>{formatDayMonth(nextEvent.event_date)}</Text>
                 </View>
                 <View style={s.eventDays}>
-                  <Text style={s.eventDaysText}>{Math.max(0, Math.ceil((new Date(nextEvent.event_date).getTime() - Date.now()) / 86400000))} дн</Text>
+                  <Text style={s.eventDaysText}>{Math.max(0, Math.ceil((new Date(nextEvent.event_date).getTime() - nowTs) / 86400000))} дн</Text>
                 </View>
               </View>
               <View style={s.actionsRow}><Btn ghost label="Открыть календарь" onPress={openCalendar} /></View>

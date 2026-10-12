@@ -116,7 +116,6 @@ export default function CalendarScreen() {
 
   const load = useCallback(async () => {
     const ids = [uid, pid].filter(Boolean) as string[];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const scoped = (q: any) => (ids.length === 1 ? q.eq('user_id', ids[0]) : q.in('user_id', ids));
     const [ev, mo, pl, md] = await Promise.all([
       scoped(supabase.from('calendar_events').select('*')),
@@ -145,7 +144,7 @@ export default function CalendarScreen() {
     setLoading(false);
   }, [uid, pid, profile.couple_start_date]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { (async () => { await load(); })(); }, [load]);
 
   const byDay = useMemo(() => {
     const map: Record<string, Day> = {};

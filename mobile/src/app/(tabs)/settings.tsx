@@ -180,7 +180,7 @@ export default function Settings() {
     const { data } = await supabase.from('couple_settings').select('love_message').eq('user_id', uid).maybeSingle();
     if (data) setLoveMessage(data.love_message || '');
   }, [uid]);
-  useEffect(() => { loadLoveMessage(); }, [loadLoveMessage]);
+  useEffect(() => { (async () => { await loadLoveMessage(); })(); }, [loadLoveMessage]);
 
   async function handleAvatarChange() {
     const asset = await chooseImage();

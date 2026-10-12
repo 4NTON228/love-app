@@ -120,19 +120,25 @@ export default function Chat() {
   const [, requestCam] = useCameraPermissions();
   const [, requestMic] = useMicrophonePermissions();
 
-  // Перерасшифровываем, когда ключи готовы/сменились
-  useEffect(() => {
-    keysRef.current = roomKeys;
-    if (!roomKeys.length) return;
-    setMessages((prev) => prev.map((m) => (m.ciphertext ? decryptMsg({ ...m, text: m._decryptFailed ? null : m.text }, roomKeys) : m)));
-  }, [roomKeys]);
+  // Перерасшифровываем, когда ключи готовы/сменились (корректировка состояния при смене пропса)
+  useEffect(() => { keysRef.current = roomKeys; }, [roomKeys]);
+  const [prevKeys, setPrevKeys] = useState(roomKeys);
+  if (prevKeys !== roomKeys) {
+    setPrevKeys(roomKeys);
+    if (roomKeys.length) {
+      setMessages((prev) => prev.map((m) => (m.ciphertext ? decryptMsg({ ...m, text: m._decryptFailed ? null : m.text }, roomKeys) : m)));
+    }
+  }
 
-  useEffect(() => { setPartnerLastSeen(partner?.last_seen ?? null); }, [partner?.last_seen]);
+  const [prevPartnerSeen, setPrevPartnerSeen] = useState(partner?.last_seen ?? null);
+  if (prevPartnerSeen !== (partner?.last_seen ?? null)) {
+    setPrevPartnerSeen(partner?.last_seen ?? null);
+    setPartnerLastSeen(partner?.last_seen ?? null);
+  }
   useEffect(() => { messagesRef.current = messages; }, [messages]);
 
   // Только своя пара (uid + partner_id)
   const applyPairFilter = useCallback(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (q: any) => (pid ? q.or(`user_id.eq.${uid},user_id.eq.${pid}`) : q.eq('user_id', uid)),
     [uid, pid],
   );

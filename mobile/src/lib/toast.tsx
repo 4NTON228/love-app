@@ -1,6 +1,6 @@
 // Порт toast из src/lib/helpers.js: снизу по центру, 3 секунды, те же цвета.
 // API тот же: toast.success('…') / toast.error('…') / toast.info('…')
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 
 import { fonts } from '@/theme';
@@ -37,7 +37,7 @@ function ToastItem({ item, onDone }: { item: Item; onDone: (id: number) => void 
 
 export function ToastHost() {
   const [items, setItems] = useState<Item[]>([]);
-  const remove = useRef((id: number) => setItems((l) => l.filter((x) => x.id !== id))).current;
+  const remove = useCallback((id: number) => setItems((l) => l.filter((x) => x.id !== id)), []);
   useEffect(() => {
     push = (message, kind) => setItems((l) => [...l, { id: ++seq, message, kind }]);
     return () => { push = null; };

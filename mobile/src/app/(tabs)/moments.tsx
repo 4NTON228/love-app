@@ -1,7 +1,7 @@
 // Порт src/components/Moments.jsx (+ StoriesViewer).
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert, Animated, Easing, Modal, PanResponder, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View,
 } from 'react-native';
@@ -114,16 +114,13 @@ function StoriesViewer({ stories, startIdx, onClose, onToggleLike }: { stories: 
 
   const goNext = useCallback(() => { setIdx((i) => { if (i < stories.length - 1) return i + 1; onClose(); return i; }); }, [stories.length, onClose]);
   const goPrev = useCallback(() => setIdx((i) => (i > 0 ? i - 1 : i)), []);
-  const navRef = useRef({ goNext, goPrev, onClose });
-  navRef.current = { goNext, goPrev, onClose };
-
-  const pan = useRef(PanResponder.create({
+  const pan = useMemo(() => PanResponder.create({
     onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 12 || Math.abs(g.dy) > 12,
     onPanResponderRelease: (_, g) => {
-      if (Math.abs(g.dx) > 50 && Math.abs(g.dx) > Math.abs(g.dy)) { if (g.dx > 0) navRef.current.goPrev(); else navRef.current.goNext(); }
-      else if (g.dy > 90 && Math.abs(g.dy) > Math.abs(g.dx)) navRef.current.onClose(); // свайп вниз — закрыть
+      if (Math.abs(g.dx) > 50 && Math.abs(g.dx) > Math.abs(g.dy)) { if (g.dx > 0) goPrev(); else goNext(); }
+      else if (g.dy > 90 && Math.abs(g.dy) > Math.abs(g.dx)) onClose(); // свайп вниз — закрыть
     },
-  })).current;
+  }), [goNext, goPrev, onClose]);
 
   function triggerHeart() {
     const next = !liked;
@@ -225,7 +222,7 @@ export default function Moments() {
     setLoading(false);
   }, [uid, pid]);
 
-  useEffect(() => { loadMoments(); }, [loadMoments]);
+  useEffect(() => { (async () => { await loadMoments(); })(); }, [loadMoments]);
 
   async function handlePhotoSelect() {
     const asset = await chooseImage();

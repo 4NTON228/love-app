@@ -37,6 +37,12 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: mobile/package-lock.json
+      - name: Select newest Xcode
+        run: |
+          ls -d /Applications/Xcode*.app
+          XC=$(ls -d /Applications/Xcode_*.app | sort -V | tail -n 1)
+          sudo xcode-select -s "$XC"
+          xcodebuild -version
       - run: npm ci
       - name: Prebuild iOS
         run: |
@@ -49,10 +55,14 @@ jobs:
         run: cd ios && pod install
       - name: Build (без подписи)
         run: |
-          set -o pipefail
+          set +e
           xcodebuild -workspace ios/LoveApp.xcworkspace -scheme LoveApp -configuration Release \
             -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build \
-            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" | tail -n 200
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" > xcodebuild.log 2>&1
+          code=$?
+          grep -nE "error:|\*\* BUILD|Command .* failed" xcodebuild.log | head -n 80
+          tail -n 40 xcodebuild.log
+          exit $code
       - name: Pack IPA
         run: |
           mkdir -p Payload

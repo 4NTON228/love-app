@@ -15,7 +15,7 @@ permissions:
 
 concurrency:
   group: mobile-builds-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 env:
   # Публичные значения (те же, что в веб-сборке): адрес проекта и anon-ключ Supabase
@@ -25,7 +25,7 @@ env:
 
 jobs:
   ios:
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 90
     defaults:
       run:

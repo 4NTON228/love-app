@@ -49,7 +49,7 @@ eas login                 # бесплатный аккаунт expo.dev
 eas init                  # привяжет проект; без этого не будет push-уведомлений
 eas env:create --name EXPO_PUBLIC_SUPABASE_URL --value https://xxxx.supabase.co --environment preview --environment production --visibility plaintext
 eas env:create --name EXPO_PUBLIC_SUPABASE_ANON_KEY --value eyJ... --environment preview --environment production --visibility plaintext
-eas env:create --name EXPO_PUBLIC_WEB_URL --value https://love-app.netlify.app --environment preview --environment production --visibility plaintext
+eas env:create --name EXPO_PUBLIC_WEB_URL --value https://love-app-omega.vercel.app --environment preview --environment production --visibility plaintext
 ```
 
 Файл `.env` в облачную сборку не попадает, поэтому переменные задаются через `eas env:create`.
@@ -93,7 +93,7 @@ Mac не нужен: сборка идёт в облаке EAS, команды �
   в команду (любая роль) → TestFlight → Internal Testing → создай группу и добавь вас обоих.
 - **Внешнее тестирование** (по ссылке): TestFlight → External Testing → группа → включи **Public Link**.
   Первую сборку Apple проверяет (обычно до суток): заполни описание, e-mail для отзывов,
-  ссылку на политику конфиденциальности (`https://love-app.netlify.app/privacy.html`)
+  ссылку на политику конфиденциальности (`https://love-app-omega.vercel.app/privacy.html`)
   и **тестовый логин и пароль** — без входа проверяющий не сможет открыть приложение.
 
 **На iPhone:** установи приложение **TestFlight** из App Store → открой приглашение (письмо или ссылку) → «Установить».

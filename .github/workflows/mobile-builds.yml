@@ -1,0 +1,116 @@
+# Бесплатные сборки мобильного приложения (mobile/):
+#  - LoveApp.ipa — iPhone без подписи, ставится через SideStore/AltStore бесплатным Apple ID;
+#  - LoveApp.apk — Android, ставится напрямую.
+# Готовые файлы публикуются в релизе «mobile-latest» (Releases на GitHub).
+name: Mobile builds
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, claude/mobile-app]
+    paths: ['mobile/**', '.github/workflows/mobile-builds.yml']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: mobile-builds-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Публичные значения (те же, что в веб-сборке): адрес проекта и anon-ключ Supabase
+  EXPO_PUBLIC_SUPABASE_URL: https://bqyisdgwtgxxomukozko.supabase.co
+  EXPO_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJxeWlzZGd3dGd4eG9tdWtvemtvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5NDcyNjUsImV4cCI6MjA4NjUyMzI2NX0.n7MpTU0-pM_093znX3mvZ4dc82bX5EwB7vnDi7GZ54c
+  EXPO_PUBLIC_WEB_URL: https://love-app-omega.vercel.app
+
+jobs:
+  ios:
+    runs-on: macos-15
+    timeout-minutes: 90
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - run: npm ci
+      - name: Prebuild iOS
+        run: |
+          printf 'EXPO_PUBLIC_SUPABASE_URL=%s\nEXPO_PUBLIC_SUPABASE_ANON_KEY=%s\nEXPO_PUBLIC_WEB_URL=%s\n' \
+            "$EXPO_PUBLIC_SUPABASE_URL" "$EXPO_PUBLIC_SUPABASE_ANON_KEY" "$EXPO_PUBLIC_WEB_URL" > .env
+          npx expo prebuild --platform ios --no-install
+          # Бесплатный Apple ID не умеет push — убираем право, чтобы подпись SideStore/AltStore прошла
+          /usr/libexec/PlistBuddy -c 'Delete :aps-environment' ios/LoveApp/LoveApp.entitlements || true
+      - name: Pods
+        run: cd ios && pod install
+      - name: Build (без подписи)
+        run: |
+          set -o pipefail
+          xcodebuild -workspace ios/LoveApp.xcworkspace -scheme LoveApp -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" | tail -n 200
+      - name: Pack IPA
+        run: |
+          mkdir -p Payload
+          cp -R build/Build/Products/Release-iphoneos/LoveApp.app Payload/
+          zip -qry LoveApp.ipa Payload
+          ls -lh LoveApp.ipa
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios
+          path: mobile/LoveApp.ipa
+
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - run: npm ci
+      - name: Prebuild Android
+        run: |
+          printf 'EXPO_PUBLIC_SUPABASE_URL=%s\nEXPO_PUBLIC_SUPABASE_ANON_KEY=%s\nEXPO_PUBLIC_WEB_URL=%s\n' \
+            "$EXPO_PUBLIC_SUPABASE_URL" "$EXPO_PUBLIC_SUPABASE_ANON_KEY" "$EXPO_PUBLIC_WEB_URL" > .env
+          npx expo prebuild --platform android --no-install
+      - name: Build APK
+        run: |
+          cd android
+          ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a,armeabi-v7a
+          cp app/build/outputs/apk/release/app-release.apk ../LoveApp.apk
+          ls -lh ../LoveApp.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android
+          path: mobile/LoveApp.apk
+
+  release:
+    needs: [ios, android]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+          merge-multiple: true
+      - name: Publish «mobile-latest»
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete mobile-latest --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag || true
+          gh release create mobile-latest out/LoveApp.ipa out/LoveApp.apk --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" --prerelease --title "Love App — сборка для телефона" \
+            --notes "iPhone: LoveApp.ipa через SideStore/AltStore. Android: LoveApp.apk. Коммит ${GITHUB_SHA::7}."

@@ -64,7 +64,7 @@ eas env:create --name EXPO_PUBLIC_WEB_URL --value https://love-app-omega.vercel.
 | **Ad Hoc через EAS** (рекомендуется) | Apple Developer Program, $99/год | 1 год | ✅ |
 | **TestFlight** | Apple Developer Program | 90 дней на сборку | ✅ |
 | **Бесплатный Apple ID + Xcode** | Mac с Xcode | 7 дней, потом переустановить | ❌ |
-| **AltStore / SideStore** | бесплатный Apple ID | 7 дней, продлевается само | ❌ |
+| **AltStore / SideStore** (бесплатно) | бесплатный Apple ID + компьютер один раз | 7 дней, продлевается само | ❌ |
 | **Expo Go** | ничего | пока открыт dev-сервер | ❌ |
 
 ### 1. Ad Hoc через EAS (лучший вариант)
@@ -105,13 +105,30 @@ Mac не нужен: сборка идёт в облаке EAS, команды �
 `npx expo prebuild -p ios` → открой `ios/LoveApp.xcworkspace` → Signing → выбери свой Apple ID →
 подключи iPhone кабелем → ▶. Приложение работает 7 дней, push-уведомления недоступны.
 
-### 4. AltStore / SideStore
-Собери `.ipa` (например, `eas build -p ios --profile preview` с аккаунтом разработчика или через Xcode) и
-установи через AltStore/SideStore — они переподписывают приложение бесплатным Apple ID каждые 7 дней.
+### 4. Бесплатно: AltStore / SideStore (без подписки Apple)
+Готовые файлы собираются бесплатно в GitHub Actions (workflow «Mobile builds») при каждом изменении
+`mobile/` и лежат на странице **Releases → «mobile-latest»**: `LoveApp.ipa` (iPhone) и `LoveApp.apk` (Android).
+
+**Один раз на каждом iPhone:**
+1. На компьютере (Windows или Mac) поставь **AltServer** с [altstore.io](https://altstore.io) и через него установи
+   **AltStore** на iPhone, войдя бесплатным Apple ID. (Вместо AltStore можно **SideStore** — он продлевает
+   приложение без компьютера.)
+2. На iPhone: Настройки → Конфиденциальность и безопасность → **Режим разработчика** → включить.
+3. В Safari открой страницу Releases репозитория → «mobile-latest» → скачай `LoveApp.ipa`.
+4. AltStore → **My Apps** → «+» → выбери `LoveApp.ipa` → готово.
+
+**Важно:**
+- Бесплатная подпись действует **7 дней**. AltStore продлевает её сам, когда компьютер с AltServer
+  включён и в той же Wi‑Fi (SideStore — прямо с телефона).
+- С бесплатным Apple ID можно держать до 3 таких приложений одновременно.
+- **Push-уведомления не работают** (Apple даёт их только платным аккаунтам). Сообщения, «Думаю о тебе»
+  и всё остальное приходят, пока приложение открыто; локальные напоминания работают.
+- Партнёру на iPhone нужно сделать то же самое со своим Apple ID.
 
 ## Android
-`npm run build:android` → открой ссылку на телефоне → скачай `.apk` → разреши установку
-из этого источника → установи. Push работает без оплаты.
+Скачай `LoveApp.apk` со страницы Releases → «mobile-latest» (или собери сам: `npm run build:android`) →
+разреши установку из этого источника → установи. Ничего платить не нужно.
+Push-уведомления на Android появятся после `eas init` (бесплатно) и новой сборки.
 
 ## Отличия от веба (честно)
 

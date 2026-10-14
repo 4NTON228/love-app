@@ -75,9 +75,31 @@ eas env:create --name EXPO_PUBLIC_WEB_URL --value https://love-app.netlify.app -
 5. Настройки → Основные → VPN и управление устройством → доверять (если спросит).
    На iOS 16+ включи **Настройки → Конфиденциальность → Режим разработчика**.
 
-### 2. TestFlight
-`eas build -p ios --profile production` → `eas submit -p ios` → в App Store Connect добавь
-тестировщиков (до 10 000), им придёт приглашение в приложение TestFlight. Это не публикация в App Store.
+### 2. TestFlight (основной способ)
+Mac не нужен: сборка идёт в облаке EAS, команды можно запускать с Windows.
+
+**Один раз:**
+1. Оформи [Apple Developer Program](https://developer.apple.com/programs/enroll/) ($99/год, одобрение — от нескольких часов до пары дней).
+2. Сделай шаги из «Сборка установочных файлов (EAS)» выше (`eas login`, `eas init`, `eas env:create`).
+3. Запусти `npm run testflight`. EAS попросит войти в Apple ID (с кодом 2FA) и сам:
+   создаст Bundle ID `app.love.couple`, сертификаты, ключ для push-уведомлений,
+   приложение в App Store Connect, соберёт его и загрузит в TestFlight.
+   Если Bundle ID уже кем-то занят — поменяй `ios.bundleIdentifier` в `app.json`.
+4. Через 10–30 минут сборка появится в [App Store Connect](https://appstoreconnect.apple.com) → приложение → **TestFlight**.
+   Если спросят про шифрование — в приложении есть сквозное шифрование чата стандартными алгоритмами (AES, ECDH), ответь на вопросы в соответствии с этим.
+
+**Добавить себя и партнёра (выбери одно):**
+- **Внутреннее тестирование** (быстрее, без проверки Apple): Users and Access → пригласи Apple ID партнёра
+  в команду (любая роль) → TestFlight → Internal Testing → создай группу и добавь вас обоих.
+- **Внешнее тестирование** (по ссылке): TestFlight → External Testing → группа → включи **Public Link**.
+  Первую сборку Apple проверяет (обычно до суток): заполни описание, e-mail для отзывов,
+  ссылку на политику конфиденциальности (`https://love-app.netlify.app/privacy.html`)
+  и **тестовый логин и пароль** — без входа проверяющий не сможет открыть приложение.
+
+**На iPhone:** установи приложение **TestFlight** из App Store → открой приглашение (письмо или ссылку) → «Установить».
+
+**Обновления:** снова `npm run testflight` — номер сборки увеличится сам, у вас в TestFlight появится обновление.
+Каждая сборка работает 90 дней, поэтому выпускай новую хотя бы раз в 3 месяца.
 
 ### 3. Бесплатно через Xcode (нужен Mac)
 `npx expo prebuild -p ios` → открой `ios/LoveApp.xcworkspace` → Signing → выбери свой Apple ID →

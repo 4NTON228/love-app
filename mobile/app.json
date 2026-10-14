@@ -13,7 +13,7 @@
       "supportsTablet": false,
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "Чтобы прикреплять фото к сообщениям и моментам.",
-        "NSCameraUsageDescription": "Чтобы снимать фото для партнёра.",
+        "NSCameraUsageDescription": "Чтобы снимать фото и видеокружки для партнёра.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },

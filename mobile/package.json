@@ -68,7 +68,8 @@
     "typecheck": "tsc --noEmit",
     "test": "jest",
     "build:android": "eas build --profile preview --platform android",
-    "build:ios": "eas build --profile preview --platform ios"
+    "build:ios": "eas build --profile preview --platform ios",
+    "testflight": "eas build --platform ios --profile production --auto-submit"
   },
   "private": true,
   "jest": {
